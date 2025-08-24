@@ -1,0 +1,37 @@
+package ast
+
+type NodeType int16
+
+const (
+	NodeTypeUnknown NodeType = iota
+	NodeTypeExpressionStatement
+	NodeTypeVariableDeclaration
+	NodeTypeIdentifier
+	NodeTypeInitializer
+	NodeTypeStringLiteral
+	NodeTypeNullLiteral
+	NodeTypeBooleanLiteral
+	NodeTypeDecimalLiteral
+	NodeTypeIfStatement
+	NodeTypeBlockStatement
+	NodeTypeAssignmentExpression
+	NodeTypeFunctionDeclaration
+	NodeTypeCallExpression
+	NodeTypeMemberExpression
+	NodeTypeImportSpecifier
+	NodeTypeImportDefaultSpecifier
+	NodeTypeImportNamespaceSpecifier
+	NodeTypeImportDeclaration
+	NodeTypeExportNamedDeclaration
+	NodeTypeExportDefaultDeclaration
+	NodeTypeExportSpecifier
+	NodeTypeBinaryExpression
+	NodeTypeSpreadElement
+	NodeTypeArrayExpression
+	NodeTypeObjectProperty
+	NodeTypeObjectMethod
+	NodeTypeObjectExpression
+	NodeTypeDirectiveLiteral
+	NodeTypeDirective
+	NodeTypeProgram
+)
