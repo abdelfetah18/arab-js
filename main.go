@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	lexer := compiler.NewLexer("إذا (100) { متغير عدد = 100؛ }")
+	lexer := compiler.NewLexer("متغير عدد : عدد = 100؛")
 	parser := compiler.NewParser(lexer, false)
 
 	program := parser.Parse()

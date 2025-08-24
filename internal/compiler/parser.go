@@ -437,24 +437,53 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 	panic("Expected PrimaryExpression but got " + p.lexer.Peek().Value)
 }
 
+func (p *Parser) getTypeNodeFromIdentifier(token Token) *ast.Node {
+	if token.Value == "نص" {
+		return ast.NewTStringKeyword().ToNode()
+	}
+
+	if token.Value == "عدد" {
+		return ast.NewTNumberKeyword().ToNode()
+	}
+
+	if token.Value == "قيمة_منطقية" {
+		return ast.NewTNumberKeyword().ToNode()
+	}
+
+	return ast.NewIdentifier(token.Value).ToNode()
+}
+
 func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 	idToken := p.lexer.Peek()
 	if idToken.Type != Identifier {
 		panic("Expected identifier, got " + idToken.Value)
 	}
 	identifier := ast.NewIdentifier(idToken.Value)
-	equals := p.lexer.Next()
-	if equals.Type != Equal {
-		panic("Expected '=', got " + equals.Value)
+
+	token := p.lexer.Next()
+	var typeAnnotation *ast.TTypeAnnotation = nil
+	if token.Type == Colon {
+		token = p.lexer.Next()
+		if token.Type != Identifier {
+			panic("Expected Token Type Identifier, got " + token.Value)
+		}
+
+		typeAnnotation = ast.NewTTypeAnnotation(p.getTypeNodeFromIdentifier(token))
+		token = p.lexer.Next()
 	}
-	p.lexer.Next()
+
+	if token.Type != Equal {
+		panic("Expected '=', got " + token.Value)
+	}
+	token = p.lexer.Next()
+
 	init := ast.NewInitializer(p.parseAssignmentExpression())
 	semicolon := p.lexer.Peek()
 	if semicolon.Type != Semicolon {
 		panic("Expected '؛', got " + semicolon.Value)
 	}
 	p.lexer.Next()
-	return ast.NewVariableDeclaration(identifier, init)
+	return ast.NewVariableDeclaration(identifier, init, typeAnnotation)
 }
 
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {

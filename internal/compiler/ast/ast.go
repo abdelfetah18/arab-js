@@ -60,18 +60,86 @@ func (expressionStatement *ExpressionStatement) ToNode() *Node {
 }
 
 type VariableDeclaration struct {
-	Identifier  *Identifier
-	Initializer *Initializer
+	Identifier     *Identifier
+	Initializer    *Initializer
+	TypeAnnotation *TTypeAnnotation
 }
 
-func NewVariableDeclaration(identifier *Identifier, initializer *Initializer) *VariableDeclaration {
-	return &VariableDeclaration{Identifier: identifier, Initializer: initializer}
+func NewVariableDeclaration(identifier *Identifier, initializer *Initializer, typeAnnotation *TTypeAnnotation) *VariableDeclaration {
+	return &VariableDeclaration{Identifier: identifier, Initializer: initializer, TypeAnnotation: typeAnnotation}
 }
 
 func (variableDeclaration *VariableDeclaration) ToNode() *Node {
 	return &Node{
 		Type: NodeTypeVariableDeclaration,
 		Data: variableDeclaration,
+	}
+}
+
+type TTypeAnnotation struct {
+	TypeAnnotation *Node // TStringKeyword | TNumberKeyword | TBooleanKeyword | TNullKeyword
+}
+
+func NewTTypeAnnotation(typeAnnotation *Node) *TTypeAnnotation {
+	return &TTypeAnnotation{TypeAnnotation: typeAnnotation}
+}
+
+func (tTypeAnnotation *TTypeAnnotation) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeVariableDeclaration,
+		Data: tTypeAnnotation,
+	}
+}
+
+type TStringKeyword struct{}
+
+func NewTStringKeyword() *TStringKeyword {
+	return &TStringKeyword{}
+}
+
+func (tStringKeyword TStringKeyword) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTStringKeyword,
+		Data: tStringKeyword,
+	}
+}
+
+type TNumberKeyword struct{}
+
+func NewTNumberKeyword() *TNumberKeyword {
+	return &TNumberKeyword{}
+}
+
+func (tNumberKeyword TNumberKeyword) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTNumberKeyword,
+		Data: tNumberKeyword,
+	}
+}
+
+type TBooleanKeyword struct{}
+
+func NewTBooleanKeyword() *TBooleanKeyword {
+	return &TBooleanKeyword{}
+}
+
+func (tBooleanKeyword TBooleanKeyword) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTBooleanKeyword,
+		Data: tBooleanKeyword,
+	}
+}
+
+type TNullKeyword struct{}
+
+func NewTNullKeyword() *TNullKeyword {
+	return &TNullKeyword{}
+}
+
+func (tNullKeyword TNullKeyword) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTNullKeyword,
+		Data: tNullKeyword,
 	}
 }
 

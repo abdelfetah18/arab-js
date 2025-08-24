@@ -34,4 +34,10 @@ const (
 	NodeTypeDirectiveLiteral
 	NodeTypeDirective
 	NodeTypeProgram
+
+	NodeTypeTTypeAnnotation
+	NodeTypeTStringKeyword
+	NodeTypeTNumberKeyword
+	NodeTypeTBooleanKeyword
+	NodeTypeTNullKeyword
 )
