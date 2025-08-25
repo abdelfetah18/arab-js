@@ -49,6 +49,9 @@ func (node *Node) AsIdentifier() *Identifier             { return node.Data.(*Id
 func (node *Node) AsBinaryExpression() *BinaryExpression { return node.Data.(*BinaryExpression) }
 func (node *Node) AsArrayExpression() *ArrayExpression   { return node.Data.(*ArrayExpression) }
 func (node *Node) AsSpreadElement() *SpreadElement       { return node.Data.(*SpreadElement) }
+func (node *Node) AsObjectExpression() *ObjectExpression { return node.Data.(*ObjectExpression) }
+func (node *Node) AsObjectProperty() *ObjectProperty     { return node.Data.(*ObjectProperty) }
+func (node *Node) AsObjectMethod() *ObjectMethod         { return node.Data.(*ObjectMethod) }
 
 func (node *Node) AsIfStatement() *IfStatement       { return node.Data.(*IfStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement { return node.Data.(*BlockStatement) }
@@ -535,13 +538,11 @@ func (objectMethod *ObjectMethod) ToNode() *Node {
 	}
 }
 
-type ObjectPropertyInterface interface{}
-
 type ObjectExpression struct {
-	Properties []ObjectPropertyInterface
+	Properties []*Node
 }
 
-func NewObjectExpression(properties []ObjectPropertyInterface) *ObjectExpression {
+func NewObjectExpression(properties []*Node) *ObjectExpression {
 	return &ObjectExpression{Properties: properties}
 }
 

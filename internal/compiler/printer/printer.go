@@ -114,7 +114,45 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 			}
 		}
 		printer.Writer.Write("]")
+	case ast.NodeTypeObjectExpression:
+		objectExpression := expression.AsObjectExpression()
+		printer.Writer.Write("{")
+		printer.increaseIndent()
+		for index, property := range objectExpression.Properties {
+			printer.Writer.Write("\n")
+			printer.writeIndent()
+			switch property.Type {
+			case ast.NodeTypeSpreadElement:
+				printer.writeSpreadElement(property.AsSpreadElement())
+			case ast.NodeTypeObjectProperty:
+				objectProperty := property.AsObjectProperty()
+				switch objectProperty.Key.Type {
+				case ast.NodeTypeIdentifier:
+					printer.writeIdentifier(objectProperty.Key.AsIdentifier())
+				case ast.NodeTypeDecimalLiteral:
+					printer.Writer.Write(objectProperty.Key.AsDecimalLiteral().Value)
+				case ast.NodeTypeStringLiteral:
+					printer.Writer.Writef("\"%s\"", objectProperty.Key.AsStringLiteral().Value)
+				}
+				printer.Writer.Write(": ")
+				printer.writeExpression(objectProperty.Value)
+			}
+
+			if index < len(objectExpression.Properties)-1 {
+				printer.Writer.Write(",")
+			}
+		}
+		printer.decreaseIndent()
+		if len(objectExpression.Properties) > 0 {
+			printer.Writer.Write("\n")
+		}
+		printer.writeIndent()
+		printer.Writer.Write("}")
 	}
+}
+
+func (printer *Printer) writeIdentifier(identifier *ast.Identifier) {
+	printer.Writer.Write(identifier.Name)
 }
 
 func (printer *Printer) writeSpreadElement(spreadElement *ast.SpreadElement) {
@@ -141,4 +179,8 @@ func (printer *Printer) writeBlockStatement(blockStatement *ast.BlockStatement) 
 	printer.Writer.Write("\n")
 	printer.Writer.Write(strings.Repeat(" ", printer.indent))
 	printer.Writer.Write("}")
+}
+
+func (printer *Printer) writeIndent() {
+	printer.Writer.Write(strings.Repeat(" ", printer.indent))
 }

@@ -377,11 +377,11 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 	}
 	if token.Type == LeftCurlyBrace {
 		token = p.lexer.Next()
-		properties := []ast.ObjectPropertyInterface{}
+		properties := []*ast.Node{}
 		for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
 			if token.Type == TripleDots {
 				token = p.lexer.Next()
-				properties = append(properties, ast.NewSpreadElement(p.parseAssignmentExpression()))
+				properties = append(properties, ast.NewSpreadElement(p.parseAssignmentExpression()).ToNode())
 				token = p.lexer.Peek()
 				if token.Type != Comma && token.Type != RightCurlyBrace {
 					panic("Expected '{' but got " + token.Value)
@@ -407,7 +407,7 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 
 				if token.Type == Colon {
 					token = p.lexer.Next()
-					properties = append(properties, ast.NewObjectProperty(key, p.parseAssignmentExpression()))
+					properties = append(properties, ast.NewObjectProperty(key, p.parseAssignmentExpression()).ToNode())
 					token = p.lexer.Peek()
 					if token.Type == Comma {
 						token = p.lexer.Next()
@@ -420,7 +420,7 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 						token = p.lexer.Next()
 					}
 					if key.Type == ast.NodeTypeIdentifier {
-						properties = append(properties, ast.NewObjectProperty(key, key))
+						properties = append(properties, ast.NewObjectProperty(key, key).ToNode())
 					} else {
 						panic("Expected Identifier but got " + token.Value)
 					}
