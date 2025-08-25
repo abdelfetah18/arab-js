@@ -60,6 +60,14 @@ func (node *Node) AsExpressionStatement() *ExpressionStatement {
 	return node.Data.(*ExpressionStatement)
 }
 
+func (node *Node) AsTInterfaceDeclaration() *TInterfaceDeclaration {
+	return node.Data.(*TInterfaceDeclaration)
+}
+
+func (node *Node) AsTPropertySignature() *TPropertySignature {
+	return node.Data.(*TPropertySignature)
+}
+
 type ExpressionStatement struct {
 	Expression *Node
 }
@@ -596,5 +604,58 @@ func (program *Program) ToNode() *Node {
 	return &Node{
 		Type: NodeTypeProgram,
 		Data: program,
+	}
+}
+
+type TInterfaceDeclaration struct {
+	Id   *Identifier
+	Body *TInterfaceBody
+}
+
+func NewTInterfaceDeclaration(id *Identifier, body *TInterfaceBody) *TInterfaceDeclaration {
+	return &TInterfaceDeclaration{
+		Id:   id,
+		Body: body,
+	}
+}
+
+func (tInterfaceDeclaration *TInterfaceDeclaration) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTInterfaceDeclaration,
+		Data: tInterfaceDeclaration,
+	}
+}
+
+type TInterfaceBody struct {
+	Body []*Node // TPropertySignature
+}
+
+func NewTInterfaceBody(body []*Node) *TInterfaceBody {
+	return &TInterfaceBody{Body: body}
+}
+
+func (tInterfaceBody *TInterfaceBody) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTInterfaceBody,
+		Data: tInterfaceBody,
+	}
+}
+
+type TPropertySignature struct {
+	Key            *Node
+	TypeAnnotation *TTypeAnnotation
+}
+
+func NewTPropertySignature(key *Node, typeAnnotation *TTypeAnnotation) *TPropertySignature {
+	return &TPropertySignature{
+		Key:            key,
+		TypeAnnotation: typeAnnotation,
+	}
+}
+
+func (tPropertySignature *TPropertySignature) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTPropertySignature,
+		Data: tPropertySignature,
 	}
 }

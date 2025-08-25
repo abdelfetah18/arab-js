@@ -94,6 +94,11 @@ func (p *Parser) parseStatement() *ast.Node {
 		return p.parseBlockStatement().ToNode()
 	}
 
+	if token.Type == Identifier && token.Value == "واجهة" {
+		p.lexer.Next()
+		return p.parseTInterfaceDeclaration().ToNode()
+	}
+
 	if p.isExpression() {
 		expression := p.parseExpression()
 		token := p.lexer.Peek()
@@ -447,7 +452,7 @@ func (p *Parser) getTypeNodeFromIdentifier(token Token) *ast.Node {
 	}
 
 	if token.Value == "قيمة_منطقية" {
-		return ast.NewTNumberKeyword().ToNode()
+		return ast.NewTBooleanKeyword().ToNode()
 	}
 
 	return ast.NewIdentifier(token.Value).ToNode()
@@ -709,4 +714,85 @@ func (p *Parser) parseAssignmentExpression() *ast.Node {
 
 func (p *Parser) parseExpression() *ast.Node {
 	return p.parseAssignmentExpression()
+}
+
+func (p *Parser) parseTInterfaceDeclaration() *ast.TInterfaceDeclaration {
+	token := p.lexer.Peek()
+	if token.Type != Identifier {
+		panic("Expected Identifier got " + token.Value)
+	}
+
+	id := ast.NewIdentifier(token.Value)
+	token = p.lexer.Next()
+
+	body := p.parseTInterfaceBody()
+
+	return ast.NewTInterfaceDeclaration(id, body)
+}
+
+func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
+	token := p.lexer.Peek()
+	if token.Type != LeftCurlyBrace {
+		panic("Expected '}' got " + token.Value)
+	}
+	token = p.lexer.Next()
+
+	body := []*ast.Node{}
+	for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
+		var key *ast.Node
+		switch token.Type {
+		case Identifier:
+			key = ast.NewIdentifier(token.Value).ToNode()
+			token = p.lexer.Next()
+		case DoubleQuoteString, SingleQuoteString:
+			key = ast.NewStringLiteral(token.Value).ToNode()
+			token = p.lexer.Next()
+		case Decimal:
+			key = ast.NewDecimalLiteral(token.Value).ToNode()
+			token = p.lexer.Next()
+		default:
+			panic("Expected a valid key but got " + token.Value)
+		}
+
+		if token.Type == Colon {
+			token = p.lexer.Next()
+			body = append(body, ast.NewTPropertySignature(key, p.parseTTypeAnnotation()).ToNode())
+			token = p.lexer.Peek()
+			if token.Type == Comma {
+				token = p.lexer.Next()
+			}
+		} else {
+			if token.Type != Comma && token.Type != RightCurlyBrace {
+				panic("A Expected '{' but got " + token.Value)
+			}
+			if token.Type == Comma {
+				token = p.lexer.Next()
+			}
+			if key.Type == ast.NodeTypeIdentifier {
+				body = append(body, ast.NewTPropertySignature(key, p.parseTTypeAnnotation()).ToNode())
+			} else {
+				panic("Expected Identifier but got " + token.Value)
+			}
+		}
+
+		token = p.lexer.Peek()
+	}
+	if token.Type != RightCurlyBrace {
+		panic("Expected '{' but got " + token.Value)
+	}
+	p.lexer.Next()
+
+	token = p.lexer.Next()
+
+	return ast.NewTInterfaceBody(body)
+}
+
+func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
+	token := p.lexer.Peek()
+	if token.Type != Identifier {
+		panic("Expected Token Type Identifier, got " + token.Value)
+	}
+	p.lexer.Next()
+
+	return ast.NewTTypeAnnotation(p.getTypeNodeFromIdentifier(token))
 }
