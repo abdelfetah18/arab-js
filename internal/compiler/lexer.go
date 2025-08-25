@@ -229,8 +229,9 @@ func (l *Lexer) nextToken() Token {
 		l.increasePosition(1)
 		value := `"`
 		for !l.isEOF() && l.current() != `"` {
-			value += l.current()
-			l.increasePosition(1)
+			char, size := l.charAndSize()
+			value += string(char)
+			l.increasePosition(size)
 		}
 		if l.isEOF() {
 			return Token{Type: EOF, Value: l.current(), Position: l.position}
@@ -245,8 +246,9 @@ func (l *Lexer) nextToken() Token {
 		l.increasePosition(1)
 		value := `'`
 		for !l.isEOF() && l.current() != `'` {
-			value += l.current()
-			l.increasePosition(1)
+			char, size := l.charAndSize()
+			value += string(char)
+			l.increasePosition(size)
 		}
 		if l.isEOF() {
 			return Token{Type: EOF, Value: l.current(), Position: l.position}

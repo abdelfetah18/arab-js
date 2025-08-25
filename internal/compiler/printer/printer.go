@@ -45,7 +45,14 @@ func (printer *Printer) writeStatement(statement *ast.Node) {
 		printer.writeIfStatement(statement.AsIfStatement())
 	case ast.NodeTypeBlockStatement:
 		printer.writeBlockStatement(statement.AsBlockStatement())
+	case ast.NodeTypeExpressionStatement:
+		printer.writeExpressionStatement(statement.AsExpressionStatement())
 	}
+}
+
+func (printer *Printer) writeExpressionStatement(expressionStatement *ast.ExpressionStatement) {
+	printer.writeExpression(expressionStatement.Expression)
+	printer.Writer.Write(";")
 }
 
 func (printer *Printer) writeVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
@@ -71,6 +78,17 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 		} else {
 			printer.Writer.Write("false")
 		}
+	case ast.NodeTypeCallExpression:
+		callExpression := expression.AsCallExpression()
+		switch callExpression.Callee.Type {
+		case ast.NodeTypeIdentifier:
+			printer.Writer.Write(callExpression.Callee.AsIdentifier().Name)
+		}
+		printer.Writer.Write("(")
+		for _, expression := range callExpression.Args {
+			printer.writeExpression(expression)
+		}
+		printer.Writer.Write(")")
 	}
 }
 
