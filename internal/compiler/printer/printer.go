@@ -12,7 +12,8 @@ type Writer struct {
 
 func NewWriter() *Writer { return &Writer{Output: ""} }
 
-func (writer *Writer) Write(input string) { writer.Output += input }
+func (writer *Writer) Write(input string)             { writer.Output += input }
+func (writer *Writer) Writef(format string, a ...any) { writer.Output += fmt.Sprintf(format, a...) }
 
 type Printer struct {
 	Writer *Writer
@@ -21,8 +22,8 @@ type Printer struct {
 
 func NewPrinter() *Printer { return &Printer{Writer: NewWriter(), indent: 0} }
 
-func (printer *Printer) increaseIndent() { printer.indent += 4 }
-func (printer *Printer) decreaseIndent() { printer.indent -= 4 }
+func (printer *Printer) increaseIndent() { printer.indent += 2 }
+func (printer *Printer) decreaseIndent() { printer.indent -= 2 }
 
 func (printer *Printer) Write(node *ast.Program) {
 	printer.writeStatementList(node.Body)
@@ -60,6 +61,16 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 	switch expression.Type {
 	case ast.NodeTypeDecimalLiteral:
 		printer.Writer.Write(expression.AsDecimalLiteral().Value)
+	case ast.NodeTypeStringLiteral:
+		printer.Writer.Writef("\"%s\"", expression.AsStringLiteral().Value)
+	case ast.NodeTypeNullLiteral:
+		printer.Writer.Write("null")
+	case ast.NodeTypeBooleanLiteral:
+		if expression.AsBooleanLiteral().Value {
+			printer.Writer.Write("true")
+		} else {
+			printer.Writer.Write("false")
+		}
 	}
 }
 
