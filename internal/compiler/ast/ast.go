@@ -43,6 +43,7 @@ func (node *Node) AsVariableDeclaration() *VariableDeclaration {
 func (node *Node) AsDecimalLiteral() *DecimalLiteral { return node.Data.(*DecimalLiteral) }
 func (node *Node) AsIfStatement() *IfStatement       { return node.Data.(*IfStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement { return node.Data.(*BlockStatement) }
+func (node *Node) AsProgram() *Program               { return node.Data.(*Program) }
 
 type ExpressionStatement struct {
 	Expression *Node
