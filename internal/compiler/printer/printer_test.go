@@ -414,3 +414,56 @@ func TestObjectExpression(t *testing.T) {
 		})
 	}
 }
+
+func TestMemberExpression(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple dot access",
+			input:    "متغير س = شخص.اسم؛",
+			expected: "let س = شخص.اسم;",
+		},
+		{
+			name:     "nested dot access",
+			input:    "متغير س = شخص.تفاصيل.عمر؛",
+			expected: "let س = شخص.تفاصيل.عمر;",
+		},
+		// {
+		// 	name:     "computed property access",
+		// 	input:    "متغير س = شخص['اسم']؛",
+		// 	expected: `let س = شخص["اسم"];`,
+		// },
+		// {
+		// 	name:     "nested computed and dot access",
+		// 	input:    "متغير س = شخص.تفاصيل['عمر']؛",
+		// 	expected: `let س = شخص.تفاصيل["عمر"];`,
+		// },
+		// {
+		// 	name:     "array access",
+		// 	input:    "متغير س = ارقام[0]؛",
+		// 	expected: "let س = ارقام[0];",
+		// },
+		// {
+		// 	name:     "nested array and object access",
+		// 	input:    "متغير س = اشخاص[0].اسم؛",
+		// 	expected: "let س = اشخاص[0].اسم;",
+		// },
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := compiler.NewParser(compiler.NewLexer(tt.input), false)
+			program := parser.Parse()
+
+			printer := NewPrinter()
+			printer.Write(program)
+
+			if printer.Writer.Output != tt.expected {
+				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, printer.Writer.Output)
+			}
+		})
+	}
+}

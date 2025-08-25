@@ -52,6 +52,7 @@ func (node *Node) AsSpreadElement() *SpreadElement       { return node.Data.(*Sp
 func (node *Node) AsObjectExpression() *ObjectExpression { return node.Data.(*ObjectExpression) }
 func (node *Node) AsObjectProperty() *ObjectProperty     { return node.Data.(*ObjectProperty) }
 func (node *Node) AsObjectMethod() *ObjectMethod         { return node.Data.(*ObjectMethod) }
+func (node *Node) AsMemberExpression() *MemberExpression { return node.Data.(*MemberExpression) }
 
 func (node *Node) AsIfStatement() *IfStatement       { return node.Data.(*IfStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement { return node.Data.(*BlockStatement) }

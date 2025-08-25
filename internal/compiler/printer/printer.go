@@ -69,6 +69,8 @@ func (printer *Printer) writeInitializer(initializer *ast.Initializer) {
 
 func (printer *Printer) writeExpression(expression *ast.Node) {
 	switch expression.Type {
+	case ast.NodeTypeIdentifier:
+		printer.writeIdentifier(expression.AsIdentifier())
 	case ast.NodeTypeDecimalLiteral:
 		printer.Writer.Write(expression.AsDecimalLiteral().Value)
 	case ast.NodeTypeStringLiteral:
@@ -86,6 +88,8 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 		switch callExpression.Callee.Type {
 		case ast.NodeTypeIdentifier:
 			printer.Writer.Write(callExpression.Callee.AsIdentifier().Name)
+		case ast.NodeTypeMemberExpression:
+			printer.writeMemberExpression(callExpression.Callee.AsMemberExpression())
 		}
 		printer.Writer.Write("(")
 		for index, expression := range callExpression.Args {
@@ -148,6 +152,9 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 		}
 		printer.writeIndent()
 		printer.Writer.Write("}")
+
+	case ast.NodeTypeMemberExpression:
+		printer.writeMemberExpression(expression.AsMemberExpression())
 	}
 }
 
@@ -183,4 +190,10 @@ func (printer *Printer) writeBlockStatement(blockStatement *ast.BlockStatement) 
 
 func (printer *Printer) writeIndent() {
 	printer.Writer.Write(strings.Repeat(" ", printer.indent))
+}
+
+func (printer *Printer) writeMemberExpression(memberExpression *ast.MemberExpression) {
+	printer.writeExpression(memberExpression.Object)
+	printer.Writer.Write(".")
+	printer.writeExpression(memberExpression.Property)
 }
