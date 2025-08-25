@@ -206,22 +206,25 @@ func (l *Lexer) nextToken() Token {
 		}
 	}
 
-	if tokenType, ok := ThreeCharTokens[l.currentThreeChars()]; ok {
+	currentThreeChars := l.currentThreeChars()
+	if tokenType, ok := ThreeCharTokens[currentThreeChars]; ok {
 		pos := l.position
 		l.increasePosition(3)
-		return Token{Type: tokenType, Value: l.currentThreeChars(), Position: pos}
+		return Token{Type: tokenType, Value: currentThreeChars, Position: pos}
 	}
 
-	if tokenType, ok := TwoCharTokens[l.currentTwoChars()]; ok {
+	currentTwoChars := l.currentTwoChars()
+	if tokenType, ok := TwoCharTokens[currentTwoChars]; ok {
 		pos := l.position
 		l.increasePosition(2)
-		return Token{Type: tokenType, Value: l.currentTwoChars(), Position: pos}
+		return Token{Type: tokenType, Value: currentTwoChars, Position: pos}
 	}
 
-	if tokenType, ok := OneCharTokens[l.current()]; ok {
+	currentOneChar := l.current()
+	if tokenType, ok := OneCharTokens[currentOneChar]; ok {
 		pos := l.position
 		l.increasePosition(1)
-		return Token{Type: tokenType, Value: l.current(), Position: pos}
+		return Token{Type: tokenType, Value: currentOneChar, Position: pos}
 	}
 
 	if l.current() == `"` {

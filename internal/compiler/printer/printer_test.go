@@ -205,3 +205,121 @@ func TestBlockStatement(t *testing.T) {
 		printer.Write(program)
 	})
 }
+
+func TestBinaryExpression(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Bitwise OR expression",
+			input:    "متغير عدد = 100 | 1؛",
+			expected: "let عدد = 100 | 1;",
+		},
+		{
+			name:     "Multiple Bitwise OR expressions",
+			input:    "متغير عدد = 100 | 1 | 2؛",
+			expected: "let عدد = 100 | 1 | 2;",
+		},
+		{
+			name:     "Bitwise XOR expression",
+			input:    "متغير عدد = 100 ^ 1؛",
+			expected: "let عدد = 100 ^ 1;",
+		},
+		{
+			name:     "Multiple Bitwise XOR expressions",
+			input:    "متغير عدد = 100 ^ 1 ^ 2؛",
+			expected: "let عدد = 100 ^ 1 ^ 2;",
+		},
+		{
+			name:     "Bitwise AND expression",
+			input:    "متغير عدد = 100 & 1؛",
+			expected: "let عدد = 100 & 1;",
+		},
+		{
+			name:     "Multiple Bitwise AND expressions",
+			input:    "متغير عدد = 100 & 1 & 2؛",
+			expected: "let عدد = 100 & 1 & 2;",
+		},
+		{
+			name:     "Equality expressions",
+			input:    "متغير يساوي = 100 == 1؛\nمتغير يساوي_يساوي = 100 === 1؛\nمتغير لا_يساوي = 100 != 1؛\nمتغير لا_يساوي_يساوي = 100 !== 1؛",
+			expected: "let يساوي = 100 == 1;\nlet يساوي_يساوي = 100 === 1;\nlet لا_يساوي = 100 != 1;\nlet لا_يساوي_يساوي = 100 !== 1;",
+		},
+		{
+			name:     "Multiple Equality expressions",
+			input:    "متغير عدد = 100 == 1 != 2 === 3 !== 300؛",
+			expected: "let عدد = 100 == 1 != 2 === 3 !== 300;",
+		},
+		{
+			name:     "Relational expressions",
+			input:    "متغير أكبر_من = 100 > 1؛\nمتغير أصغر_من = 100 < 1؛\nمتغير أكبر_أو_يساوي = 100 >= 1؛\nمتغير أصغر_أو_يساوي = 100 <= 1؛",
+			expected: "let أكبر_من = 100 > 1;\nlet أصغر_من = 100 < 1;\nlet أكبر_أو_يساوي = 100 >= 1;\nlet أصغر_أو_يساوي = 100 <= 1;",
+		},
+		{
+			name:     "Multiple Relational expressions",
+			input:    "متغير عدد = 100 == 1 != 2 > 3 <= 300؛",
+			expected: "let عدد = 100 == 1 != 2 > 3 <= 300;",
+		},
+		{
+			name:     "Shift expressions",
+			input:    "متغير أ = 100 >> 1؛\nمتغير ب = 100 << 1؛\nمتغير ت = 100 >>> 1؛",
+			expected: "let أ = 100 >> 1;\nlet ب = 100 << 1;\nlet ت = 100 >>> 1;",
+		},
+		{
+			name:     "Multiple Shift expressions",
+			input:    "متغير عدد = 100 == 1 >> 2 >>> 3 << 300؛",
+			expected: "let عدد = 100 == 1 >> 2 >>> 3 << 300;",
+		},
+		{
+			name:     "Additive expressions",
+			input:    "متغير جمع = 100 + 1؛\nمتغير طرح = 100 - 1؛",
+			expected: "let جمع = 100 + 1;\nlet طرح = 100 - 1;",
+		},
+		{
+			name:     "Multiple Additive expressions",
+			input:    "متغير عملية_حسابية = 100 == 1 - 2 - 3 + 300؛",
+			expected: "let عملية_حسابية = 100 == 1 - 2 - 3 + 300;",
+		},
+		{
+			name:     "Multiplicative expressions",
+			input:    "متغير ضرب = 100 * 1؛\nمتغير قسمة = 100 / 1؛\nمتغير باقي_القسمة = 100 % 1؛",
+			expected: "let ضرب = 100 * 1;\nlet قسمة = 100 / 1;\nlet باقي_القسمة = 100 % 1;",
+		},
+		{
+			name:     "Multiple Multiplicative expressions",
+			input:    "متغير عملية_حسابية = 100 == 1 % 2 / 3 * 300؛",
+			expected: "let عملية_حسابية = 100 == 1 % 2 / 3 * 300;",
+		},
+		{
+			name:     "Exponentiation expression",
+			input:    "متغير عملية_حسابية = 100 ** 1؛",
+			expected: "let عملية_حسابية = 100 ** 1;",
+		},
+		{
+			name:     "Multiple Exponentiation expressions",
+			input:    "متغير عملية_حسابية = 1 ** 2 ** 3 ** 4؛",
+			expected: "let عملية_حسابية = 1 ** 2 ** 3 ** 4;",
+		},
+		{
+			name:     "Random Binary expressions",
+			input:    "متغير عملية_حسابية = 1 | 2 ^ 3 & 4 == 5 === 6 != 7 !== 8 < 9 <= 10 > 11 >= 12 << 13 >> 14 >>> 15 + 16 - 17 * 18 / 19 % 20 ** 21؛",
+			expected: "let عملية_حسابية = 1 | 2 ^ 3 & 4 == 5 === 6 != 7 !== 8 < 9 <= 10 > 11 >= 12 << 13 >> 14 >>> 15 + 16 - 17 * 18 / 19 % 20 ** 21;",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := compiler.NewParser(compiler.NewLexer(tt.input), false)
+			program := parser.Parse()
+
+			printer := NewPrinter()
+			printer.Write(program)
+
+			if printer.Writer.Output != tt.expected {
+				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, printer.Writer.Output)
+			}
+		})
+	}
+}

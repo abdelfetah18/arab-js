@@ -40,12 +40,13 @@ func (node *Node) AsVariableDeclaration() *VariableDeclaration {
 	return node.Data.(*VariableDeclaration)
 }
 
-func (node *Node) AsDecimalLiteral() *DecimalLiteral { return node.Data.(*DecimalLiteral) }
-func (node *Node) AsStringLiteral() *StringLiteral   { return node.Data.(*StringLiteral) }
-func (node *Node) AsBooleanLiteral() *BooleanLiteral { return node.Data.(*BooleanLiteral) }
-func (node *Node) AsNullLiteral() *NullLiteral       { return node.Data.(*NullLiteral) }
-func (node *Node) AsCallExpression() *CallExpression { return node.Data.(*CallExpression) }
-func (node *Node) AsIdentifier() *Identifier         { return node.Data.(*Identifier) }
+func (node *Node) AsDecimalLiteral() *DecimalLiteral     { return node.Data.(*DecimalLiteral) }
+func (node *Node) AsStringLiteral() *StringLiteral       { return node.Data.(*StringLiteral) }
+func (node *Node) AsBooleanLiteral() *BooleanLiteral     { return node.Data.(*BooleanLiteral) }
+func (node *Node) AsNullLiteral() *NullLiteral           { return node.Data.(*NullLiteral) }
+func (node *Node) AsCallExpression() *CallExpression     { return node.Data.(*CallExpression) }
+func (node *Node) AsIdentifier() *Identifier             { return node.Data.(*Identifier) }
+func (node *Node) AsBinaryExpression() *BinaryExpression { return node.Data.(*BinaryExpression) }
 
 func (node *Node) AsIfStatement() *IfStatement       { return node.Data.(*IfStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement { return node.Data.(*BlockStatement) }

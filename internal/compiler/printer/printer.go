@@ -95,6 +95,11 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 			}
 		}
 		printer.Writer.Write(")")
+	case ast.NodeTypeBinaryExpression:
+		binaryExpression := expression.AsBinaryExpression()
+		printer.writeExpression(binaryExpression.Left)
+		printer.Writer.Writef(" %s ", binaryExpression.Operator)
+		printer.writeExpression(binaryExpression.Right)
 	}
 }
 
