@@ -113,3 +113,95 @@ func TestStringLiteral(t *testing.T) {
 		}
 	})
 }
+
+func TestBlockStatement(t *testing.T) {
+	t.Run("should parse an empty BlockStatement", func(t *testing.T) {
+		input := "{}"
+		parser := compiler.NewParser(compiler.NewLexer(input), false)
+		program := parser.Parse()
+
+		printer := NewPrinter()
+		printer.Write(program)
+
+		expected := "{\n\n}"
+
+		if printer.Writer.Output != expected {
+			t.Errorf("Expected %s, got %s\n", expected, printer.Writer.Output)
+		}
+	})
+
+	t.Run("should parse a BlockStatement with a single VariableDeclaration", func(t *testing.T) {
+		input := "{ متغير عدد = 100؛ }"
+		parser := compiler.NewParser(compiler.NewLexer(input), false)
+		program := parser.Parse()
+
+		printer := NewPrinter()
+		printer.Write(program)
+
+		expected := "{\n  let عدد = 100;\n}"
+
+		if printer.Writer.Output != expected {
+			t.Errorf("Expected:\n%s\nGot:\n%s\n", expected, printer.Writer.Output)
+		}
+	})
+
+	t.Run("should parse a BlockStatement with multiple statements", func(t *testing.T) {
+		input := "{ متغير عدد = 100؛ متغير رقم = 1؛}"
+		parser := compiler.NewParser(compiler.NewLexer(input), false)
+		program := parser.Parse()
+
+		printer := NewPrinter()
+		printer.Write(program)
+
+		expected := "{\n  let عدد = 100;\n  let رقم = 1;\n}"
+
+		if printer.Writer.Output != expected {
+			t.Errorf("Expected:\n%s\nGot:\n%s\n", expected, printer.Writer.Output)
+		}
+	})
+
+	t.Run("should parse a nested BlockStatement", func(t *testing.T) {
+		input := "{ { متغير س = 5؛ } }"
+		parser := compiler.NewParser(compiler.NewLexer(input), false)
+		program := parser.Parse()
+
+		printer := NewPrinter()
+		printer.Write(program)
+
+		expected := "{\n  {\n    let س = 5;\n  }\n}"
+
+		if printer.Writer.Output != expected {
+			t.Errorf("Expected:\n%s\nGot:\n%s\n", expected, printer.Writer.Output)
+		}
+	})
+
+	t.Run("should parse a BlockStatement with different statement types", func(t *testing.T) {
+		input := "{ احسب(1,2)؛ متغير س = 10؛ }"
+		parser := compiler.NewParser(compiler.NewLexer(input), false)
+		program := parser.Parse()
+
+		printer := NewPrinter()
+		printer.Write(program)
+
+		expected := "{\n  احسب(1, 2);\n  let س = 10;\n}"
+
+		if printer.Writer.Output != expected {
+			t.Errorf("Expected:\n%s\nGot:\n%s\n", expected, printer.Writer.Output)
+		}
+	})
+
+	t.Run("should throw on BlockStatement with missing closing brace", func(t *testing.T) {
+		input := "{ متغير عدد = 100؛ "
+		parser := compiler.NewParser(compiler.NewLexer(input), false)
+
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Expected panic for missing closing brace, but no panic occurred")
+			}
+		}()
+
+		program := parser.Parse()
+		printer := NewPrinter()
+		printer.Write(program)
+	})
+}

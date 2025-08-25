@@ -30,7 +30,10 @@ func (printer *Printer) Write(node *ast.Program) {
 }
 
 func (printer *Printer) writeStatementList(statementList []*ast.Node) {
-	for _, statement := range statementList {
+	for index, statement := range statementList {
+		if index > 0 {
+			printer.Writer.Write("\n")
+		}
 		printer.writeStatement(statement)
 	}
 }
@@ -85,8 +88,11 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 			printer.Writer.Write(callExpression.Callee.AsIdentifier().Name)
 		}
 		printer.Writer.Write("(")
-		for _, expression := range callExpression.Args {
+		for index, expression := range callExpression.Args {
 			printer.writeExpression(expression)
+			if index < len(callExpression.Args)-1 {
+				printer.Writer.Write(", ")
+			}
 		}
 		printer.Writer.Write(")")
 	}
@@ -108,5 +114,7 @@ func (printer *Printer) writeBlockStatement(blockStatement *ast.BlockStatement) 
 	printer.increaseIndent()
 	printer.writeStatementList(blockStatement.Body)
 	printer.decreaseIndent()
-	printer.Writer.Write("\n}")
+	printer.Writer.Write("\n")
+	printer.Writer.Write(strings.Repeat(" ", printer.indent))
+	printer.Writer.Write("}")
 }
