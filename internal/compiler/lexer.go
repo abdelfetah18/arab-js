@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"regexp"
 	"unicode/utf8"
 )
 
@@ -102,13 +103,15 @@ var ThreeCharTokens = map[string]TokenType{
 }
 
 type Lexer struct {
-	input        string
-	position     int
-	currentToken Token
+	input                             string
+	position                          int
+	currentToken                      Token
+	HasPrecedingOriginalNameDirective bool
+	OriginalNameDirectiveValue        string
 }
 
 func NewLexer(input string) *Lexer {
-	lexer := &Lexer{input: input, position: 0}
+	lexer := &Lexer{input: input, position: 0, HasPrecedingOriginalNameDirective: false}
 	lexer.currentToken = lexer.nextToken()
 	return lexer
 }
@@ -145,6 +148,11 @@ func (l *Lexer) isEOF() bool {
 
 func (l *Lexer) increasePosition(value int) {
 	l.position += value
+}
+
+func (l *Lexer) isNewLineCharacter() bool {
+	ch := l.current()
+	return ch == "\r" || ch == "\n"
 }
 
 func (l *Lexer) isWhiteSpace() bool {
@@ -187,6 +195,8 @@ func (l *Lexer) Peek() Token {
 }
 
 func (l *Lexer) Next() Token {
+	l.HasPrecedingOriginalNameDirective = false
+	l.OriginalNameDirectiveValue = ""
 	l.currentToken = l.nextToken()
 	return l.currentToken
 }
@@ -196,6 +206,29 @@ func (l *Lexer) nextToken() Token {
 
 	if l.isEOF() {
 		return Token{Type: EOF, Value: "", Position: l.position}
+	}
+
+	if l.currentTwoChars() == "//" {
+		comment := "//"
+		l.increasePosition(2)
+		for !l.isEOF() && !l.isNewLineCharacter() {
+			char, size := l.charAndSize()
+			comment += string(char)
+			l.increasePosition(size)
+		}
+
+		l.skipWhiteSpace()
+		// Regex to extract value inside quotes
+		re := regexp.MustCompile(`//\s*@الاسم_الأصلي\("([^"]+)"\)`)
+
+		if matches := re.FindStringSubmatch(comment); len(matches) > 1 {
+			l.OriginalNameDirectiveValue = matches[1]
+			l.HasPrecedingOriginalNameDirective = true
+		}
+
+		if l.isEOF() {
+			return Token{Type: EOF, Value: l.current(), Position: l.position}
+		}
 	}
 
 	for _, keyword := range Keywords {
