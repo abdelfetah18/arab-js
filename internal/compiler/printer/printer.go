@@ -100,7 +100,26 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 		printer.writeExpression(binaryExpression.Left)
 		printer.Writer.Writef(" %s ", binaryExpression.Operator)
 		printer.writeExpression(binaryExpression.Right)
+	case ast.NodeTypeArrayExpression:
+		arrayExpression := expression.AsArrayExpression()
+		printer.Writer.Write("[")
+		for index, element := range arrayExpression.Elements {
+			if element.Type == ast.NodeTypeSpreadElement {
+				printer.writeSpreadElement(element.AsSpreadElement())
+			} else {
+				printer.writeExpression(element)
+			}
+			if index < len(arrayExpression.Elements)-1 {
+				printer.Writer.Write(", ")
+			}
+		}
+		printer.Writer.Write("]")
 	}
+}
+
+func (printer *Printer) writeSpreadElement(spreadElement *ast.SpreadElement) {
+	printer.Writer.Write("...")
+	printer.writeExpression(spreadElement.Argument)
 }
 
 func (printer *Printer) writeIfStatement(ifStatement *ast.IfStatement) {

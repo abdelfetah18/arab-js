@@ -47,6 +47,8 @@ func (node *Node) AsNullLiteral() *NullLiteral           { return node.Data.(*Nu
 func (node *Node) AsCallExpression() *CallExpression     { return node.Data.(*CallExpression) }
 func (node *Node) AsIdentifier() *Identifier             { return node.Data.(*Identifier) }
 func (node *Node) AsBinaryExpression() *BinaryExpression { return node.Data.(*BinaryExpression) }
+func (node *Node) AsArrayExpression() *ArrayExpression   { return node.Data.(*ArrayExpression) }
+func (node *Node) AsSpreadElement() *SpreadElement       { return node.Data.(*SpreadElement) }
 
 func (node *Node) AsIfStatement() *IfStatement       { return node.Data.(*IfStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement { return node.Data.(*BlockStatement) }

@@ -323,3 +323,41 @@ func TestBinaryExpression(t *testing.T) {
 		})
 	}
 }
+
+func TestArrayExpression(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "should parse an empty array",
+			input:    "[]؛",
+			expected: "[];",
+		},
+		{
+			name:     "should parse an array",
+			input:    "[1, 'مرحبا', صحيح]؛",
+			expected: `[1, "مرحبا", true];`,
+		},
+		{
+			name:     "should parse a spread element in array",
+			input:    "[1, 'مرحبا', صحيح, ...[1, 'مرحبا', صحيح]]؛",
+			expected: `[1, "مرحبا", true, ...[1, "مرحبا", true]];`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := compiler.NewParser(compiler.NewLexer(tt.input), false)
+			program := parser.Parse()
+
+			printer := NewPrinter()
+			printer.Write(program)
+
+			if printer.Writer.Output != tt.expected {
+				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, printer.Writer.Output)
+			}
+		})
+	}
+}
