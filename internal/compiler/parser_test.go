@@ -100,3 +100,39 @@ func TestFunctionDeclaration(t *testing.T) {
 		}
 	})
 }
+
+func TestTFunctionType(t *testing.T) {
+	t.Run("should parse interface declaration with function type", func(t *testing.T) {
+		input := "واجهة مستخدم { جلب_بيانات_المستخدم: (اسم:نص) => نص }"
+
+		expected := ast.NewProgram([]*ast.Node{
+			ast.NewTInterfaceDeclaration(
+				ast.NewIdentifier("مستخدم", nil),
+				ast.NewTInterfaceBody([]*ast.Node{
+					ast.NewTPropertySignature(
+						ast.NewIdentifier("جلب_بيانات_المستخدم", nil).ToNode(),
+						ast.NewTTypeAnnotation(
+							ast.NewTFunctionType(
+								[]*ast.Identifier{
+									ast.NewIdentifier(
+										"اسم",
+										ast.NewTTypeAnnotation(
+											ast.NewTStringKeyword().ToNode()),
+									),
+								},
+								ast.NewTTypeAnnotation(ast.NewTStringKeyword().ToNode()),
+							).ToNode(),
+						),
+					).ToNode(),
+				})).ToNode(),
+		}, []*ast.Directive{})
+
+		parser := NewParser(NewLexer(input), false)
+		program := parser.Parse()
+
+		if !reflect.DeepEqual(program, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+
+}

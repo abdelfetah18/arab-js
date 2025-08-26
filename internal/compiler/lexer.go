@@ -47,6 +47,7 @@ const (
 	DoubleStar
 	TripleDots
 	Colon
+	EqualRightArrow
 	Invalid
 )
 
@@ -92,6 +93,7 @@ var TwoCharTokens = map[string]TokenType{
 	"<<": DoubleLeftArrow,
 	">>": DoubleRightArrow,
 	"**": DoubleStar,
+	"=>": EqualRightArrow,
 	"؛":  Semicolon, // Unicode character
 }
 

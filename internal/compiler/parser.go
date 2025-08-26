@@ -786,6 +786,11 @@ func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
 
 func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
 	token := p.lexer.Peek()
+
+	if token.Type == LeftParenthesis {
+		return ast.NewTTypeAnnotation(p.parseTFunctionType().ToNode())
+	}
+
 	if token.Type != Identifier {
 		panic("Expected Token Type Identifier, got " + token.Value)
 	}
@@ -819,4 +824,36 @@ func (p *Parser) parseTypedIdentifier() *ast.Identifier {
 	}
 
 	return ast.NewIdentifier(identifierName, tTypeAnnotation)
+}
+
+func (p *Parser) parseTFunctionType() *ast.TFunctionType {
+	token := p.lexer.Peek()
+	if token.Type != LeftParenthesis {
+		panic("Expected ')', got " + token.Value)
+	}
+	token = p.lexer.Next()
+	params := []*ast.Identifier{}
+	for token.Type != EOF && token.Type != Invalid && token.Type != RightParenthesis && token.Type == Identifier {
+		params = append(params, p.parseTypedIdentifier())
+		token = p.lexer.Peek()
+		if token.Type != Comma && token.Type != RightParenthesis {
+			panic("Expected ',', got " + token.Value)
+		}
+		if token.Type == Comma {
+			token = p.lexer.Next()
+		}
+	}
+	if token.Type != RightParenthesis {
+		panic("Expected '(', got " + token.Value)
+	}
+	token = p.lexer.Next()
+
+	if token.Type != EqualRightArrow {
+		panic("Expected '=>', got " + token.Value)
+
+	}
+	p.lexer.Next()
+
+	typeAnnotation := p.parseTTypeAnnotation()
+	return ast.NewTFunctionType(params, typeAnnotation)
 }

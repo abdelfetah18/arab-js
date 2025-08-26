@@ -686,3 +686,22 @@ func (returnStatement *ReturnStatement) ToNode() *Node {
 		Data: returnStatement,
 	}
 }
+
+type TFunctionType struct {
+	Params         []*Identifier
+	TypeAnnotation *TTypeAnnotation
+}
+
+func NewTFunctionType(params []*Identifier, typeAnnotation *TTypeAnnotation) *TFunctionType {
+	return &TFunctionType{
+		Params:         params,
+		TypeAnnotation: typeAnnotation,
+	}
+}
+
+func (tFunctionType *TFunctionType) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTFunctionType,
+		Data: tFunctionType,
+	}
+}

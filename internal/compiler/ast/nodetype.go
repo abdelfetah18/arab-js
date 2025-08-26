@@ -44,4 +44,5 @@ const (
 	NodeTypeTInterfaceDeclaration
 	NodeTypeTInterfaceBody
 	NodeTypeTPropertySignature
+	NodeTypeTFunctionType
 )
