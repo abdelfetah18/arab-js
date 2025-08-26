@@ -40,6 +40,10 @@ func (node *Node) AsVariableDeclaration() *VariableDeclaration {
 	return node.Data.(*VariableDeclaration)
 }
 
+func (node *Node) AsFunctionDeclaration() *FunctionDeclaration {
+	return node.Data.(*FunctionDeclaration)
+}
+
 func (node *Node) AsDecimalLiteral() *DecimalLiteral     { return node.Data.(*DecimalLiteral) }
 func (node *Node) AsStringLiteral() *StringLiteral       { return node.Data.(*StringLiteral) }
 func (node *Node) AsBooleanLiteral() *BooleanLiteral     { return node.Data.(*BooleanLiteral) }

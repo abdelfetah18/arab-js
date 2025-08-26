@@ -39,7 +39,7 @@ func (printer *Printer) writeStatementList(statementList []*ast.Node) {
 }
 
 func (printer *Printer) writeStatement(statement *ast.Node) {
-	printer.Writer.Write(strings.Repeat(" ", printer.indent))
+	printer.writeIndent()
 	switch statement.Type {
 	case ast.NodeTypeVariableDeclaration:
 		printer.writeVariableDeclaration(statement.AsVariableDeclaration())
@@ -50,6 +50,8 @@ func (printer *Printer) writeStatement(statement *ast.Node) {
 		printer.writeBlockStatement(statement.AsBlockStatement())
 	case ast.NodeTypeExpressionStatement:
 		printer.writeExpressionStatement(statement.AsExpressionStatement())
+	case ast.NodeTypeFunctionDeclaration:
+		printer.writeFunctionDeclaration(statement.AsFunctionDeclaration())
 	}
 }
 
@@ -171,7 +173,13 @@ func (printer *Printer) writeIfStatement(ifStatement *ast.IfStatement) {
 	printer.Writer.Write("if (")
 	printer.writeExpression(ifStatement.TestExpression)
 	printer.Writer.Write(") ")
-	printer.writeStatement(ifStatement.ConsequentStatement)
+	// FIXME: Find a better way. writeStatement adds indent.
+	// 		  We check for block statements here to prevent extra indent.
+	if ifStatement.ConsequentStatement.Type == ast.NodeTypeBlockStatement {
+		printer.writeBlockStatement(ifStatement.ConsequentStatement.AsBlockStatement())
+	} else {
+		printer.writeStatement(ifStatement.ConsequentStatement)
+	}
 	if ifStatement.AlternateStatement != nil {
 		printer.Writer.Write(" else ")
 		printer.writeStatement(ifStatement.AlternateStatement)
@@ -179,6 +187,11 @@ func (printer *Printer) writeIfStatement(ifStatement *ast.IfStatement) {
 }
 
 func (printer *Printer) writeBlockStatement(blockStatement *ast.BlockStatement) {
+	if len(blockStatement.Body) == 0 {
+		printer.Writer.Write("{}")
+		return
+	}
+
 	printer.Writer.Write("{\n")
 	printer.increaseIndent()
 	printer.writeStatementList(blockStatement.Body)
@@ -196,4 +209,19 @@ func (printer *Printer) writeMemberExpression(memberExpression *ast.MemberExpres
 	printer.writeExpression(memberExpression.Object)
 	printer.Writer.Write(".")
 	printer.writeExpression(memberExpression.Property)
+}
+
+func (printer *Printer) writeFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
+	printer.Writer.Write("function ")
+	printer.Writer.Write(functionDeclaration.ID.Name)
+	printer.Writer.Write("(")
+	for index, param := range functionDeclaration.Params {
+		printer.Writer.Write(param.Name)
+
+		if index < len(functionDeclaration.Params)-1 {
+			printer.Writer.Write(", ")
+		}
+	}
+	printer.Writer.Write(") ")
+	printer.writeBlockStatement(functionDeclaration.Body)
 }

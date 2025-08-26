@@ -123,7 +123,7 @@ func TestBlockStatement(t *testing.T) {
 		printer := NewPrinter()
 		printer.Write(program)
 
-		expected := "{\n\n}"
+		expected := "{}"
 
 		if printer.Writer.Output != expected {
 			t.Errorf("Expected %s, got %s\n", expected, printer.Writer.Output)
@@ -451,6 +451,77 @@ func TestMemberExpression(t *testing.T) {
 		// 	input:    "متغير س = اشخاص[0].اسم؛",
 		// 	expected: "let س = اشخاص[0].اسم;",
 		// },
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := compiler.NewParser(compiler.NewLexer(tt.input), false)
+			program := parser.Parse()
+
+			printer := NewPrinter()
+			printer.Write(program)
+
+			if printer.Writer.Output != tt.expected {
+				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, printer.Writer.Output)
+			}
+		})
+	}
+}
+
+func TestFunctionDeclaration(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty function declaration",
+			input:    "دالة مرحبا() {}",
+			expected: "function مرحبا() {}",
+		},
+		{
+			name:     "function with single parameter",
+			input:    "دالة اطبع(نص) {}",
+			expected: "function اطبع(نص) {}",
+		},
+		{
+			name:     "function with multiple parameters",
+			input:    "دالة جمع(أ, ب) {}",
+			expected: "function جمع(أ, ب) {}",
+		},
+		{
+			name: "function with a single statement in body",
+			input: `دالة مرحبا() {
+  اطبع("أهلا")؛
+}`,
+			expected: `function مرحبا() {
+  اطبع("أهلا");
+}`,
+		},
+		{
+			name: "function with multiple statements in body",
+			input: `دالة عملية(أ, ب) {
+  متغير مجموع = أ + ب؛
+  متغير طرح = أ - ب؛
+}`,
+			expected: `function عملية(أ, ب) {
+  let مجموع = أ + ب;
+  let طرح = أ - ب;
+}`,
+		},
+		{
+			name: "nested blocks inside function",
+			input: `دالة تحقق(قيمة) {
+  إذا(قيمة) {
+    اطبع("صحيح")؛
+  }
+}`,
+			expected: `function تحقق(قيمة) {
+  if (قيمة) {
+    اطبع("صحيح");
+  }
+}`,
+		},
 	}
 
 	for _, tt := range tests {
