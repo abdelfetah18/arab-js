@@ -52,6 +52,9 @@ func (printer *Printer) writeStatement(statement *ast.Node) {
 		printer.writeExpressionStatement(statement.AsExpressionStatement())
 	case ast.NodeTypeFunctionDeclaration:
 		printer.writeFunctionDeclaration(statement.AsFunctionDeclaration())
+	case ast.NodeTypeReturnStatement:
+		printer.writeReturnStatement(statement.AsReturnStatement())
+		printer.Writer.Write(";")
 	}
 }
 
@@ -224,4 +227,9 @@ func (printer *Printer) writeFunctionDeclaration(functionDeclaration *ast.Functi
 	}
 	printer.Writer.Write(") ")
 	printer.writeBlockStatement(functionDeclaration.Body)
+}
+
+func (printer *Printer) writeReturnStatement(returnStatement *ast.ReturnStatement) {
+	printer.Writer.Write("return ")
+	printer.writeExpression(returnStatement.Argument)
 }

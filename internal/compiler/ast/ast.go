@@ -58,9 +58,10 @@ func (node *Node) AsObjectProperty() *ObjectProperty     { return node.Data.(*Ob
 func (node *Node) AsObjectMethod() *ObjectMethod         { return node.Data.(*ObjectMethod) }
 func (node *Node) AsMemberExpression() *MemberExpression { return node.Data.(*MemberExpression) }
 
-func (node *Node) AsIfStatement() *IfStatement       { return node.Data.(*IfStatement) }
-func (node *Node) AsBlockStatement() *BlockStatement { return node.Data.(*BlockStatement) }
-func (node *Node) AsProgram() *Program               { return node.Data.(*Program) }
+func (node *Node) AsIfStatement() *IfStatement         { return node.Data.(*IfStatement) }
+func (node *Node) AsBlockStatement() *BlockStatement   { return node.Data.(*BlockStatement) }
+func (node *Node) AsProgram() *Program                 { return node.Data.(*Program) }
+func (node *Node) AsReturnStatement() *ReturnStatement { return node.Data.(*ReturnStatement) }
 func (node *Node) AsExpressionStatement() *ExpressionStatement {
 	return node.Data.(*ExpressionStatement)
 }
@@ -662,5 +663,20 @@ func (tPropertySignature *TPropertySignature) ToNode() *Node {
 	return &Node{
 		Type: NodeTypeTPropertySignature,
 		Data: tPropertySignature,
+	}
+}
+
+type ReturnStatement struct {
+	Argument *Node
+}
+
+func NewReturnStatement(argument *Node) *ReturnStatement {
+	return &ReturnStatement{Argument: argument}
+}
+
+func (returnStatement *ReturnStatement) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeReturnStatement,
+		Data: returnStatement,
 	}
 }

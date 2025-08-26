@@ -522,6 +522,11 @@ func TestFunctionDeclaration(t *testing.T) {
   }
 }`,
 		},
+		{
+			name:     "function with return statement",
+			input:    "دالة جمع(أ, ب) { إرجاع أ + ب؛ }",
+			expected: "function جمع(أ, ب) {\n  return أ + ب;\n}",
+		},
 	}
 
 	for _, tt := range tests {

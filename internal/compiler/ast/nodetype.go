@@ -14,6 +14,7 @@ const (
 	NodeTypeDecimalLiteral
 	NodeTypeIfStatement
 	NodeTypeBlockStatement
+	NodeTypeReturnStatement
 	NodeTypeAssignmentExpression
 	NodeTypeFunctionDeclaration
 	NodeTypeCallExpression

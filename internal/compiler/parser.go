@@ -89,6 +89,10 @@ func (p *Parser) parseStatement() *ast.Node {
 		}
 		return p.parseExportNamedDeclaration().ToNode()
 	}
+	if token.Type == KeywordToken && token.Value == "إرجاع" {
+		p.lexer.Next()
+		return p.parseReturnStatement().ToNode()
+	}
 	if token.Type == LeftCurlyBrace {
 		p.lexer.Next()
 		return p.parseBlockStatement().ToNode()
@@ -795,4 +799,14 @@ func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
 	p.lexer.Next()
 
 	return ast.NewTTypeAnnotation(p.getTypeNodeFromIdentifier(token))
+}
+
+func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+	argument := p.parseExpression()
+	if p.lexer.Peek().Type != Semicolon {
+		panic("Expected '؛', got " + p.lexer.Peek().Value)
+	}
+	p.lexer.Next()
+
+	return ast.NewReturnStatement(argument)
 }
