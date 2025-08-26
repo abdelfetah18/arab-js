@@ -12,10 +12,10 @@ func TestTInterfaceDeclaration(t *testing.T) {
 
 		expected := ast.NewProgram([]*ast.Node{
 			ast.NewTInterfaceDeclaration(
-				ast.NewIdentifier("مستخدم"),
+				ast.NewIdentifier("مستخدم", nil),
 				ast.NewTInterfaceBody([]*ast.Node{
 					ast.NewTPropertySignature(
-						ast.NewIdentifier("الاسم").ToNode(),
+						ast.NewIdentifier("الاسم", nil).ToNode(),
 						ast.NewTTypeAnnotation(
 							ast.NewTStringKeyword().ToNode(),
 						),
@@ -36,27 +36,60 @@ func TestTInterfaceDeclaration(t *testing.T) {
 
 		expected := ast.NewProgram([]*ast.Node{
 			ast.NewTInterfaceDeclaration(
-				ast.NewIdentifier("بيانات"),
+				ast.NewIdentifier("بيانات", nil),
 				ast.NewTInterfaceBody([]*ast.Node{
 					ast.NewTPropertySignature(
-						ast.NewIdentifier("النص").ToNode(),
+						ast.NewIdentifier("النص", nil).ToNode(),
 						ast.NewTTypeAnnotation(
 							ast.NewTStringKeyword().ToNode(),
 						),
 					).ToNode(),
 					ast.NewTPropertySignature(
-						ast.NewIdentifier("الرقم").ToNode(),
+						ast.NewIdentifier("الرقم", nil).ToNode(),
 						ast.NewTTypeAnnotation(
 							ast.NewTNumberKeyword().ToNode(),
 						),
 					).ToNode(),
 					ast.NewTPropertySignature(
-						ast.NewIdentifier("الحالة").ToNode(),
+						ast.NewIdentifier("الحالة", nil).ToNode(),
 						ast.NewTTypeAnnotation(
 							ast.NewTBooleanKeyword().ToNode(),
 						),
 					).ToNode(),
 				})).ToNode(),
+		}, []*ast.Directive{})
+
+		parser := NewParser(NewLexer(input), false)
+		program := parser.Parse()
+
+		if !reflect.DeepEqual(program, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+}
+
+func TestFunctionDeclaration(t *testing.T) {
+	t.Run("should parse typed function", func(t *testing.T) {
+		input := "دالة جمع (أ: عدد, ب: عدد) : عدد { إرجاع أ + ب؛ }"
+
+		expected := ast.NewProgram([]*ast.Node{
+			ast.NewFunctionDeclaration(
+				ast.NewIdentifier("جمع", nil),
+				[]*ast.Identifier{
+					ast.NewIdentifier("أ", ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode())),
+					ast.NewIdentifier("ب", ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode())),
+				},
+				ast.NewBlockStatement([]*ast.Node{
+					ast.NewReturnStatement(
+						ast.NewBinaryExpression(
+							"+",
+							ast.NewIdentifier("أ", nil).ToNode(),
+							ast.NewIdentifier("ب", nil).ToNode(),
+						).ToNode(),
+					).ToNode(),
+				}),
+				ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode()),
+			).ToNode(),
 		}, []*ast.Directive{})
 
 		parser := NewParser(NewLexer(input), false)

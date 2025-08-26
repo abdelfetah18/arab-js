@@ -127,7 +127,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 			}
 			importSpecifiers = append(
 				importSpecifiers,
-				ast.NewImportSpecifier(ast.NewIdentifier(token.Value), ast.NewIdentifier(token.Value).ToNode()),
+				ast.NewImportSpecifier(ast.NewIdentifier(token.Value, nil), ast.NewIdentifier(token.Value, nil).ToNode()),
 			)
 			p.lexer.Next()
 			token = p.lexer.Peek()
@@ -140,7 +140,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 		}
 		p.lexer.Next()
 	} else if token.Type == Identifier {
-		importSpecifiers = append(importSpecifiers, ast.NewImportDefaultSpecifier(ast.NewIdentifier(token.Value)))
+		importSpecifiers = append(importSpecifiers, ast.NewImportDefaultSpecifier(ast.NewIdentifier(token.Value, nil)))
 		p.lexer.Next()
 		token = p.lexer.Peek()
 		if token.Type == Comma {
@@ -155,7 +155,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 					}
 					importSpecifiers = append(
 						importSpecifiers,
-						ast.NewImportSpecifier(ast.NewIdentifier(token.Value), ast.NewIdentifier(token.Value).ToNode()),
+						ast.NewImportSpecifier(ast.NewIdentifier(token.Value, nil), ast.NewIdentifier(token.Value, nil).ToNode()),
 					)
 					p.lexer.Next()
 					token = p.lexer.Peek()
@@ -180,7 +180,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 		if token.Type != Identifier {
 			panic("Expected Identifier after 'as' got " + token.Value)
 		}
-		importSpecifiers = append(importSpecifiers, ast.NewImportNamespaceSpecifier(ast.NewIdentifier(token.Value)))
+		importSpecifiers = append(importSpecifiers, ast.NewImportNamespaceSpecifier(ast.NewIdentifier(token.Value, nil)))
 		p.lexer.Next()
 	} else {
 		panic("Unexpected token in import: " + token.Value)
@@ -216,7 +216,7 @@ func (p *Parser) parseExportNamedDeclaration() *ast.ExportNamedDeclaration {
 			if token.Type != Identifier {
 				panic("Expected Identifier in export got " + token.Value)
 			}
-			id := ast.NewIdentifier(token.Value)
+			id := ast.NewIdentifier(token.Value, nil)
 			specifiers = append(specifiers, ast.NewExportSpecifier(id, id.ToNode()))
 			p.lexer.Next()
 			token = p.lexer.Peek()
@@ -341,7 +341,7 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 	token := p.lexer.Peek()
 	if token.Type == Identifier {
 		p.lexer.Next()
-		return ast.NewIdentifier(token.Value).ToNode()
+		return ast.NewIdentifier(token.Value, nil).ToNode()
 	}
 	if token.Type == KeywordToken && token.Value == "فارغ" {
 		p.lexer.Next()
@@ -402,7 +402,7 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 				var key *ast.Node
 				switch token.Type {
 				case Identifier:
-					key = ast.NewIdentifier(token.Value).ToNode()
+					key = ast.NewIdentifier(token.Value, nil).ToNode()
 					token = p.lexer.Next()
 				case DoubleQuoteString, SingleQuoteString:
 					key = ast.NewStringLiteral(token.Value).ToNode()
@@ -459,28 +459,13 @@ func (p *Parser) getTypeNodeFromIdentifier(token Token) *ast.Node {
 		return ast.NewTBooleanKeyword().ToNode()
 	}
 
-	return ast.NewIdentifier(token.Value).ToNode()
+	return ast.NewIdentifier(token.Value, nil).ToNode()
 }
 
 func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
-	idToken := p.lexer.Peek()
-	if idToken.Type != Identifier {
-		panic("Expected identifier, got " + idToken.Value)
-	}
-	identifier := ast.NewIdentifier(idToken.Value)
+	identifier := p.parseTypedIdentifier()
 
-	token := p.lexer.Next()
-	var typeAnnotation *ast.TTypeAnnotation = nil
-	if token.Type == Colon {
-		token = p.lexer.Next()
-		if token.Type != Identifier {
-			panic("Expected Token Type Identifier, got " + token.Value)
-		}
-
-		typeAnnotation = ast.NewTTypeAnnotation(p.getTypeNodeFromIdentifier(token))
-		token = p.lexer.Next()
-	}
-
+	token := p.lexer.Peek()
 	if token.Type != Equal {
 		panic("Expected '=', got " + token.Value)
 	}
@@ -492,7 +477,7 @@ func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 		panic("Expected '؛', got " + semicolon.Value)
 	}
 	p.lexer.Next()
-	return ast.NewVariableDeclaration(identifier, init, typeAnnotation)
+	return ast.NewVariableDeclaration(identifier, init)
 }
 
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
@@ -500,7 +485,7 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 	if token.Type != Identifier {
 		panic("Expected 'Identifier', got " + token.Value)
 	}
-	identifier := ast.NewIdentifier(token.Value)
+	identifier := ast.NewIdentifier(token.Value, nil)
 	token = p.lexer.Next()
 	if token.Type != LeftParenthesis {
 		panic("Expected ')', got " + token.Value)
@@ -508,8 +493,8 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 	token = p.lexer.Next()
 	params := []*ast.Identifier{}
 	for token.Type != EOF && token.Type != Invalid && token.Type != RightParenthesis && token.Type == Identifier {
-		params = append(params, ast.NewIdentifier(token.Value))
-		token = p.lexer.Next()
+		params = append(params, p.parseTypedIdentifier())
+		token = p.lexer.Peek()
 		if token.Type != Comma && token.Type != RightParenthesis {
 			panic("Expected ',', got " + token.Value)
 		}
@@ -521,12 +506,20 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 		panic("Expected '(', got " + token.Value)
 	}
 	token = p.lexer.Next()
+
+	var tTypeAnnotation *ast.TTypeAnnotation = nil
+	if token.Type == Colon {
+		p.lexer.Next()
+		tTypeAnnotation = p.parseTTypeAnnotation()
+	}
+
+	token = p.lexer.Peek()
 	if token.Type != LeftCurlyBrace {
 		panic("Expecting '}' got " + token.Value)
 	}
 	p.lexer.Next()
 	body := p.parseBlockStatement()
-	return ast.NewFunctionDeclaration(identifier, params, body)
+	return ast.NewFunctionDeclaration(identifier, params, body, tTypeAnnotation)
 }
 
 func (p *Parser) parseLeftHandSideExpression() *ast.Node {
@@ -563,7 +556,7 @@ func (p *Parser) parseMemberExpression() *ast.Node {
 			if token.Type != Identifier {
 				panic("Expected Identifier but got " + token.Value)
 			}
-			memberExpression = ast.NewMemberExpression(memberExpression, ast.NewIdentifier(token.Value).ToNode()).ToNode()
+			memberExpression = ast.NewMemberExpression(memberExpression, ast.NewIdentifier(token.Value, nil).ToNode()).ToNode()
 			token = p.lexer.Next()
 		}
 		return memberExpression
@@ -726,7 +719,7 @@ func (p *Parser) parseTInterfaceDeclaration() *ast.TInterfaceDeclaration {
 		panic("Expected Identifier got " + token.Value)
 	}
 
-	id := ast.NewIdentifier(token.Value)
+	id := ast.NewIdentifier(token.Value, nil)
 	token = p.lexer.Next()
 
 	body := p.parseTInterfaceBody()
@@ -746,7 +739,7 @@ func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
 		var key *ast.Node
 		switch token.Type {
 		case Identifier:
-			key = ast.NewIdentifier(token.Value).ToNode()
+			key = ast.NewIdentifier(token.Value, nil).ToNode()
 			token = p.lexer.Next()
 		case DoubleQuoteString, SingleQuoteString:
 			key = ast.NewStringLiteral(token.Value).ToNode()
@@ -809,4 +802,21 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	p.lexer.Next()
 
 	return ast.NewReturnStatement(argument)
+}
+
+func (p *Parser) parseTypedIdentifier() *ast.Identifier {
+	token := p.lexer.Peek()
+	if token.Type != Identifier {
+		panic("Expected Identifier, got " + token.Value)
+	}
+	identifierName := token.Value
+	token = p.lexer.Next()
+
+	var tTypeAnnotation *ast.TTypeAnnotation = nil
+	if token.Type == Colon {
+		token = p.lexer.Next()
+		tTypeAnnotation = p.parseTTypeAnnotation()
+	}
+
+	return ast.NewIdentifier(identifierName, tTypeAnnotation)
 }

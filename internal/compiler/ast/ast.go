@@ -90,13 +90,12 @@ func (expressionStatement *ExpressionStatement) ToNode() *Node {
 }
 
 type VariableDeclaration struct {
-	Identifier     *Identifier
-	Initializer    *Initializer
-	TypeAnnotation *TTypeAnnotation
+	Identifier  *Identifier
+	Initializer *Initializer
 }
 
-func NewVariableDeclaration(identifier *Identifier, initializer *Initializer, typeAnnotation *TTypeAnnotation) *VariableDeclaration {
-	return &VariableDeclaration{Identifier: identifier, Initializer: initializer, TypeAnnotation: typeAnnotation}
+func NewVariableDeclaration(identifier *Identifier, initializer *Initializer) *VariableDeclaration {
+	return &VariableDeclaration{Identifier: identifier, Initializer: initializer}
 }
 
 func (variableDeclaration *VariableDeclaration) ToNode() *Node {
@@ -174,11 +173,12 @@ func (tNullKeyword TNullKeyword) ToNode() *Node {
 }
 
 type Identifier struct {
-	Name string
+	Name           string
+	TypeAnnotation *TTypeAnnotation
 }
 
-func NewIdentifier(name string) *Identifier {
-	return &Identifier{Name: name}
+func NewIdentifier(name string, typeAnnotation *TTypeAnnotation) *Identifier {
+	return &Identifier{Name: name, TypeAnnotation: typeAnnotation}
 }
 
 func (identifier *Identifier) ToNode() *Node {
@@ -311,13 +311,19 @@ func (assignmentExpression *AssignmentExpression) ToNode() *Node {
 }
 
 type FunctionDeclaration struct {
-	ID     *Identifier
-	Params []*Identifier
-	Body   *BlockStatement
+	ID              *Identifier
+	Params          []*Identifier
+	Body            *BlockStatement
+	TTypeAnnotation *TTypeAnnotation
 }
 
-func NewFunctionDeclaration(id *Identifier, params []*Identifier, body *BlockStatement) *FunctionDeclaration {
-	return &FunctionDeclaration{ID: id, Params: params, Body: body}
+func NewFunctionDeclaration(id *Identifier, params []*Identifier, body *BlockStatement, tTypeAnnotation *TTypeAnnotation) *FunctionDeclaration {
+	return &FunctionDeclaration{
+		ID:              id,
+		Params:          params,
+		Body:            body,
+		TTypeAnnotation: tTypeAnnotation,
+	}
 }
 
 func (functionDeclaration *FunctionDeclaration) ToNode() *Node {

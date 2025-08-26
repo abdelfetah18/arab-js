@@ -37,7 +37,7 @@ func (c *Checker) checkStatement(node *ast.Node) {
 }
 
 func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
-	if variableDeclaration.TypeAnnotation.TypeAnnotation.Type == ast.NodeTypeTNumberKeyword {
+	if variableDeclaration.Identifier.TypeAnnotation.TypeAnnotation.Type == ast.NodeTypeTNumberKeyword {
 		if variableDeclaration.Initializer.Expression.Type != ast.NodeTypeDecimalLiteral {
 			c.error("Type 'string' is not assignable to type 'number'")
 			return
@@ -108,7 +108,7 @@ func BuildSymbolTable(program *ast.Program) *SymbolTable {
 		if node.Type == ast.NodeTypeVariableDeclaration {
 			variableDeclaration := node.AsVariableDeclaration()
 
-			typeAnnotation := variableDeclaration.TypeAnnotation.TypeAnnotation
+			typeAnnotation := variableDeclaration.Identifier.TypeAnnotation.TypeAnnotation
 			if typeAnnotation.Type == ast.NodeTypeTNumberKeyword {
 				currentScope.AddVariable(variableDeclaration.Identifier.Name, TypeNumber)
 			}
