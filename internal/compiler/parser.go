@@ -103,6 +103,11 @@ func (p *Parser) parseStatement() *ast.Node {
 		return p.parseTInterfaceDeclaration().ToNode()
 	}
 
+	if token.Type == Identifier && token.Value == "نوع" {
+		p.lexer.Next()
+		return p.parseTTypeAliasDeclaration().ToNode()
+	}
+
 	if p.isExpression() {
 		expression := p.parseExpression()
 		token := p.lexer.Peek()
@@ -856,4 +861,22 @@ func (p *Parser) parseTFunctionType() *ast.TFunctionType {
 
 	typeAnnotation := p.parseTTypeAnnotation()
 	return ast.NewTFunctionType(params, typeAnnotation)
+}
+
+func (p *Parser) parseTTypeAliasDeclaration() *ast.TTypeAliasDeclaration {
+	token := p.lexer.Peek()
+	if token.Type != Identifier {
+		panic("Expected Identifier, got " + token.Value)
+	}
+	identifier := ast.NewIdentifier(token.Value, nil)
+	token = p.lexer.Next()
+
+	if token.Type != Equal {
+		panic("Expected '=', got " + token.Value)
+	}
+	token = p.lexer.Next()
+
+	typeAnnotation := p.parseTTypeAnnotation()
+
+	return ast.NewTTypeAliasDeclaration(identifier, typeAnnotation)
 }

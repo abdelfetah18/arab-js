@@ -45,4 +45,5 @@ const (
 	NodeTypeTInterfaceBody
 	NodeTypeTPropertySignature
 	NodeTypeTFunctionType
+	NodeTypeTTypeAliasDeclaration
 )

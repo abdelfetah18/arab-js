@@ -136,3 +136,24 @@ func TestTFunctionType(t *testing.T) {
 	})
 
 }
+
+func TestTTypeAliasDeclaration(t *testing.T) {
+	t.Run("should parse type alias declaration", func(t *testing.T) {
+		input := "نوع الاسم = نص"
+
+		expected := ast.NewProgram([]*ast.Node{
+			ast.NewTTypeAliasDeclaration(
+				ast.NewIdentifier("الاسم", nil),
+				ast.NewTTypeAnnotation(ast.NewTStringKeyword().ToNode()),
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		parser := NewParser(NewLexer(input), false)
+		program := parser.Parse()
+
+		if !reflect.DeepEqual(program, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+
+}

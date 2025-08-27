@@ -705,3 +705,22 @@ func (tFunctionType *TFunctionType) ToNode() *Node {
 		Data: tFunctionType,
 	}
 }
+
+type TTypeAliasDeclaration struct {
+	Id             *Identifier
+	TypeAnnotation *TTypeAnnotation
+}
+
+func NewTTypeAliasDeclaration(id *Identifier, typeAnnotation *TTypeAnnotation) *TTypeAliasDeclaration {
+	return &TTypeAliasDeclaration{
+		Id:             id,
+		TypeAnnotation: typeAnnotation,
+	}
+}
+
+func (tTypeAliasDeclaration *TTypeAliasDeclaration) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTFunctionType,
+		Data: tTypeAliasDeclaration,
+	}
+}
