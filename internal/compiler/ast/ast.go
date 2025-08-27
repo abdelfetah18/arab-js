@@ -724,3 +724,18 @@ func (tTypeAliasDeclaration *TTypeAliasDeclaration) ToNode() *Node {
 		Data: tTypeAliasDeclaration,
 	}
 }
+
+type TTypeLiteral struct {
+	Members []*Node
+}
+
+func NewTTypeLiteral(members []*Node) *TTypeLiteral {
+	return &TTypeLiteral{Members: members}
+}
+
+func (tTypeLiteral *TTypeLiteral) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTFunctionType,
+		Data: tTypeLiteral,
+	}
+}

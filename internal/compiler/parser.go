@@ -796,6 +796,10 @@ func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
 		return ast.NewTTypeAnnotation(p.parseTFunctionType().ToNode())
 	}
 
+	if token.Type == LeftCurlyBrace {
+		return ast.NewTTypeAnnotation(p.parseTTypeLiteral().ToNode())
+	}
+
 	if token.Type != Identifier {
 		panic("Expected Token Type Identifier, got " + token.Value)
 	}
@@ -879,4 +883,61 @@ func (p *Parser) parseTTypeAliasDeclaration() *ast.TTypeAliasDeclaration {
 	typeAnnotation := p.parseTTypeAnnotation()
 
 	return ast.NewTTypeAliasDeclaration(identifier, typeAnnotation)
+}
+
+func (p *Parser) parseTTypeLiteral() *ast.TTypeLiteral {
+	token := p.lexer.Peek()
+	if token.Type != LeftCurlyBrace {
+		panic("Expected '}' got " + token.Value)
+	}
+	token = p.lexer.Next()
+
+	members := []*ast.Node{}
+	for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
+		var key *ast.Node
+		switch token.Type {
+		case Identifier:
+			key = ast.NewIdentifier(token.Value, nil).ToNode()
+			token = p.lexer.Next()
+		case DoubleQuoteString, SingleQuoteString:
+			key = ast.NewStringLiteral(token.Value).ToNode()
+			token = p.lexer.Next()
+		case Decimal:
+			key = ast.NewDecimalLiteral(token.Value).ToNode()
+			token = p.lexer.Next()
+		default:
+			panic("Expected a valid key but got " + token.Value)
+		}
+
+		if token.Type == Colon {
+			token = p.lexer.Next()
+			members = append(members, ast.NewTPropertySignature(key, p.parseTTypeAnnotation()).ToNode())
+			token = p.lexer.Peek()
+			if token.Type == Comma {
+				token = p.lexer.Next()
+			}
+		} else {
+			if token.Type != Comma && token.Type != RightCurlyBrace {
+				panic("A Expected '{' but got " + token.Value)
+			}
+			if token.Type == Comma {
+				token = p.lexer.Next()
+			}
+			if key.Type == ast.NodeTypeIdentifier {
+				members = append(members, ast.NewTPropertySignature(key, p.parseTTypeAnnotation()).ToNode())
+			} else {
+				panic("Expected Identifier but got " + token.Value)
+			}
+		}
+
+		token = p.lexer.Peek()
+	}
+	if token.Type != RightCurlyBrace {
+		panic("Expected '{' but got " + token.Value)
+	}
+	p.lexer.Next()
+
+	token = p.lexer.Next()
+
+	return ast.NewTTypeLiteral(members)
 }

@@ -157,3 +157,71 @@ func TestTTypeAliasDeclaration(t *testing.T) {
 	})
 
 }
+
+func TestTTypeLiteral(t *testing.T) {
+	t.Run("should parse type literal", func(t *testing.T) {
+		input := "نوع مستخدم = { الاسم: نص }"
+
+		expected := ast.NewProgram([]*ast.Node{
+			ast.NewTTypeAliasDeclaration(
+				ast.NewIdentifier("مستخدم", nil),
+				ast.NewTTypeAnnotation(
+					ast.NewTTypeLiteral([]*ast.Node{
+						ast.NewTPropertySignature(
+							ast.NewIdentifier("الاسم", nil).ToNode(),
+							ast.NewTTypeAnnotation(
+								ast.NewTStringKeyword().ToNode(),
+							),
+						).ToNode(),
+					}).ToNode(),
+				),
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		parser := NewParser(NewLexer(input), false)
+		program := parser.Parse()
+
+		if !reflect.DeepEqual(program, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+
+	t.Run("should parse type literal with multiple properties", func(t *testing.T) {
+		input := "نوع بيانات = { النص: نص, الرقم: عدد, الحالة: قيمة_منطقية }"
+
+		expected := ast.NewProgram([]*ast.Node{
+			ast.NewTTypeAliasDeclaration(
+				ast.NewIdentifier("بيانات", nil),
+				ast.NewTTypeAnnotation(
+					ast.NewTTypeLiteral([]*ast.Node{
+						ast.NewTPropertySignature(
+							ast.NewIdentifier("النص", nil).ToNode(),
+							ast.NewTTypeAnnotation(
+								ast.NewTStringKeyword().ToNode(),
+							),
+						).ToNode(),
+						ast.NewTPropertySignature(
+							ast.NewIdentifier("الرقم", nil).ToNode(),
+							ast.NewTTypeAnnotation(
+								ast.NewTNumberKeyword().ToNode(),
+							),
+						).ToNode(),
+						ast.NewTPropertySignature(
+							ast.NewIdentifier("الحالة", nil).ToNode(),
+							ast.NewTTypeAnnotation(
+								ast.NewTBooleanKeyword().ToNode(),
+							),
+						).ToNode(),
+					}).ToNode(),
+				),
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		parser := NewParser(NewLexer(input), false)
+		program := parser.Parse()
+
+		if !reflect.DeepEqual(program, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+}
