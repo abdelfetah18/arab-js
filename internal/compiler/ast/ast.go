@@ -92,10 +92,11 @@ func (expressionStatement *ExpressionStatement) ToNode() *Node {
 type VariableDeclaration struct {
 	Identifier  *Identifier
 	Initializer *Initializer
+	Declare     bool
 }
 
-func NewVariableDeclaration(identifier *Identifier, initializer *Initializer) *VariableDeclaration {
-	return &VariableDeclaration{Identifier: identifier, Initializer: initializer}
+func NewVariableDeclaration(identifier *Identifier, initializer *Initializer, declare bool) *VariableDeclaration {
+	return &VariableDeclaration{Identifier: identifier, Initializer: initializer, Declare: declare}
 }
 
 func (variableDeclaration *VariableDeclaration) ToNode() *Node {

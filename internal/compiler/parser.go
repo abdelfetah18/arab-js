@@ -108,6 +108,21 @@ func (p *Parser) parseStatement() *ast.Node {
 		return p.parseTTypeAliasDeclaration().ToNode()
 	}
 
+	if token.Type == Identifier && token.Value == "تصريح" {
+		token := p.lexer.Next()
+		if token.Type == KeywordToken && token.Value == "متغير" {
+			p.lexer.Next()
+			identifier := p.parseTypedIdentifier()
+			token := p.lexer.Peek()
+			if token.Type != Semicolon {
+				panic("Expected '؛', got " + token.Value)
+			}
+			p.lexer.Next()
+
+			return ast.NewVariableDeclaration(identifier, nil, true).ToNode()
+		}
+	}
+
 	if p.isExpression() {
 		expression := p.parseExpression()
 		token := p.lexer.Peek()
@@ -482,7 +497,7 @@ func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 		panic("Expected '؛', got " + semicolon.Value)
 	}
 	p.lexer.Next()
-	return ast.NewVariableDeclaration(identifier, init)
+	return ast.NewVariableDeclaration(identifier, init, false)
 }
 
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {

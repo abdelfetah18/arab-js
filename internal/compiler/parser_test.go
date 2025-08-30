@@ -225,3 +225,27 @@ func TestTTypeLiteral(t *testing.T) {
 		}
 	})
 }
+
+func TestVariableDeclaration(t *testing.T) {
+	t.Run("should parse variable declaration with declare keyword", func(t *testing.T) {
+		input := "تصريح متغير رقم: عدد؛"
+
+		expected := ast.NewProgram([]*ast.Node{
+			ast.NewVariableDeclaration(
+				ast.NewIdentifier(
+					"رقم",
+					ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode()),
+				),
+				nil,
+				true,
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		parser := NewParser(NewLexer(input), false)
+		program := parser.Parse()
+
+		if !reflect.DeepEqual(program, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+}
