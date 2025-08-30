@@ -175,11 +175,12 @@ func (tNullKeyword TNullKeyword) ToNode() *Node {
 
 type Identifier struct {
 	Name           string
+	OriginalName   *string
 	TypeAnnotation *TTypeAnnotation
 }
 
 func NewIdentifier(name string, typeAnnotation *TTypeAnnotation) *Identifier {
-	return &Identifier{Name: name, TypeAnnotation: typeAnnotation}
+	return &Identifier{Name: name, TypeAnnotation: typeAnnotation, OriginalName: nil}
 }
 
 func (identifier *Identifier) ToNode() *Node {

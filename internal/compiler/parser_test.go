@@ -248,4 +248,31 @@ func TestVariableDeclaration(t *testing.T) {
 			t.Error("AST structures are not equal")
 		}
 	})
+
+	t.Run("should parse variable declaration with declare keyword and has original name", func(t *testing.T) {
+		input := "// @الاسم_الأصلي(\"num\")\nتصريح متغير رقم: عدد؛"
+
+		identifier := ast.NewIdentifier(
+			"رقم",
+			ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode()),
+		)
+
+		originalName := "num"
+		identifier.OriginalName = &originalName
+
+		expected := ast.NewProgram([]*ast.Node{
+			ast.NewVariableDeclaration(
+				identifier,
+				nil,
+				true,
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		parser := NewParser(NewLexer(input), false)
+		program := parser.Parse()
+
+		if !reflect.DeepEqual(program, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
 }

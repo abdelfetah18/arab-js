@@ -109,10 +109,17 @@ func (p *Parser) parseStatement() *ast.Node {
 	}
 
 	if token.Type == Identifier && token.Value == "تصريح" {
+		hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
+		originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
+
 		token := p.lexer.Next()
 		if token.Type == KeywordToken && token.Value == "متغير" {
 			p.lexer.Next()
 			identifier := p.parseTypedIdentifier()
+			if hasPrecedingOriginalNameDirective {
+				identifier.OriginalName = &originalNameDirectiveValue
+			}
+
 			token := p.lexer.Peek()
 			if token.Type != Semicolon {
 				panic("Expected '؛', got " + token.Value)
