@@ -23,6 +23,10 @@ func (v *NodeVisitor) VisitNode(node *Node) *Node {
 		v.visitBlockStatement(node.AsBlockStatement())
 	}
 
+	if node.Type == NodeTypeVariableDeclaration {
+		v.visitVariableDeclaration(node.AsVariableDeclaration())
+	}
+
 	return result
 }
 
@@ -36,4 +40,9 @@ func (v *NodeVisitor) visitBlockStatement(blockStatement *BlockStatement) {
 	for _, node := range blockStatement.Body {
 		v.VisitNode(node)
 	}
+}
+
+func (v *NodeVisitor) visitVariableDeclaration(variableDeclaration *VariableDeclaration) {
+	v.VisitNode(variableDeclaration.Identifier.ToNode())
+	v.VisitNode(variableDeclaration.Identifier.ToNode())
 }
