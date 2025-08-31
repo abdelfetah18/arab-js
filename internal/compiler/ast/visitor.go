@@ -27,6 +27,10 @@ func (v *NodeVisitor) VisitNode(node *Node) *Node {
 		v.visitVariableDeclaration(node.AsVariableDeclaration())
 	}
 
+	if node.Type == NodeTypeExpressionStatement {
+		v.VisitNode(node.AsExpressionStatement().Expression)
+	}
+
 	return result
 }
 

@@ -74,6 +74,10 @@ func (node *Node) AsTPropertySignature() *TPropertySignature {
 	return node.Data.(*TPropertySignature)
 }
 
+type DeclarationBase struct {
+	Symbol *Symbol
+}
+
 type ExpressionStatement struct {
 	Expression *Node
 }
@@ -281,11 +285,12 @@ func (ifStatement *IfStatement) ToNode() *Node {
 }
 
 type BlockStatement struct {
-	Body []*Node
+	Body  []*Node
+	Scope *Scope
 }
 
 func NewBlockStatement(body []*Node) *BlockStatement {
-	return &BlockStatement{Body: body}
+	return &BlockStatement{Body: body, Scope: nil}
 }
 
 func (blockStatement *BlockStatement) ToNode() *Node {
