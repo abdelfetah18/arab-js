@@ -66,6 +66,33 @@ func TestTInterfaceDeclaration(t *testing.T) {
 			t.Error("AST structures are not equal")
 		}
 	})
+
+	t.Run("should parse interface declaration with a property that has an original name", func(t *testing.T) {
+		input := "واجهة مستخدم {\n// @الاسم_الأصلي(\"name\")\nالاسم: نص\n}"
+
+		identifier := ast.NewIdentifier("الاسم", nil)
+		s := "name"
+		identifier.OriginalName = &s
+		expected := ast.NewProgram([]*ast.Node{
+			ast.NewTInterfaceDeclaration(
+				ast.NewIdentifier("مستخدم", nil),
+				ast.NewTInterfaceBody([]*ast.Node{
+					ast.NewTPropertySignature(
+						identifier.ToNode(),
+						ast.NewTTypeAnnotation(
+							ast.NewTStringKeyword().ToNode(),
+						),
+					).ToNode(),
+				})).ToNode(),
+		}, []*ast.Directive{})
+
+		parser := NewParser(NewLexer(input), false)
+		program := parser.Parse()
+
+		if !reflect.DeepEqual(program, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
 }
 
 func TestFunctionDeclaration(t *testing.T) {

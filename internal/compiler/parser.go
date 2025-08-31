@@ -763,10 +763,17 @@ func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
 
 	body := []*ast.Node{}
 	for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
+		hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
+		originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
+
 		var key *ast.Node
 		switch token.Type {
 		case Identifier:
-			key = ast.NewIdentifier(token.Value, nil).ToNode()
+			identifier := ast.NewIdentifier(token.Value, nil)
+			key = identifier.ToNode()
+			if hasPrecedingOriginalNameDirective {
+				identifier.OriginalName = &originalNameDirectiveValue
+			}
 			token = p.lexer.Next()
 		case DoubleQuoteString, SingleQuoteString:
 			key = ast.NewStringLiteral(token.Value).ToNode()
