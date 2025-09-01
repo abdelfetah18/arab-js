@@ -64,6 +64,10 @@ func (printer *Printer) writeExpressionStatement(expressionStatement *ast.Expres
 }
 
 func (printer *Printer) writeVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
+	if variableDeclaration.Declare {
+		return
+	}
+
 	printer.Writer.Write(fmt.Sprintf("let %s = ", variableDeclaration.Identifier.Name))
 	if variableDeclaration.Initializer != nil {
 		printer.writeInitializer(variableDeclaration.Initializer)
