@@ -31,6 +31,20 @@ func (v *NodeVisitor) VisitNode(node *Node) *Node {
 		v.VisitNode(node.AsExpressionStatement().Expression)
 	}
 
+	if node.Type == NodeTypeCallExpression {
+		callExpression := node.AsCallExpression()
+		for _, node := range callExpression.Args {
+			v.VisitNode(node)
+		}
+		v.VisitNode(callExpression.Callee)
+	}
+
+	if node.Type == NodeTypeMemberExpression {
+		memberExpression := node.AsMemberExpression()
+		v.VisitNode(memberExpression.Object)
+		v.VisitNode(memberExpression.Property)
+	}
+
 	return result
 }
 
@@ -48,5 +62,8 @@ func (v *NodeVisitor) visitBlockStatement(blockStatement *BlockStatement) {
 
 func (v *NodeVisitor) visitVariableDeclaration(variableDeclaration *VariableDeclaration) {
 	v.VisitNode(variableDeclaration.Identifier.ToNode())
-	v.VisitNode(variableDeclaration.Identifier.ToNode())
+
+	if variableDeclaration.Initializer != nil {
+		v.VisitNode(variableDeclaration.Initializer.Expression)
+	}
 }
