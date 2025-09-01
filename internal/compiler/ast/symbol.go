@@ -11,20 +11,20 @@ type Symbol struct {
 }
 
 type Scope struct {
-	Variables map[string]*Symbol
-	Parent    *Scope
+	Locals map[string]*Symbol
+	Parent *Scope
 }
 
 func (s *Scope) AddVariable(name string, originalName *string, _type *Type) error {
-	if s.Variables == nil {
-		s.Variables = make(map[string]*Symbol)
+	if s.Locals == nil {
+		s.Locals = make(map[string]*Symbol)
 	}
 
-	if _, exists := s.Variables[name]; exists {
+	if _, exists := s.Locals[name]; exists {
 		return fmt.Errorf("variable '%s' already declared in this scope", name)
 	}
 
-	s.Variables[name] = &Symbol{
+	s.Locals[name] = &Symbol{
 		Name:         name,
 		Type:         _type,
 		OriginalName: originalName,
@@ -34,75 +34,18 @@ func (s *Scope) AddVariable(name string, originalName *string, _type *Type) erro
 }
 
 func (s *Scope) GetVariableSymbol(name string) *Symbol {
-	if s.Variables == nil {
+	if s.Locals == nil {
 		return nil
 	}
 
-	if symbol, exists := s.Variables[name]; exists {
+	if symbol, exists := s.Locals[name]; exists {
 		return symbol
 	}
 
 	return nil
 }
 
-type SymbolTable struct {
-	Current *Scope
-}
-
-func BuildSymbolTable(program *Program) *SymbolTable {
-	currentScope := &Scope{
-		Variables: map[string]*Symbol{},
-		Parent:    nil,
-	}
-
-	symbolTable := &SymbolTable{
-		Current: currentScope,
-	}
-
-	nodeVisitor := NewNodeVisitor(func(node *Node) *Node {
-		if node.Type == NodeTypeBlockStatement {
-			newScope := &Scope{
-				Variables: map[string]*Symbol{},
-				Parent:    currentScope,
-			}
-
-			node.AsBlockStatement().Scope = newScope
-			currentScope = newScope
-		}
-
-		if node.Type == NodeTypeIdentifier {
-			identifier := node.AsIdentifier()
-			if identifier.TypeAnnotation != nil {
-				currentScope.AddVariable(
-					identifier.Name,
-					identifier.OriginalName,
-					GetTypeFromTypeAnnotationNode(identifier.TypeAnnotation),
-				)
-			} else {
-				currentScope.AddVariable(
-					identifier.Name,
-					identifier.OriginalName,
-					nil,
-				)
-			}
-		}
-
-		return nil
-	})
-
-	nodeVisitor.VisitNode(program.ToNode())
-
-	return symbolTable
-}
-
-func (s *SymbolTable) Resolve(name string) *Symbol {
-	find := s.Current.GetVariableSymbol(name)
-	if find != nil {
-		return find
-	}
-
-	return nil
-}
+type SymbolTable map[string]*Symbol
 
 type Type struct {
 	Data TypeData

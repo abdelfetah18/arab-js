@@ -74,8 +74,8 @@ func (node *Node) AsTPropertySignature() *TPropertySignature {
 	return node.Data.(*TPropertySignature)
 }
 
-type DeclarationBase struct {
-	Symbol *Symbol
+type ContainerBase struct {
+	Scope *Scope
 }
 
 type ExpressionStatement struct {
@@ -285,6 +285,7 @@ func (ifStatement *IfStatement) ToNode() *Node {
 }
 
 type BlockStatement struct {
+	ContainerBase
 	Body  []*Node
 	Scope *Scope
 }
@@ -611,6 +612,7 @@ func (directive *Directive) ToNode() *Node {
 }
 
 type Program struct {
+	ContainerBase
 	Body       []*Node
 	Directives []*Directive
 }

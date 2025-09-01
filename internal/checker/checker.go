@@ -6,16 +6,14 @@ import (
 )
 
 type Checker struct {
-	Program     *ast.Program
-	SymbolTable *ast.SymbolTable
-	Errors      []string
+	Program *ast.Program
+	Errors  []string
 }
 
 func NewChecker(program *ast.Program) *Checker {
 	return &Checker{
-		Program:     program,
-		SymbolTable: ast.BuildSymbolTable(program),
-		Errors:      []string{},
+		Program: program,
+		Errors:  []string{},
 	}
 }
 

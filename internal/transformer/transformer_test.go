@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"arab_js/internal/binder"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"reflect"
@@ -24,11 +25,22 @@ func TestOriginalName(t *testing.T) {
 			ast.NewExpressionStatement(ast.NewIdentifier("console", nil).ToNode()).ToNode(),
 		}, []*ast.Directive{})
 
+		expected.Scope = &ast.Scope{
+			Locals: map[string]*ast.Symbol{
+				"وحدة_التحكم": {
+					Name:         "وحدة_التحكم",
+					OriginalName: &s,
+					Type:         nil,
+				},
+			},
+			Parent: nil,
+		}
+
 		parser := compiler.NewParser(compiler.NewLexer(input), false)
 		program := parser.Parse()
-		symbolTable := ast.BuildSymbolTable(program)
-
-		transformer := NewTransformer(program, symbolTable)
+		_binder := binder.NewBinder(program)
+		_binder.Bind()
+		transformer := NewTransformer(program)
 		transformer.Transform()
 
 		if !reflect.DeepEqual(program, expected) {

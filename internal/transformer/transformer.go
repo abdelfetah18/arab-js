@@ -5,19 +5,17 @@ import (
 )
 
 type Transformer struct {
-	program     *ast.Program
-	symbolTable *ast.SymbolTable
+	program *ast.Program
 }
 
-func NewTransformer(program *ast.Program, symbolTable *ast.SymbolTable) *Transformer {
+func NewTransformer(program *ast.Program) *Transformer {
 	return &Transformer{
-		program:     program,
-		symbolTable: symbolTable,
+		program: program,
 	}
 }
 
 func (t *Transformer) Transform() *ast.Node {
-	currentScope := t.symbolTable.Current
+	currentScope := t.program.Scope
 	nodeVisitor := ast.NewNodeVisitor(func(node *ast.Node) *ast.Node {
 		if node.Type == ast.NodeTypeBlockStatement {
 			currentScope = node.AsBlockStatement().Scope
