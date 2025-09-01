@@ -65,7 +65,9 @@ func (printer *Printer) writeExpressionStatement(expressionStatement *ast.Expres
 
 func (printer *Printer) writeVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
 	printer.Writer.Write(fmt.Sprintf("let %s = ", variableDeclaration.Identifier.Name))
-	printer.writeInitializer(variableDeclaration.Initializer)
+	if variableDeclaration.Initializer != nil {
+		printer.writeInitializer(variableDeclaration.Initializer)
+	}
 }
 
 func (printer *Printer) writeInitializer(initializer *ast.Initializer) {
