@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"arab_js/internal/binder"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/printer"
+	"arab_js/internal/transformer"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,6 +28,8 @@ var buildCmd = &cobra.Command{
 		lexer := compiler.NewLexer(string(source))
 		parser := compiler.NewParser(lexer, false)
 		program := parser.Parse()
+		binder.NewBinder(program).Bind()
+		transformer.NewTransformer(program).Transform()
 
 		p := printer.NewPrinter()
 		p.Write(program)
