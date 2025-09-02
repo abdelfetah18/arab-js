@@ -20,4 +20,5 @@ func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	rootCmd.AddCommand(buildCmd)
+	rootCmd.AddCommand(createCmd)
 }
