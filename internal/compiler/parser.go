@@ -486,7 +486,7 @@ func (p *Parser) getTypeNodeFromIdentifier(token Token) *ast.Node {
 		return ast.NewTBooleanKeyword().ToNode()
 	}
 
-	return ast.NewIdentifier(token.Value, nil).ToNode()
+	return ast.NewTTypeReference(ast.NewIdentifier(token.Value, nil)).ToNode()
 }
 
 func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {

@@ -44,7 +44,7 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 		return
 	}
 
-	identifierType := ast.GetTypeFromTypeAnnotationNode(variableDeclaration.Identifier.TypeAnnotation)
+	identifierType := variableDeclaration.Symbol.Type
 	initializerType := c.checkExpression(variableDeclaration.Initializer.Expression)
 
 	if identifierType.Data.Name() != initializerType.Data.Name() {

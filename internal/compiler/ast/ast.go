@@ -70,12 +70,24 @@ func (node *Node) AsTInterfaceDeclaration() *TInterfaceDeclaration {
 	return node.Data.(*TInterfaceDeclaration)
 }
 
+func (node *Node) AsTInterfaceBody() *TInterfaceBody {
+	return node.Data.(*TInterfaceBody)
+}
+
 func (node *Node) AsTPropertySignature() *TPropertySignature {
 	return node.Data.(*TPropertySignature)
 }
 
+func (node *Node) AsTTypeReference() *TTypeReference {
+	return node.Data.(*TTypeReference)
+}
+
 type ContainerBase struct {
 	Scope *Scope
+}
+
+type DeclarationBase struct {
+	Symbol *Symbol
 }
 
 type ExpressionStatement struct {
@@ -94,6 +106,7 @@ func (expressionStatement *ExpressionStatement) ToNode() *Node {
 }
 
 type VariableDeclaration struct {
+	DeclarationBase
 	Identifier  *Identifier
 	Initializer *Initializer
 	Declare     bool
@@ -746,5 +759,20 @@ func (tTypeLiteral *TTypeLiteral) ToNode() *Node {
 	return &Node{
 		Type: NodeTypeTFunctionType,
 		Data: tTypeLiteral,
+	}
+}
+
+type TTypeReference struct {
+	TypeName *Identifier
+}
+
+func NewTTypeReference(TypeName *Identifier) *TTypeReference {
+	return &TTypeReference{TypeName: TypeName}
+}
+
+func (tTypeReference *TTypeReference) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTTypeReference,
+		Data: tTypeReference,
 	}
 }

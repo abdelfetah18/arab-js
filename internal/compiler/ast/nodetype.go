@@ -46,4 +46,5 @@ const (
 	NodeTypeTPropertySignature
 	NodeTypeTFunctionType
 	NodeTypeTTypeAliasDeclaration
+	NodeTypeTTypeReference
 )

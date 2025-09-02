@@ -1,6 +1,7 @@
 package checker
 
 import (
+	"arab_js/internal/binder"
 	"arab_js/internal/compiler"
 	"testing"
 )
@@ -11,6 +12,8 @@ func TestCheckVariableDeclaration(t *testing.T) {
 
 		parser := compiler.NewParser(compiler.NewLexer(input), false)
 		program := parser.Parse()
+		_binder := binder.NewBinder(program)
+		_binder.Bind()
 		_checker := NewChecker(program)
 		_checker.Check()
 
@@ -24,6 +27,8 @@ func TestCheckVariableDeclaration(t *testing.T) {
 
 		parser := compiler.NewParser(compiler.NewLexer(input), false)
 		program := parser.Parse()
+		_binder := binder.NewBinder(program)
+		_binder.Bind()
 		_checker := NewChecker(program)
 		_checker.Check()
 
