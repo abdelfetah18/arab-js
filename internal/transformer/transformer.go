@@ -16,7 +16,14 @@ func NewTransformer(program *ast.Program) *Transformer {
 
 func (t *Transformer) Transform() {
 	for _, node := range t.program.Body {
-		t.transformStatement(node)
+		switch node.Type {
+		case ast.NodeTypeFunctionDeclaration:
+			t.transformFunctionDeclaration(node.AsFunctionDeclaration())
+			continue
+		default:
+			t.transformStatement(node)
+			continue
+		}
 	}
 }
 
@@ -30,9 +37,7 @@ func (t *Transformer) transformStatement(node *ast.Node) {
 		t.transformStatement(ifStatement.ConsequentStatement)
 		t.transformStatement(ifStatement.AlternateStatement)
 	case ast.NodeTypeBlockStatement:
-		for _, node := range node.AsBlockStatement().Body {
-			t.transformStatement(node)
-		}
+		t.transformBlockStatement(node.AsBlockStatement())
 	}
 }
 
@@ -82,4 +87,14 @@ func (t *Transformer) transformProperty(property *ast.Node, objectType *ast.Obje
 			identifier.Name = *propertyType.OriginalName
 		}
 	}
+}
+
+func (t *Transformer) transformBlockStatement(blockStatement *ast.BlockStatement) {
+	for _, node := range blockStatement.Body {
+		t.transformStatement(node)
+	}
+}
+
+func (t *Transformer) transformFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
+	t.transformBlockStatement(functionDeclaration.Body)
 }
