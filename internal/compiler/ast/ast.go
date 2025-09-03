@@ -60,7 +60,7 @@ func (node *Node) AsMemberExpression() *MemberExpression { return node.Data.(*Me
 
 func (node *Node) AsIfStatement() *IfStatement         { return node.Data.(*IfStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement   { return node.Data.(*BlockStatement) }
-func (node *Node) AsProgram() *Program                 { return node.Data.(*Program) }
+func (node *Node) AsSourceFile() *SourceFile           { return node.Data.(*SourceFile) }
 func (node *Node) AsReturnStatement() *ReturnStatement { return node.Data.(*ReturnStatement) }
 func (node *Node) AsExpressionStatement() *ExpressionStatement {
 	return node.Data.(*ExpressionStatement)
@@ -624,20 +624,21 @@ func (directive *Directive) ToNode() *Node {
 	}
 }
 
-type Program struct {
+type SourceFile struct {
 	ContainerBase
+	Name       string
 	Body       []*Node
 	Directives []*Directive
 }
 
-func NewProgram(body []*Node, directives []*Directive) *Program {
-	return &Program{Body: body, Directives: directives}
+func NewSourceFile(body []*Node, directives []*Directive) *SourceFile {
+	return &SourceFile{Name: "", Body: body, Directives: directives}
 }
 
-func (program *Program) ToNode() *Node {
+func (sourceFile *SourceFile) ToNode() *Node {
 	return &Node{
 		Type: NodeTypeProgram,
-		Data: program,
+		Data: sourceFile,
 	}
 }
 

@@ -25,7 +25,7 @@ func NewPrinter() *Printer { return &Printer{Writer: NewWriter(), indent: 0} }
 func (printer *Printer) increaseIndent() { printer.indent += 2 }
 func (printer *Printer) decreaseIndent() { printer.indent -= 2 }
 
-func (printer *Printer) Write(node *ast.Program) {
+func (printer *Printer) Write(node *ast.SourceFile) {
 	printer.writeStatementList(node.Body)
 }
 

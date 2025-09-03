@@ -13,7 +13,11 @@ func NewParser(lexer *Lexer, isNativeScript bool) *Parser {
 	return &Parser{lexer: lexer, isNativeScript: isNativeScript}
 }
 
-func (p *Parser) Parse() *ast.Program {
+func ParseSourceFile(sourceText string) *ast.SourceFile {
+	return NewParser(NewLexer(sourceText), false).Parse()
+}
+
+func (p *Parser) Parse() *ast.SourceFile {
 	token := p.lexer.Peek()
 	directives := []*ast.Directive{}
 	for token.Type == SingleQuoteString || token.Type == DoubleQuoteString {
@@ -38,7 +42,7 @@ func (p *Parser) Parse() *ast.Program {
 		panic("Unexpected token: " + token.Value)
 	}
 
-	return ast.NewProgram(statements, directives)
+	return ast.NewSourceFile(statements, directives)
 }
 
 func (p *Parser) parseIfStatement() *ast.IfStatement {

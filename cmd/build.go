@@ -1,52 +1,90 @@
 package cmd
 
 import (
-	"arab_js/internal/binder"
+	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/printer"
 	"arab_js/internal/transformer"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
 
+func ListFilesWithExt(root, ext string) ([]string, error) {
+	var files []string
+
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err // stop if there's a problem accessing the path
+		}
+		if !d.IsDir() && filepath.Ext(path) == ext {
+			files = append(files, path)
+		}
+		return nil
+	})
+
+	return files, err
+}
+
 var buildCmd = &cobra.Command{
-	Use:   "build [file_path]",
-	Short: "Build using the specified file path",
+	Use:   "build [project_path]",
+	Short: "Build project in the specified path",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		filePath := args[0]
-		fmt.Println("Building from file:", filePath)
+		projectPath := args[0]
+		fmt.Println("Building project in path:", projectPath)
 
-		source, err := os.ReadFile(filePath)
+		info, err := os.Stat(projectPath)
 		if err != nil {
-			return fmt.Errorf("failed to read file: %w", err)
+			panic(err)
 		}
 
-		lexer := compiler.NewLexer(string(source))
-		parser := compiler.NewParser(lexer, false)
-		program := parser.Parse()
-		binder.NewBinder(program).Bind()
+		if !info.IsDir() {
+			panic("Expeced a Directory but got a file")
+		}
+
+		files, err := ListFilesWithExt(projectPath, ".كود")
+		if err != nil {
+			panic(err)
+		}
+
+		fileLoader := compiler.NewFileLoader(files)
+		fileLoader.LoadSourceFiles()
+
+		program := compiler.NewProgram(fileLoader.SourceFiles)
+
+		_checker := checker.NewChecker(program)
+		_checker.Check()
+
+		if len(_checker.Errors) > 0 {
+			for _, message := range _checker.Errors {
+				println(message)
+			}
+			panic("Checker Errors")
+		}
+
 		transformer.NewTransformer(program).Transform()
-
-		p := printer.NewPrinter()
-		p.Write(program)
-
-		output := p.Writer.Output
 
 		outputDir := "build"
 		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 			return fmt.Errorf("failed to create build directory: %w", err)
 		}
 
-		outputFile := filepath.Join(outputDir, "index.js")
-		if err := os.WriteFile(outputFile, []byte(output), 0644); err != nil {
-			return fmt.Errorf("failed to write output file: %w", err)
+		for _, sourceFile := range program.SourceFiles {
+			p := printer.NewPrinter()
+			p.Write(sourceFile)
+			output := p.Writer.Output
+
+			outputFile := filepath.Join(outputDir, fmt.Sprintf("%s.js", sourceFile.Name))
+			if err := os.WriteFile(outputFile, []byte(output), 0644); err != nil {
+				return fmt.Errorf("failed to write output file: %w", err)
+			}
 		}
 
-		fmt.Println("Build successful! Output written to", outputFile)
+		fmt.Println("Build successful!")
 		return nil
 	},
 }

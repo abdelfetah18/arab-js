@@ -5,24 +5,28 @@ import (
 )
 
 type Binder struct {
-	program   *ast.Program
-	container *ast.ContainerBase
+	sourceFile *ast.SourceFile
+	container  *ast.ContainerBase
 }
 
-func NewBinder(program *ast.Program) *Binder {
+func NewBinder(sourceFile *ast.SourceFile) *Binder {
 	return &Binder{
-		program:   program,
-		container: &program.ContainerBase,
+		sourceFile: sourceFile,
+		container:  &sourceFile.ContainerBase,
 	}
 }
 
+func BindSourceFile(sourceFile *ast.SourceFile) {
+	NewBinder(sourceFile).Bind()
+}
+
 func (b *Binder) Bind() {
-	b.program.Scope = &ast.Scope{
+	b.sourceFile.Scope = &ast.Scope{
 		Locals: map[string]*ast.Symbol{},
 		Parent: nil,
 	}
 
-	for _, node := range b.program.Body {
+	for _, node := range b.sourceFile.Body {
 		switch node.Type {
 		case ast.NodeTypeVariableDeclaration:
 			b.bindVariableDeclaration(node.AsVariableDeclaration())
@@ -51,7 +55,7 @@ func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 	saveContainer := b.container
 	b.container = &blockStatement.ContainerBase
 
-	for _, node := range b.program.Body {
+	for _, node := range b.sourceFile.Body {
 		switch node.Type {
 		case ast.NodeTypeVariableDeclaration:
 			b.bindVariableDeclaration(node.AsVariableDeclaration())

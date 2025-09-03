@@ -1,28 +1,34 @@
 package transformer
 
 import (
+	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 )
 
 type Transformer struct {
-	program *ast.Program
+	program *compiler.Program
+
+	sourceFile *ast.SourceFile
 }
 
-func NewTransformer(program *ast.Program) *Transformer {
+func NewTransformer(program *compiler.Program) *Transformer {
 	return &Transformer{
 		program: program,
 	}
 }
 
 func (t *Transformer) Transform() {
-	for _, node := range t.program.Body {
-		switch node.Type {
-		case ast.NodeTypeFunctionDeclaration:
-			t.transformFunctionDeclaration(node.AsFunctionDeclaration())
-			continue
-		default:
-			t.transformStatement(node)
-			continue
+	for _, sourceFile := range t.program.SourceFiles {
+		t.sourceFile = sourceFile
+		for _, node := range sourceFile.Body {
+			switch node.Type {
+			case ast.NodeTypeFunctionDeclaration:
+				t.transformFunctionDeclaration(node.AsFunctionDeclaration())
+				continue
+			default:
+				t.transformStatement(node)
+				continue
+			}
 		}
 	}
 }
@@ -47,7 +53,7 @@ func (t *Transformer) transformExpression(node *ast.Node) {
 		t.transformCallExpression(node.AsCallExpression())
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
-		symbol := t.program.Scope.GetVariableSymbol(identifier.Name)
+		symbol := t.sourceFile.Scope.GetVariableSymbol(identifier.Name)
 		if symbol.OriginalName != nil {
 			identifier.Name = *symbol.OriginalName
 		}
@@ -64,12 +70,12 @@ func (t *Transformer) transformCallExpression(callExpression *ast.CallExpression
 func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpression) {
 	switch memberExpression.Object.Type {
 	case ast.NodeTypeMemberExpression:
-		objectType := t.program.Scope.GetTypeOfNode(memberExpression.Object)
+		objectType := t.sourceFile.Scope.GetTypeOfNode(memberExpression.Object)
 		t.transformMemberExpression(memberExpression.Object.AsMemberExpression())
 		t.transformProperty(memberExpression.Property, objectType.AsObjectType())
 	case ast.NodeTypeIdentifier:
 		objectIdentfier := memberExpression.Object.AsIdentifier()
-		symbol := t.program.Scope.GetVariableSymbol(objectIdentfier.Name)
+		symbol := t.sourceFile.Scope.GetVariableSymbol(objectIdentfier.Name)
 		objectIdentfier.Name = *symbol.OriginalName
 		if symbol.Type.Flags&ast.TypeFlagsObject == ast.TypeFlagsObject {
 			objectType := symbol.Type.AsObjectType()

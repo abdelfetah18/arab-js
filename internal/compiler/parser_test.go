@@ -10,7 +10,7 @@ func TestTInterfaceDeclaration(t *testing.T) {
 	t.Run("should parse interface declaration", func(t *testing.T) {
 		input := "واجهة مستخدم { الاسم: نص }"
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewTInterfaceDeclaration(
 				ast.NewIdentifier("مستخدم", nil),
 				ast.NewTInterfaceBody([]*ast.Node{
@@ -34,7 +34,7 @@ func TestTInterfaceDeclaration(t *testing.T) {
 	t.Run("should parse interface with multiple properties", func(t *testing.T) {
 		input := "واجهة بيانات { النص: نص, الرقم: عدد, الحالة: قيمة_منطقية }"
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewTInterfaceDeclaration(
 				ast.NewIdentifier("بيانات", nil),
 				ast.NewTInterfaceBody([]*ast.Node{
@@ -73,7 +73,7 @@ func TestTInterfaceDeclaration(t *testing.T) {
 		identifier := ast.NewIdentifier("الاسم", nil)
 		s := "name"
 		identifier.OriginalName = &s
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewTInterfaceDeclaration(
 				ast.NewIdentifier("مستخدم", nil),
 				ast.NewTInterfaceBody([]*ast.Node{
@@ -99,7 +99,7 @@ func TestFunctionDeclaration(t *testing.T) {
 	t.Run("should parse typed function", func(t *testing.T) {
 		input := "دالة جمع (أ: عدد, ب: عدد) : عدد { إرجاع أ + ب؛ }"
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewFunctionDeclaration(
 				ast.NewIdentifier("جمع", nil),
 				[]*ast.Identifier{
@@ -132,7 +132,7 @@ func TestTFunctionType(t *testing.T) {
 	t.Run("should parse interface declaration with function type", func(t *testing.T) {
 		input := "واجهة مستخدم { جلب_بيانات_المستخدم: (اسم:نص) => نص }"
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewTInterfaceDeclaration(
 				ast.NewIdentifier("مستخدم", nil),
 				ast.NewTInterfaceBody([]*ast.Node{
@@ -168,7 +168,7 @@ func TestTTypeAliasDeclaration(t *testing.T) {
 	t.Run("should parse type alias declaration", func(t *testing.T) {
 		input := "نوع الاسم = نص"
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewTTypeAliasDeclaration(
 				ast.NewIdentifier("الاسم", nil),
 				ast.NewTTypeAnnotation(ast.NewTStringKeyword().ToNode()),
@@ -189,7 +189,7 @@ func TestTTypeLiteral(t *testing.T) {
 	t.Run("should parse type literal", func(t *testing.T) {
 		input := "نوع مستخدم = { الاسم: نص }"
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewTTypeAliasDeclaration(
 				ast.NewIdentifier("مستخدم", nil),
 				ast.NewTTypeAnnotation(
@@ -216,7 +216,7 @@ func TestTTypeLiteral(t *testing.T) {
 	t.Run("should parse type literal with multiple properties", func(t *testing.T) {
 		input := "نوع بيانات = { النص: نص, الرقم: عدد, الحالة: قيمة_منطقية }"
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewTTypeAliasDeclaration(
 				ast.NewIdentifier("بيانات", nil),
 				ast.NewTTypeAnnotation(
@@ -257,7 +257,7 @@ func TestVariableDeclaration(t *testing.T) {
 	t.Run("should parse variable declaration with declare keyword", func(t *testing.T) {
 		input := "تصريح متغير رقم: عدد؛"
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewVariableDeclaration(
 				ast.NewIdentifier(
 					"رقم",
@@ -287,7 +287,7 @@ func TestVariableDeclaration(t *testing.T) {
 		originalName := "num"
 		identifier.OriginalName = &originalName
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewVariableDeclaration(
 				identifier,
 				nil,

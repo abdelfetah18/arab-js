@@ -1,18 +1,19 @@
 package checker
 
 import (
+	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"fmt"
 )
 
 type Checker struct {
-	Program *ast.Program
+	program *compiler.Program
 	Errors  []string
 }
 
-func NewChecker(program *ast.Program) *Checker {
+func NewChecker(program *compiler.Program) *Checker {
 	return &Checker{
-		Program: program,
+		program: program,
 		Errors:  []string{},
 	}
 }
@@ -26,8 +27,10 @@ func (c *Checker) errorf(format string, a ...any) {
 }
 
 func (c *Checker) Check() {
-	for _, node := range c.Program.Body {
-		c.checkStatement(node)
+	for _, sourceFile := range c.program.SourceFiles {
+		for _, node := range sourceFile.Body {
+			c.checkStatement(node)
+		}
 	}
 }
 

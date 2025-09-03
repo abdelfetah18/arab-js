@@ -16,7 +16,7 @@ func (v *NodeVisitor) VisitNode(node *Node) *Node {
 	result := v.Visit(node)
 
 	if node.Type == NodeTypeProgram {
-		v.visitProgram(node.AsProgram())
+		v.visitProgram(node.AsSourceFile())
 	}
 
 	if node.Type == NodeTypeBlockStatement {
@@ -48,8 +48,8 @@ func (v *NodeVisitor) VisitNode(node *Node) *Node {
 	return result
 }
 
-func (v *NodeVisitor) visitProgram(program *Program) {
-	for _, node := range program.Body {
+func (v *NodeVisitor) visitProgram(sourceFile *SourceFile) {
+	for _, node := range sourceFile.Body {
 		v.VisitNode(node)
 	}
 }

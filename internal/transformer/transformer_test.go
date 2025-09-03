@@ -29,7 +29,7 @@ func TestOriginalName(t *testing.T) {
 
 		variableDeclaration.Symbol = symbol
 
-		expected := ast.NewProgram([]*ast.Node{
+		expected := ast.NewSourceFile([]*ast.Node{
 			variableDeclaration.ToNode(),
 			ast.NewExpressionStatement(ast.NewIdentifier("console", nil).ToNode()).ToNode(),
 		}, []*ast.Directive{})
@@ -41,14 +41,12 @@ func TestOriginalName(t *testing.T) {
 			Parent: nil,
 		}
 
-		parser := compiler.NewParser(compiler.NewLexer(input), false)
-		program := parser.Parse()
-		_binder := binder.NewBinder(program)
-		_binder.Bind()
-		transformer := NewTransformer(program)
+		sourceFile := compiler.ParseSourceFile(input)
+		binder.NewBinder(sourceFile).Bind()
+		transformer := NewTransformer(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
 		transformer.Transform()
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
