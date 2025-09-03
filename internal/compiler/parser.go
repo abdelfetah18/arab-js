@@ -55,7 +55,7 @@ func (p *Parser) parseIfStatement() *ast.IfStatement {
 	p.lexer.Next()
 	consequentStatement := p.parseStatement()
 	token = p.lexer.Peek()
-	if token.Type == KeywordToken && token.Value == "وإلا" {
+	if token.Type == KeywordToken && token.Value == "و_إلا" {
 		p.lexer.Next()
 		alternateStatement := p.parseStatement()
 		return ast.NewIfStatement(testExpression, consequentStatement, alternateStatement)
