@@ -24,7 +24,11 @@ func (t *Transformer) transformStatement(node *ast.Node) {
 	switch node.Type {
 	case ast.NodeTypeExpressionStatement:
 		t.transformExpression(node.AsExpressionStatement().Expression)
-	}
+	case ast.NodeTypeIfStatement:
+		ifStatement := node.AsIfStatement()
+		t.transformExpression(ifStatement.TestExpression)
+		t.transformStatement(ifStatement.ConsequentStatement)
+		t.transformStatement(ifStatement.AlternateStatement)
 }
 
 func (t *Transformer) transformExpression(node *ast.Node) {
