@@ -29,6 +29,11 @@ func (t *Transformer) transformStatement(node *ast.Node) {
 		t.transformExpression(ifStatement.TestExpression)
 		t.transformStatement(ifStatement.ConsequentStatement)
 		t.transformStatement(ifStatement.AlternateStatement)
+	case ast.NodeTypeBlockStatement:
+		for _, node := range node.AsBlockStatement().Body {
+			t.transformStatement(node)
+		}
+	}
 }
 
 func (t *Transformer) transformExpression(node *ast.Node) {
