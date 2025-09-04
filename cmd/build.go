@@ -4,6 +4,7 @@ import (
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/printer"
+	"arab_js/internal/package_definition"
 	"arab_js/internal/transformer"
 	"fmt"
 	"io/fs"
@@ -46,6 +47,11 @@ var buildCmd = &cobra.Command{
 			panic("Expeced a Directory but got a file")
 		}
 
+		packageDefinition, err := package_definition.FromYAMLFile(filepath.Join(projectPath, "رزمة.تعريف"))
+		if err != nil {
+			panic(err)
+		}
+
 		files, err := ListFilesWithExt(projectPath, ".كود")
 		if err != nil {
 			panic(err)
@@ -68,17 +74,22 @@ var buildCmd = &cobra.Command{
 
 		transformer.NewTransformer(program).Transform()
 
-		outputDir := "build"
+		outputDir := filepath.Join(projectPath, "البناء")
 		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 			return fmt.Errorf("failed to create build directory: %w", err)
 		}
 
 		for _, sourceFile := range program.SourceFiles {
+			outputFileName := fmt.Sprintf("%s.js", sourceFile.Name)
+			if packageDefinition.Main == sourceFile.Name {
+				outputFileName = "index.js"
+			}
+
 			p := printer.NewPrinter()
 			p.Write(sourceFile)
 			output := p.Writer.Output
 
-			outputFile := filepath.Join(outputDir, fmt.Sprintf("%s.js", sourceFile.Name))
+			outputFile := filepath.Join(outputDir, outputFileName)
 			if err := os.WriteFile(outputFile, []byte(output), 0644); err != nil {
 				return fmt.Errorf("failed to write output file: %w", err)
 			}

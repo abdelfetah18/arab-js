@@ -86,6 +86,8 @@ type ContainerBase struct {
 	Scope *Scope
 }
 
+func (node *ContainerBase) ContainerBaseData() *ContainerBase { return node }
+
 type DeclarationBase struct {
 	Symbol *Symbol
 }

@@ -13,12 +13,11 @@ type FileLoader struct {
 func NewFileLoader(files []string) *FileLoader {
 	return &FileLoader{
 		files:       files,
-		SourceFiles: nil,
+		SourceFiles: []*ast.SourceFile{},
 	}
 }
 
 func (l *FileLoader) LoadSourceFiles() {
-	l.SourceFiles = make([]*ast.SourceFile, len(l.files))
 	for _, file := range l.files {
 		sourceFile := GetSourceFile(file)
 		binder.BindSourceFile(sourceFile)

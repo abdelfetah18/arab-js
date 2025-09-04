@@ -48,6 +48,10 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 	}
 
 	identifierType := variableDeclaration.Symbol.Type
+
+	if variableDeclaration.Initializer == nil {
+		return
+	}
 	initializerType := c.checkExpression(variableDeclaration.Initializer.Expression)
 
 	if identifierType.Data.Name() != initializerType.Data.Name() {

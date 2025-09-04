@@ -8,7 +8,7 @@ import (
 
 func GetSourceFile(path string) *ast.SourceFile {
 	data, err := os.ReadFile(path)
-	if err == nil {
+	if err != nil {
 		panic(err)
 	}
 

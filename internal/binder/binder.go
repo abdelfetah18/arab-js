@@ -12,7 +12,7 @@ type Binder struct {
 func NewBinder(sourceFile *ast.SourceFile) *Binder {
 	return &Binder{
 		sourceFile: sourceFile,
-		container:  &sourceFile.ContainerBase,
+		container:  sourceFile.ContainerBaseData(),
 	}
 }
 
