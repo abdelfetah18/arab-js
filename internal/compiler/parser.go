@@ -522,11 +522,24 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 		panic("Expected ')', got " + token.Value)
 	}
 	token = p.lexer.Next()
-	params := []*ast.Identifier{}
-	for token.Type != EOF && token.Type != Invalid && token.Type != RightParenthesis && token.Type == Identifier {
-		params = append(params, p.parseTypedIdentifier())
+	params := []*ast.Node{}
+	for token.Type != EOF && token.Type != Invalid && token.Type != RightParenthesis && (token.Type == Identifier || token.Type == TripleDots) {
+		isRestElement := false
+		if token.Type == TripleDots {
+			token = p.lexer.Next()
+			isRestElement = true
+		}
+
+		identifier := p.parseTypedIdentifier()
+		if isRestElement {
+			params = append(params, ast.NewRestElement(identifier, identifier.TypeAnnotation).ToNode())
+			identifier.TypeAnnotation = nil
+		} else {
+			params = append(params, identifier.ToNode())
+		}
+
 		token = p.lexer.Peek()
-		if token.Type != Comma && token.Type != RightParenthesis {
+		if token.Type != Comma && token.Type != RightParenthesis && token.Type != TripleDots {
 			panic("Expected ',', got " + token.Value)
 		}
 		if token.Type == Comma {
@@ -883,9 +896,22 @@ func (p *Parser) parseTFunctionType() *ast.TFunctionType {
 		panic("Expected ')', got " + token.Value)
 	}
 	token = p.lexer.Next()
-	params := []*ast.Identifier{}
-	for token.Type != EOF && token.Type != Invalid && token.Type != RightParenthesis && token.Type == Identifier {
-		params = append(params, p.parseTypedIdentifier())
+	params := []*ast.Node{}
+	for token.Type != EOF && token.Type != Invalid && token.Type != RightParenthesis && (token.Type == Identifier || token.Type == TripleDots) {
+		isRestElement := false
+		if token.Type == TripleDots {
+			token = p.lexer.Next()
+			isRestElement = true
+		}
+
+		identifier := p.parseTypedIdentifier()
+		if isRestElement {
+			params = append(params, ast.NewRestElement(identifier, identifier.TypeAnnotation).ToNode())
+			identifier.TypeAnnotation = nil
+		} else {
+			params = append(params, identifier.ToNode())
+		}
+
 		token = p.lexer.Peek()
 		if token.Type != Comma && token.Type != RightParenthesis {
 			panic("Expected ',', got " + token.Value)

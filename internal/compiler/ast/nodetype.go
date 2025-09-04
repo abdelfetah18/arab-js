@@ -49,4 +49,5 @@ const (
 	NodeTypeTTypeAliasDeclaration
 	NodeTypeTTypeReference
 	NodeTypeTArrayType
+	NodeTypeRestElement
 )

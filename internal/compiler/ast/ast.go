@@ -57,6 +57,7 @@ func (node *Node) AsObjectExpression() *ObjectExpression { return node.Data.(*Ob
 func (node *Node) AsObjectProperty() *ObjectProperty     { return node.Data.(*ObjectProperty) }
 func (node *Node) AsObjectMethod() *ObjectMethod         { return node.Data.(*ObjectMethod) }
 func (node *Node) AsMemberExpression() *MemberExpression { return node.Data.(*MemberExpression) }
+func (node *Node) AsRestElement() *RestElement           { return node.Data.(*RestElement) }
 
 func (node *Node) AsIfStatement() *IfStatement         { return node.Data.(*IfStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement   { return node.Data.(*BlockStatement) }
@@ -348,12 +349,12 @@ func (assignmentExpression *AssignmentExpression) ToNode() *Node {
 
 type FunctionDeclaration struct {
 	ID              *Identifier
-	Params          []*Identifier
+	Params          []*Node // Identifier | RestElement
 	Body            *BlockStatement
 	TTypeAnnotation *TTypeAnnotation
 }
 
-func NewFunctionDeclaration(id *Identifier, params []*Identifier, body *BlockStatement, tTypeAnnotation *TTypeAnnotation) *FunctionDeclaration {
+func NewFunctionDeclaration(id *Identifier, params []*Node, body *BlockStatement, tTypeAnnotation *TTypeAnnotation) *FunctionDeclaration {
 	return &FunctionDeclaration{
 		ID:              id,
 		Params:          params,
@@ -728,11 +729,11 @@ func (returnStatement *ReturnStatement) ToNode() *Node {
 }
 
 type TFunctionType struct {
-	Params         []*Identifier
+	Params         []*Node // Identifier | RestElement
 	TypeAnnotation *TTypeAnnotation
 }
 
-func NewTFunctionType(params []*Identifier, typeAnnotation *TTypeAnnotation) *TFunctionType {
+func NewTFunctionType(params []*Node, typeAnnotation *TTypeAnnotation) *TFunctionType {
 	return &TFunctionType{
 		Params:         params,
 		TypeAnnotation: typeAnnotation,
@@ -807,5 +808,24 @@ func (tArrayType *TArrayType) ToNode() *Node {
 	return &Node{
 		Type: NodeTypeTArrayType,
 		Data: tArrayType,
+	}
+}
+
+type RestElement struct {
+	Argument       *Identifier
+	TypeAnnotation *TTypeAnnotation
+}
+
+func NewRestElement(argument *Identifier, typeAnnotation *TTypeAnnotation) *RestElement {
+	return &RestElement{
+		Argument:       argument,
+		TypeAnnotation: typeAnnotation,
+	}
+}
+
+func (restElement *RestElement) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeRestElement,
+		Data: restElement,
 	}
 }

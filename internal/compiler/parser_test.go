@@ -99,9 +99,9 @@ func TestFunctionDeclaration(t *testing.T) {
 		expected := ast.NewSourceFile([]*ast.Node{
 			ast.NewFunctionDeclaration(
 				ast.NewIdentifier("جمع", nil),
-				[]*ast.Identifier{
-					ast.NewIdentifier("أ", ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode())),
-					ast.NewIdentifier("ب", ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode())),
+				[]*ast.Node{
+					ast.NewIdentifier("أ", ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode())).ToNode(),
+					ast.NewIdentifier("ب", ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode())).ToNode(),
 				},
 				ast.NewBlockStatement([]*ast.Node{
 					ast.NewReturnStatement(
@@ -112,6 +112,32 @@ func TestFunctionDeclaration(t *testing.T) {
 						).ToNode(),
 					).ToNode(),
 				}),
+				ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode()),
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := ParseSourceFile(input)
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+
+	t.Run("should parse function declaration with rest element", func(t *testing.T) {
+		input := "دالة جمع (...أعداد: عدد[]) : عدد {}"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewFunctionDeclaration(
+				ast.NewIdentifier("جمع", nil),
+				[]*ast.Node{
+					ast.NewRestElement(
+						ast.NewIdentifier("أعداد", nil),
+						ast.NewTTypeAnnotation(
+							ast.NewTArrayType(ast.NewTNumberKeyword().ToNode()).ToNode(),
+						),
+					).ToNode(),
+				},
+				ast.NewBlockStatement([]*ast.Node{}),
 				ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode()),
 			).ToNode(),
 		}, []*ast.Directive{})
@@ -136,14 +162,47 @@ func TestTFunctionType(t *testing.T) {
 						ast.NewIdentifier("جلب_بيانات_المستخدم", nil).ToNode(),
 						ast.NewTTypeAnnotation(
 							ast.NewTFunctionType(
-								[]*ast.Identifier{
+								[]*ast.Node{
 									ast.NewIdentifier(
 										"اسم",
 										ast.NewTTypeAnnotation(
 											ast.NewTStringKeyword().ToNode()),
-									),
+									).ToNode(),
 								},
 								ast.NewTTypeAnnotation(ast.NewTStringKeyword().ToNode()),
+							).ToNode(),
+						),
+					).ToNode(),
+				})).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := ParseSourceFile(input)
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+
+	t.Run("should parse function type with rest param in interface", func(t *testing.T) {
+		input := "واجهة حاسبة { جمع: (...أعداد: عدد[]) => عدد }"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewTInterfaceDeclaration(
+				ast.NewIdentifier("حاسبة", nil),
+				ast.NewTInterfaceBody([]*ast.Node{
+					ast.NewTPropertySignature(
+						ast.NewIdentifier("جمع", nil).ToNode(),
+						ast.NewTTypeAnnotation(
+							ast.NewTFunctionType(
+								[]*ast.Node{
+									ast.NewRestElement(
+										ast.NewIdentifier("أعداد", nil),
+										ast.NewTTypeAnnotation(
+											ast.NewTArrayType(ast.NewTNumberKeyword().ToNode()).ToNode(),
+										),
+									).ToNode(),
+								},
+								ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode()),
 							).ToNode(),
 						),
 					).ToNode(),

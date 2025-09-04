@@ -231,7 +231,13 @@ func (printer *Printer) writeFunctionDeclaration(functionDeclaration *ast.Functi
 	printer.Writer.Write(functionDeclaration.ID.Name)
 	printer.Writer.Write("(")
 	for index, param := range functionDeclaration.Params {
-		printer.Writer.Write(param.Name)
+		switch param.Type {
+		case ast.NodeTypeRestElement:
+			printer.Writer.Write("...")
+			printer.Writer.Write(param.AsRestElement().Argument.Name)
+		case ast.NodeTypeIdentifier:
+			printer.Writer.Write(param.AsIdentifier().Name)
+		}
 
 		if index < len(functionDeclaration.Params)-1 {
 			printer.Writer.Write(", ")
