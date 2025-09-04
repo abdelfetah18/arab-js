@@ -59,7 +59,7 @@ func (p *Parser) parseIfStatement() *ast.IfStatement {
 	p.lexer.Next()
 	consequentStatement := p.parseStatement()
 	token = p.lexer.Peek()
-	if token.Type == KeywordToken && token.Value == "و_إلا" {
+	if token.Type == KeywordToken && token.Value == KeywordElse {
 		p.lexer.Next()
 		alternateStatement := p.parseStatement()
 		return ast.NewIfStatement(testExpression, consequentStatement, alternateStatement)
@@ -69,31 +69,31 @@ func (p *Parser) parseIfStatement() *ast.IfStatement {
 
 func (p *Parser) parseStatement() *ast.Node {
 	token := p.lexer.Peek()
-	if token.Type == KeywordToken && token.Value == "إذا" {
+	if token.Type == KeywordToken && token.Value == KeywordIf {
 		p.lexer.Next()
 		return p.parseIfStatement().ToNode()
 	}
-	if token.Type == KeywordToken && token.Value == "متغير" {
+	if token.Type == KeywordToken && token.Value == KeywordLet {
 		p.lexer.Next()
 		return p.parseVariableDeclaration().ToNode()
 	}
-	if token.Type == KeywordToken && token.Value == "دالة" {
+	if token.Type == KeywordToken && token.Value == KeywordFunction {
 		p.lexer.Next()
 		return p.parseFunctionDeclaration().ToNode()
 	}
-	if token.Type == KeywordToken && token.Value == "استيراد" {
+	if token.Type == KeywordToken && token.Value == KeywordImport {
 		p.lexer.Next()
 		return p.parseImportDeclaration().ToNode()
 	}
-	if token.Type == KeywordToken && token.Value == "تصدير" {
+	if token.Type == KeywordToken && token.Value == KeywordExport {
 		token = p.lexer.Next()
-		if token.Type == KeywordToken && token.Value == "افتراضي" {
+		if token.Type == KeywordToken && token.Value == KeywordDefault {
 			p.lexer.Next()
 			return p.parseExportDefaultDeclaration().ToNode()
 		}
 		return p.parseExportNamedDeclaration().ToNode()
 	}
-	if token.Type == KeywordToken && token.Value == "إرجاع" {
+	if token.Type == KeywordToken && token.Value == KeywordReturn {
 		p.lexer.Next()
 		return p.parseReturnStatement().ToNode()
 	}
@@ -102,22 +102,22 @@ func (p *Parser) parseStatement() *ast.Node {
 		return p.parseBlockStatement().ToNode()
 	}
 
-	if token.Type == Identifier && token.Value == "واجهة" {
+	if token.Type == Identifier && token.Value == TypeKeywordInterface {
 		p.lexer.Next()
 		return p.parseTInterfaceDeclaration().ToNode()
 	}
 
-	if token.Type == Identifier && token.Value == "نوع" {
+	if token.Type == Identifier && token.Value == TypeKeywordType {
 		p.lexer.Next()
 		return p.parseTTypeAliasDeclaration().ToNode()
 	}
 
-	if token.Type == Identifier && token.Value == "تصريح" {
+	if token.Type == Identifier && token.Value == TypeKeywordDeclare {
 		hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
 		originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
 
 		token := p.lexer.Next()
-		if token.Type == KeywordToken && token.Value == "متغير" {
+		if token.Type == KeywordToken && token.Value == KeywordLet {
 			p.lexer.Next()
 			identifier := p.parseTypedIdentifier()
 			if hasPrecedingOriginalNameDirective {
@@ -203,7 +203,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 	} else if token.Type == Star {
 		p.lexer.Next()
 		token = p.lexer.Peek()
-		if !(token.Type == KeywordToken && token.Value == "بإسم") {
+		if !(token.Type == KeywordToken && token.Value == KeywordAs) {
 			panic("Expected 'as' after '*' got " + token.Value)
 		}
 		p.lexer.Next()
@@ -217,7 +217,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 		panic("Unexpected token in import: " + token.Value)
 	}
 	token = p.lexer.Peek()
-	if !(token.Type == KeywordToken && token.Value == "من") {
+	if !(token.Type == KeywordToken && token.Value == KeywordFrom) {
 		panic("Expected 'من' got " + token.Value)
 	}
 	p.lexer.Next()
@@ -263,7 +263,7 @@ func (p *Parser) parseExportNamedDeclaration() *ast.ExportNamedDeclaration {
 		}
 		p.lexer.Next()
 		token = p.lexer.Peek()
-		if token.Type == KeywordToken && token.Value == "من" {
+		if token.Type == KeywordToken && token.Value == KeywordFrom {
 			p.lexer.Next()
 			stringToken := p.lexer.Peek()
 			if stringToken.Type != DoubleQuoteString && stringToken.Type != SingleQuoteString {
@@ -295,11 +295,11 @@ func (p *Parser) parseExportDefaultDeclaration() *ast.ExportDefaultDeclaration {
 
 func (p *Parser) parseDeclarationOnly() *ast.Node {
 	token := p.lexer.Peek()
-	if token.Type == KeywordToken && token.Value == "دالة" {
+	if token.Type == KeywordToken && token.Value == KeywordFunction {
 		p.lexer.Next()
 		return p.parseFunctionDeclaration().ToNode()
 	}
-	if token.Type == KeywordToken && (token.Value == "متغير" || token.Value == "ثابت") {
+	if token.Type == KeywordToken && (token.Value == KeywordLet || token.Value == KeywordConst) {
 		p.lexer.Next()
 		return p.parseVariableDeclaration().ToNode()
 	}
@@ -308,7 +308,7 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 
 func (p *Parser) parseFunctionDeclarationOrExpression() *ast.Node {
 	token := p.lexer.Peek()
-	if token.Type == KeywordToken && token.Value == "دالة" {
+	if token.Type == KeywordToken && token.Value == KeywordFunction {
 		p.lexer.Next()
 		return p.parseFunctionDeclaration().ToNode()
 	}
@@ -341,7 +341,7 @@ func (p *Parser) isExpression() bool {
 		return false
 	case KeywordToken:
 		switch token.Value {
-		case "دالة", "متغير", "ثابت":
+		case KeywordFunction, KeywordLet, KeywordConst:
 			return false
 		default:
 			return true
@@ -358,7 +358,7 @@ func (p *Parser) isPrimaryExpression() bool {
 		return true
 	case KeywordToken:
 		switch token.Value {
-		case "فارغ", "صحيح", "خطأ":
+		case KeywordNull, KeywordTrue, KeywordFalse:
 			return true
 		default:
 			return false
@@ -374,13 +374,13 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 		p.lexer.Next()
 		return ast.NewIdentifier(token.Value, nil).ToNode()
 	}
-	if token.Type == KeywordToken && token.Value == "فارغ" {
+	if token.Type == KeywordToken && token.Value == KeywordNull {
 		p.lexer.Next()
 		return ast.NewNullLiteral().ToNode()
 	}
-	if token.Type == KeywordToken && (token.Value == "صحيح" || token.Value == "خطأ") {
+	if token.Type == KeywordToken && (token.Value == KeywordTrue || token.Value == KeywordFalse) {
 		p.lexer.Next()
-		return ast.NewBooleanLiteral(token.Value == "صحيح").ToNode()
+		return ast.NewBooleanLiteral(token.Value == KeywordTrue).ToNode()
 	}
 	if token.Type == Decimal {
 		p.lexer.Next()
@@ -478,19 +478,19 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 }
 
 func (p *Parser) getTypeNodeFromIdentifier(token Token) *ast.Node {
-	if token.Value == "نص" {
+	if token.Value == TypeKeywordString {
 		return ast.NewTStringKeyword().ToNode()
 	}
 
-	if token.Value == "عدد" {
+	if token.Value == TypeKeywordNumber {
 		return ast.NewTNumberKeyword().ToNode()
 	}
 
-	if token.Value == "قيمة_منطقية" {
+	if token.Value == TypeKeywordBoolean {
 		return ast.NewTBooleanKeyword().ToNode()
 	}
 
-	if token.Value == "أي_نوع" {
+	if token.Value == TypeKeywordAny {
 		return ast.NewTAnyKeyword().ToNode()
 	}
 

@@ -6,6 +6,24 @@ import (
 )
 
 type Keyword = string
+
+const (
+	KeywordConst    Keyword = "ثابت"
+	KeywordLet      Keyword = "متغير"
+	KeywordFunction Keyword = "دالة"
+	KeywordNull     Keyword = "فارغ"
+	KeywordTrue     Keyword = "صحيح"
+	KeywordFalse    Keyword = "خطأ"
+	KeywordIf       Keyword = "إذا"
+	KeywordElse     Keyword = "و_إلا"
+	KeywordImport   Keyword = "استيراد"
+	KeywordFrom     Keyword = "من"
+	KeywordAs       Keyword = "بإسم"
+	KeywordExport   Keyword = "تصدير"
+	KeywordDefault  Keyword = "افتراضي"
+	KeywordReturn   Keyword = "إرجاع"
+)
+
 type TokenType = int
 
 const (
@@ -58,8 +76,20 @@ type Token struct {
 }
 
 var Keywords = []Keyword{
-	"ثابت", "متغير", "دالة", "كائن", "فارغ", "صحيح", "خطأ", "إذا", "و_إلا",
-	"استيراد", "من", "بإسم", "تصدير", "افتراضي", "إرجاع",
+	KeywordConst,
+	KeywordLet,
+	KeywordFunction,
+	KeywordNull,
+	KeywordTrue,
+	KeywordFalse,
+	KeywordIf,
+	KeywordElse,
+	KeywordImport,
+	KeywordFrom,
+	KeywordAs,
+	KeywordExport,
+	KeywordDefault,
+	KeywordReturn,
 }
 
 var OneCharTokens = map[string]TokenType{
@@ -103,6 +133,19 @@ var ThreeCharTokens = map[string]TokenType{
 	">>>": TripleRightArrow,
 	"...": TripleDots,
 }
+
+type TypeKeyword = string
+
+const (
+	TypeKeywordAny     TypeKeyword = "أي_نوع"
+	TypeKeywordString  TypeKeyword = "نص"
+	TypeKeywordNumber  TypeKeyword = "عدد"
+	TypeKeywordBoolean TypeKeyword = "قيمة_منطقية"
+
+	TypeKeywordInterface TypeKeyword = "واجهة"
+	TypeKeywordType      TypeKeyword = "نوع"
+	TypeKeywordDeclare   TypeKeyword = "تصريح"
+)
 
 type Lexer struct {
 	input                             string
