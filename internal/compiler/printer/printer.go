@@ -22,6 +22,12 @@ type Printer struct {
 
 func NewPrinter() *Printer { return &Printer{Writer: NewWriter(), indent: 0} }
 
+func WriteSourceFile(sourceFile *ast.SourceFile) string {
+	printer := NewPrinter()
+	printer.Write(sourceFile)
+	return printer.Writer.Output
+}
+
 func (printer *Printer) increaseIndent() { printer.indent += 2 }
 func (printer *Printer) decreaseIndent() { printer.indent -= 2 }
 

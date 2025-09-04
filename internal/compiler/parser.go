@@ -5,16 +5,15 @@ import (
 )
 
 type Parser struct {
-	lexer          *Lexer
-	isNativeScript bool
+	lexer *Lexer
 }
 
-func NewParser(lexer *Lexer, isNativeScript bool) *Parser {
-	return &Parser{lexer: lexer, isNativeScript: isNativeScript}
+func NewParser(lexer *Lexer) *Parser {
+	return &Parser{lexer: lexer}
 }
 
 func ParseSourceFile(sourceText string) *ast.SourceFile {
-	return NewParser(NewLexer(sourceText), false).Parse()
+	return NewParser(NewLexer(sourceText)).Parse()
 }
 
 func (p *Parser) Parse() *ast.SourceFile {
@@ -22,9 +21,6 @@ func (p *Parser) Parse() *ast.SourceFile {
 	directives := []*ast.Directive{}
 	for token.Type == SingleQuoteString || token.Type == DoubleQuoteString {
 		value := token.Value[1 : len(token.Value)-1]
-		if value == "أصلي" {
-			p.isNativeScript = true
-		}
 		directives = append(directives, ast.NewDirective(ast.NewDirectiveLiteral(value)))
 		token = p.lexer.Next()
 		if token.Type != Semicolon {

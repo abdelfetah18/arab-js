@@ -23,10 +23,9 @@ func TestTInterfaceDeclaration(t *testing.T) {
 				})).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -59,10 +58,9 @@ func TestTInterfaceDeclaration(t *testing.T) {
 				})).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -86,10 +84,9 @@ func TestTInterfaceDeclaration(t *testing.T) {
 				})).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -119,10 +116,9 @@ func TestFunctionDeclaration(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -154,10 +150,9 @@ func TestTFunctionType(t *testing.T) {
 				})).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -175,10 +170,9 @@ func TestTTypeAliasDeclaration(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -205,10 +199,9 @@ func TestTTypeLiteral(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -244,10 +237,9 @@ func TestTTypeLiteral(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -268,10 +260,9 @@ func TestVariableDeclaration(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -295,10 +286,9 @@ func TestVariableDeclaration(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		parser := NewParser(NewLexer(input), false)
-		program := parser.Parse()
+		sourceFile := ParseSourceFile(input)
 
-		if !reflect.DeepEqual(program, expected) {
+		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
 		}
 	})
@@ -318,7 +308,7 @@ func TestTypeKeywords(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		sourceFile := NewParser(NewLexer(input), false).Parse()
+		sourceFile := ParseSourceFile(input)
 
 		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
@@ -339,7 +329,7 @@ func TestTypeKeywords(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		sourceFile := NewParser(NewLexer(input), false).Parse()
+		sourceFile := ParseSourceFile(input)
 
 		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
@@ -360,7 +350,7 @@ func TestTypeKeywords(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		sourceFile := NewParser(NewLexer(input), false).Parse()
+		sourceFile := ParseSourceFile(input)
 
 		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
@@ -381,7 +371,7 @@ func TestTypeKeywords(t *testing.T) {
 			).ToNode(),
 		}, []*ast.Directive{})
 
-		sourceFile := NewParser(NewLexer(input), false).Parse()
+		sourceFile := ParseSourceFile(input)
 
 		if !reflect.DeepEqual(sourceFile, expected) {
 			t.Error("AST structures are not equal")
