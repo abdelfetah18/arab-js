@@ -303,3 +303,88 @@ func TestVariableDeclaration(t *testing.T) {
 		}
 	})
 }
+func TestTypeKeywords(t *testing.T) {
+	t.Run("should parse type any", func(t *testing.T) {
+		input := "متغير رقم : أي_نوع = 100؛"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewVariableDeclaration(
+				ast.NewIdentifier(
+					"رقم",
+					ast.NewTTypeAnnotation(ast.NewTAnyKeyword().ToNode()),
+				),
+				ast.NewInitializer(ast.NewDecimalLiteral("100").ToNode()),
+				false,
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := NewParser(NewLexer(input), false).Parse()
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+
+	t.Run("should parse type number", func(t *testing.T) {
+		input := "متغير رقم : عدد = 100؛"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewVariableDeclaration(
+				ast.NewIdentifier(
+					"رقم",
+					ast.NewTTypeAnnotation(ast.NewTNumberKeyword().ToNode()),
+				),
+				ast.NewInitializer(ast.NewDecimalLiteral("100").ToNode()),
+				false,
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := NewParser(NewLexer(input), false).Parse()
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+
+	t.Run("should parse type string", func(t *testing.T) {
+		input := "متغير جملة : نص = 'مرحبا'؛"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewVariableDeclaration(
+				ast.NewIdentifier(
+					"جملة",
+					ast.NewTTypeAnnotation(ast.NewTStringKeyword().ToNode()),
+				),
+				ast.NewInitializer(ast.NewStringLiteral("مرحبا").ToNode()),
+				false,
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := NewParser(NewLexer(input), false).Parse()
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+
+	t.Run("should parse type boolean", func(t *testing.T) {
+		input := "متغير قيمة_منطقية : قيمة_منطقية = صحيح؛"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewVariableDeclaration(
+				ast.NewIdentifier(
+					"قيمة_منطقية",
+					ast.NewTTypeAnnotation(ast.NewTBooleanKeyword().ToNode()),
+				),
+				ast.NewInitializer(ast.NewBooleanLiteral(true).ToNode()),
+				false,
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := NewParser(NewLexer(input), false).Parse()
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+}

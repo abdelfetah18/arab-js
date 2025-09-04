@@ -192,6 +192,19 @@ func (tNullKeyword TNullKeyword) ToNode() *Node {
 	}
 }
 
+type TAnyKeyword struct{}
+
+func NewTAnyKeyword() *TAnyKeyword {
+	return &TAnyKeyword{}
+}
+
+func (tAnyKeyword TAnyKeyword) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTAnyKeyword,
+		Data: tAnyKeyword,
+	}
+}
+
 type Identifier struct {
 	Name           string
 	OriginalName   *string

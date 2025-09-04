@@ -41,6 +41,7 @@ const (
 	NodeTypeTNumberKeyword
 	NodeTypeTBooleanKeyword
 	NodeTypeTNullKeyword
+	NodeTypeTAnyKeyword
 	NodeTypeTInterfaceDeclaration
 	NodeTypeTInterfaceBody
 	NodeTypeTPropertySignature

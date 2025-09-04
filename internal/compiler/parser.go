@@ -490,6 +490,10 @@ func (p *Parser) getTypeNodeFromIdentifier(token Token) *ast.Node {
 		return ast.NewTBooleanKeyword().ToNode()
 	}
 
+	if token.Value == "أي_نوع" {
+		return ast.NewTAnyKeyword().ToNode()
+	}
+
 	return ast.NewTTypeReference(ast.NewIdentifier(token.Value, nil)).ToNode()
 }
 
