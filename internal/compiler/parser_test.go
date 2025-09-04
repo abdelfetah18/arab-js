@@ -458,3 +458,48 @@ func TestTypeKeywords(t *testing.T) {
 		}
 	})
 }
+
+func TestUpdateExpression(t *testing.T) {
+	t.Run("should parse update expression", func(t *testing.T) {
+		input := "أ++؛"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewExpressionStatement(
+				ast.NewUpdateExpression(
+					ast.PLUS_PLUS,
+					ast.NewIdentifier("أ", nil).ToNode(),
+					false,
+				).ToNode(),
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := ParseSourceFile(input)
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+}
+
+func TestForStatement(t *testing.T) {
+	t.Run("should parse for statement", func(t *testing.T) {
+		input := "من_أجل (متغير أ = 0؛ أ <= 10؛ أ++) { أ؛ }"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewForStatement(
+				ast.NewVariableDeclaration(ast.NewIdentifier("أ", nil), ast.NewInitializer(ast.NewDecimalLiteral("0").ToNode()), false).ToNode(),
+				ast.NewBinaryExpression(ast.LEFT_ARROW_EQUAL, ast.NewIdentifier("أ", nil).ToNode(), ast.NewDecimalLiteral("10").ToNode()).ToNode(),
+				ast.NewUpdateExpression(ast.PLUS_PLUS, ast.NewIdentifier("أ", nil).ToNode(), false).ToNode(),
+				ast.NewBlockStatement([]*ast.Node{
+					ast.NewExpressionStatement(ast.NewIdentifier("أ", nil).ToNode()).ToNode(),
+				}).ToNode(),
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := ParseSourceFile(input)
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+}

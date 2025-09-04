@@ -93,6 +93,9 @@ func (p *Parser) parseStatement() *ast.Node {
 		p.lexer.Next()
 		return p.parseReturnStatement().ToNode()
 	}
+	if token.Type == KeywordToken && token.Value == KeywordFor {
+		return p.parseBreakableStatement()
+	}
 	if token.Type == LeftCurlyBrace {
 		p.lexer.Next()
 		return p.parseBlockStatement().ToNode()
@@ -609,7 +612,24 @@ func (p *Parser) parseMemberExpression() *ast.Node {
 }
 
 func (p *Parser) parseUpdateExpression() *ast.Node {
-	return p.parseLeftHandSideExpression()
+	token := p.lexer.Peek()
+	if token.Type == DOUBLE_PLUS || token.Type == DOUBLE_MINUS {
+		operator := token.Value
+		token = p.lexer.Next()
+		return ast.NewUpdateExpression(operator, p.parseUnaryExpression(), true).ToNode()
+	}
+
+	token = p.lexer.Peek()
+
+	leftHandSideExpression := p.parseLeftHandSideExpression()
+	token = p.lexer.Peek()
+
+	if token.Type == DOUBLE_PLUS || token.Type == DOUBLE_MINUS {
+		p.lexer.Next()
+		return ast.NewUpdateExpression(token.Value, leftHandSideExpression, false).ToNode()
+	}
+
+	return leftHandSideExpression
 }
 
 func (p *Parser) parseUnaryExpression() *ast.Node {
@@ -1008,4 +1028,68 @@ func (p *Parser) parseTTypeLiteral() *ast.TTypeLiteral {
 	token = p.lexer.Next()
 
 	return ast.NewTTypeLiteral(members)
+}
+
+func (p *Parser) parseBreakableStatement() *ast.Node {
+	token := p.lexer.Peek()
+	switch token.Value {
+	case KeywordFor:
+		return p.parseIterationStatement()
+	}
+
+	return nil
+}
+
+func (p *Parser) parseIterationStatement() *ast.Node {
+	token := p.lexer.Peek()
+	switch token.Value {
+	case KeywordFor:
+		return p.parseForStatement().ToNode()
+	}
+
+	return nil
+}
+
+func (p *Parser) parseForStatement() *ast.ForStatement {
+	token := p.lexer.Peek()
+	if token.Type != KeywordToken && token.Value != KeywordFor {
+		panic("Expeceted 'من_أجل' but got" + token.Value)
+	}
+	token = p.lexer.Next()
+
+	if token.Type != LeftParenthesis {
+		panic("Expeceted '(' but got" + token.Value)
+	}
+	token = p.lexer.Next()
+
+	var init *ast.Node = nil
+	if token.Type == KeywordToken && token.Value == KeywordLet {
+		token = p.lexer.Next()
+		init = p.parseVariableDeclaration().ToNode()
+	} else {
+		init = p.parseExpression()
+		token = p.lexer.Peek()
+		if token.Type != Semicolon {
+			panic("Expeceted '؛' but got " + token.Value)
+		}
+		p.lexer.Next()
+	}
+
+	test := p.parseExpression()
+
+	token = p.lexer.Peek()
+	if token.Type != Semicolon {
+		panic("Expeceted '؛' but got" + token.Value)
+	}
+	p.lexer.Next()
+
+	update := p.parseExpression()
+
+	token = p.lexer.Peek()
+	if token.Type != RightParenthesis {
+		panic("Expeceted ')' but got" + token.Value)
+	}
+	p.lexer.Next()
+
+	return ast.NewForStatement(init, test, update, p.parseStatement())
 }

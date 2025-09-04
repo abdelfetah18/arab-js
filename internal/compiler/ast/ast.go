@@ -29,6 +29,13 @@ const (
 	LEFT_ARROW_EQUAL   BinaryExpressionOperator = "<="
 )
 
+type UpdateExpressionOperator = string
+
+const (
+	PLUS_PLUS   UpdateExpressionOperator = "++"
+	MINUS_MINUS UpdateExpressionOperator = "--"
+)
+
 type Node struct {
 	Type NodeType
 	Data NodeData
@@ -58,8 +65,10 @@ func (node *Node) AsObjectProperty() *ObjectProperty     { return node.Data.(*Ob
 func (node *Node) AsObjectMethod() *ObjectMethod         { return node.Data.(*ObjectMethod) }
 func (node *Node) AsMemberExpression() *MemberExpression { return node.Data.(*MemberExpression) }
 func (node *Node) AsRestElement() *RestElement           { return node.Data.(*RestElement) }
+func (node *Node) AsUpdateExpression() *UpdateExpression { return node.Data.(*UpdateExpression) }
 
 func (node *Node) AsIfStatement() *IfStatement         { return node.Data.(*IfStatement) }
+func (node *Node) AsForStatement() *ForStatement       { return node.Data.(*ForStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement   { return node.Data.(*BlockStatement) }
 func (node *Node) AsSourceFile() *SourceFile           { return node.Data.(*SourceFile) }
 func (node *Node) AsReturnStatement() *ReturnStatement { return node.Data.(*ReturnStatement) }
@@ -827,5 +836,49 @@ func (restElement *RestElement) ToNode() *Node {
 	return &Node{
 		Type: NodeTypeRestElement,
 		Data: restElement,
+	}
+}
+
+type ForStatement struct {
+	Init   *Node
+	Test   *Node
+	Update *Node
+	Body   *Node
+}
+
+func NewForStatement(init *Node, test *Node, update *Node, body *Node) *ForStatement {
+	return &ForStatement{
+		Init:   init,
+		Test:   test,
+		Update: update,
+		Body:   body,
+	}
+}
+
+func (forStatement *ForStatement) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeForStatement,
+		Data: forStatement,
+	}
+}
+
+type UpdateExpression struct {
+	Operator UpdateExpressionOperator
+	Argument *Node
+	Prefix   bool
+}
+
+func NewUpdateExpression(operator UpdateExpressionOperator, argument *Node, prefix bool) *UpdateExpression {
+	return &UpdateExpression{
+		Operator: operator,
+		Argument: argument,
+		Prefix:   prefix,
+	}
+}
+
+func (updateExpression *UpdateExpression) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeUpdateExpression,
+		Data: updateExpression,
 	}
 }

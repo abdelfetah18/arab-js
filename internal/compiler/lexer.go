@@ -22,6 +22,7 @@ const (
 	KeywordExport   Keyword = "تصدير"
 	KeywordDefault  Keyword = "افتراضي"
 	KeywordReturn   Keyword = "إرجاع"
+	KeywordFor      Keyword = "من_أجل"
 )
 
 type TokenType = int
@@ -66,6 +67,8 @@ const (
 	TripleDots
 	Colon
 	EqualRightArrow
+	DOUBLE_PLUS
+	DOUBLE_MINUS
 	Invalid
 )
 
@@ -85,11 +88,13 @@ var Keywords = []Keyword{
 	KeywordIf,
 	KeywordElse,
 	KeywordImport,
-	KeywordFrom,
 	KeywordAs,
 	KeywordExport,
 	KeywordDefault,
 	KeywordReturn,
+
+	KeywordFor, // Must stay before KeywordFrom
+	KeywordFrom,
 }
 
 var OneCharTokens = map[string]TokenType{
@@ -125,6 +130,8 @@ var TwoCharTokens = map[string]TokenType{
 	"**": DoubleStar,
 	"=>": EqualRightArrow,
 	"؛":  Semicolon, // Unicode character
+	"++": DOUBLE_PLUS,
+	"--": DOUBLE_MINUS,
 }
 
 var ThreeCharTokens = map[string]TokenType{

@@ -15,6 +15,8 @@ const (
 	NodeTypeIfStatement
 	NodeTypeBlockStatement
 	NodeTypeReturnStatement
+	NodeTypeForStatement
+	NodeTypeUpdateExpression
 	NodeTypeAssignmentExpression
 	NodeTypeFunctionDeclaration
 	NodeTypeCallExpression
