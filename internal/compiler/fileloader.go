@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"arab_js/internal/binder"
+	"arab_js/internal/bundled"
 	"arab_js/internal/compiler/ast"
 )
 
@@ -18,6 +19,12 @@ func NewFileLoader(files []string) *FileLoader {
 }
 
 func (l *FileLoader) LoadSourceFiles() {
+	// Load Dom Library
+	libFileContent := bundled.ReadLibFile(bundled.LibNameDom)
+	sourceFile := ParseSourceFile(libFileContent)
+	binder.BindSourceFile(sourceFile)
+	l.SourceFiles = append(l.SourceFiles, sourceFile)
+
 	for _, file := range l.files {
 		sourceFile := GetSourceFile(file)
 		binder.BindSourceFile(sourceFile)

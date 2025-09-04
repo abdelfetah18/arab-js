@@ -72,7 +72,7 @@ var buildCmd = &cobra.Command{
 			panic("Checker Errors")
 		}
 
-		transformer.NewTransformer(program).Transform()
+		transformer.NewTransformer(program, _checker.NameResolver).Transform()
 
 		outputDir := filepath.Join(projectPath, "البناء")
 		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {

@@ -1,20 +1,31 @@
 package checker
 
 import (
+	"arab_js/internal/binder"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"fmt"
 )
 
 type Checker struct {
-	program *compiler.Program
-	Errors  []string
+	program      *compiler.Program
+	NameResolver *binder.NameResolver
+	Errors       []string
 }
 
 func NewChecker(program *compiler.Program) *Checker {
+	globalScope := &ast.Scope{}
+
+	for _, sourceFile := range program.SourceFiles {
+		if !ast.IsExternalModule(sourceFile) {
+			globalScope.MergeScopeLocals(sourceFile.Scope)
+		}
+	}
+
 	return &Checker{
-		program: program,
-		Errors:  []string{},
+		program:      program,
+		Errors:       []string{},
+		NameResolver: binder.NewNameResolver(globalScope),
 	}
 }
 

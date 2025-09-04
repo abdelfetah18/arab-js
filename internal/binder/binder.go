@@ -30,11 +30,25 @@ func (b *Binder) Bind() {
 		switch node.Type {
 		case ast.NodeTypeVariableDeclaration:
 			b.bindVariableDeclaration(node.AsVariableDeclaration())
-		case ast.NodeTypeBlockStatement:
-			b.bindBlockStatement(node.AsBlockStatement())
+			continue
 		case ast.NodeTypeTInterfaceDeclaration:
 			b.bindTInterfaceDeclaration(node.AsTInterfaceDeclaration())
+			continue
+		default:
+			b.bindStatement(node)
+			continue
 		}
+	}
+}
+
+func (b *Binder) bindStatement(node *ast.Node) {
+	switch node.Type {
+	case ast.NodeTypeIfStatement:
+		ifStatement := node.AsIfStatement()
+		b.bindStatement(ifStatement.ConsequentStatement)
+		b.bindStatement(ifStatement.AlternateStatement)
+	case ast.NodeTypeBlockStatement:
+		b.bindBlockStatement(node.AsBlockStatement())
 	}
 }
 
@@ -53,7 +67,7 @@ func (b *Binder) bindVariableDeclaration(variableDeclaration *ast.VariableDeclar
 func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 	blockStatement.Scope.Parent = b.container.Scope
 	saveContainer := b.container
-	b.container = &blockStatement.ContainerBase
+	b.container = blockStatement.ContainerBaseData()
 
 	for _, node := range b.sourceFile.Body {
 		switch node.Type {

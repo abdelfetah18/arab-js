@@ -1,25 +1,28 @@
 package transformer
 
 import (
+	"arab_js/internal/binder"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 )
 
 type Transformer struct {
-	program *compiler.Program
+	program      *compiler.Program
+	NameResolver *binder.NameResolver
 
-	sourceFile *ast.SourceFile
+	currentScope *ast.Scope
 }
 
-func NewTransformer(program *compiler.Program) *Transformer {
+func NewTransformer(program *compiler.Program, nameResolver *binder.NameResolver) *Transformer {
 	return &Transformer{
-		program: program,
+		program:      program,
+		NameResolver: nameResolver,
 	}
 }
 
 func (t *Transformer) Transform() {
 	for _, sourceFile := range t.program.SourceFiles {
-		t.sourceFile = sourceFile
+		t.currentScope = sourceFile.Scope
 		for _, node := range sourceFile.Body {
 			switch node.Type {
 			case ast.NodeTypeFunctionDeclaration:
@@ -53,7 +56,7 @@ func (t *Transformer) transformExpression(node *ast.Node) {
 		t.transformCallExpression(node.AsCallExpression())
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
-		symbol := t.sourceFile.Scope.GetVariableSymbol(identifier.Name)
+		symbol := t.NameResolver.Resolve(identifier.Name, t.currentScope)
 		if symbol.OriginalName != nil {
 			identifier.Name = *symbol.OriginalName
 		}
@@ -70,12 +73,12 @@ func (t *Transformer) transformCallExpression(callExpression *ast.CallExpression
 func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpression) {
 	switch memberExpression.Object.Type {
 	case ast.NodeTypeMemberExpression:
-		objectType := t.sourceFile.Scope.GetTypeOfNode(memberExpression.Object)
+		objectType := t.currentScope.GetTypeOfNode(memberExpression.Object)
 		t.transformMemberExpression(memberExpression.Object.AsMemberExpression())
 		t.transformProperty(memberExpression.Property, objectType.AsObjectType())
 	case ast.NodeTypeIdentifier:
 		objectIdentfier := memberExpression.Object.AsIdentifier()
-		symbol := t.sourceFile.Scope.GetVariableSymbol(objectIdentfier.Name)
+		symbol := t.NameResolver.Resolve(objectIdentfier.Name, t.currentScope)
 		objectIdentfier.Name = *symbol.OriginalName
 		if symbol.Type.Flags&ast.TypeFlagsObject == ast.TypeFlagsObject {
 			objectType := symbol.Type.AsObjectType()
@@ -97,6 +100,7 @@ func (t *Transformer) transformProperty(property *ast.Node, objectType *ast.Obje
 
 func (t *Transformer) transformBlockStatement(blockStatement *ast.BlockStatement) {
 	for _, node := range blockStatement.Body {
+		t.currentScope = blockStatement.Scope
 		t.transformStatement(node)
 	}
 }

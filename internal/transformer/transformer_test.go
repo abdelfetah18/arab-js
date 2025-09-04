@@ -2,6 +2,7 @@ package transformer
 
 import (
 	"arab_js/internal/binder"
+	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"reflect"
@@ -43,7 +44,10 @@ func TestOriginalName(t *testing.T) {
 
 		sourceFile := compiler.ParseSourceFile(input)
 		binder.NewBinder(sourceFile).Bind()
-		transformer := NewTransformer(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
+		_checker := checker.NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
+		_checker.Check()
+
+		transformer := NewTransformer(compiler.NewProgram([]*ast.SourceFile{sourceFile}), _checker.NameResolver)
 		transformer.Transform()
 
 		if !reflect.DeepEqual(sourceFile, expected) {

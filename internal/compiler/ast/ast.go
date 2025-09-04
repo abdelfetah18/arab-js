@@ -306,7 +306,7 @@ type BlockStatement struct {
 }
 
 func NewBlockStatement(body []*Node) *BlockStatement {
-	return &BlockStatement{Body: body, Scope: nil}
+	return &BlockStatement{Body: body, Scope: &Scope{}}
 }
 
 func (blockStatement *BlockStatement) ToNode() *Node {
@@ -631,6 +631,8 @@ type SourceFile struct {
 	Name       string
 	Body       []*Node
 	Directives []*Directive
+
+	ExternalModuleIndicator *Node
 }
 
 func NewSourceFile(body []*Node, directives []*Directive) *SourceFile {

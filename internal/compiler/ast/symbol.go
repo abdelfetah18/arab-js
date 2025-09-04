@@ -63,6 +63,13 @@ func (s *Scope) GetVariableSymbol(name string) *Symbol {
 	return nil
 }
 
+// MergeScope mean Adding other Locals to current Scope Locals
+func (s *Scope) MergeScopeLocals(other *Scope) {
+	for _, symbol := range other.Locals {
+		s.AddVariable(symbol.Name, symbol.OriginalName, symbol.Type)
+	}
+}
+
 type SymbolTable map[string]*Symbol
 
 type TypeFlags uint32
