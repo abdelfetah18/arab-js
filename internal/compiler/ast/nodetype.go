@@ -48,4 +48,5 @@ const (
 	NodeTypeTFunctionType
 	NodeTypeTTypeAliasDeclaration
 	NodeTypeTTypeReference
+	NodeTypeTArrayType
 )

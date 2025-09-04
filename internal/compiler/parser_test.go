@@ -377,4 +377,25 @@ func TestTypeKeywords(t *testing.T) {
 			t.Error("AST structures are not equal")
 		}
 	})
+
+	t.Run("should parse type array", func(t *testing.T) {
+		input := "متغير مصفوفة_أعداد : عدد[] = []؛"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewVariableDeclaration(
+				ast.NewIdentifier(
+					"مصفوفة_أعداد",
+					ast.NewTTypeAnnotation(ast.NewTArrayType(ast.NewTNumberKeyword().ToNode()).ToNode()),
+				),
+				ast.NewInitializer(ast.NewArrayExpression([]*ast.Node{}).ToNode()),
+				false,
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := ParseSourceFile(input)
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
 }

@@ -794,3 +794,18 @@ func (tTypeReference *TTypeReference) ToNode() *Node {
 		Data: tTypeReference,
 	}
 }
+
+type TArrayType struct {
+	ElementType *Node
+}
+
+func NewTArrayType(elementType *Node) *TArrayType {
+	return &TArrayType{ElementType: elementType}
+}
+
+func (tArrayType *TArrayType) ToNode() *Node {
+	return &Node{
+		Type: NodeTypeTArrayType,
+		Data: tArrayType,
+	}
+}

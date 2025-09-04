@@ -836,9 +836,18 @@ func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
 	if token.Type != Identifier {
 		panic("Expected Token Type Identifier, got " + token.Value)
 	}
-	p.lexer.Next()
 
-	return ast.NewTTypeAnnotation(p.getTypeNodeFromIdentifier(token))
+	typeNode := p.getTypeNodeFromIdentifier(token)
+	token = p.lexer.Next()
+
+	if token.Type == LeftSquareBracket {
+		token = p.lexer.Next()
+		if token.Type == RightSquareBracket {
+			p.lexer.Next()
+			return ast.NewTTypeAnnotation(ast.NewTArrayType(typeNode).ToNode())
+		}
+	}
+	return ast.NewTTypeAnnotation(typeNode)
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
