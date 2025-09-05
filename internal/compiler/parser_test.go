@@ -503,3 +503,25 @@ func TestForStatement(t *testing.T) {
 		}
 	})
 }
+
+func TestAssignmentExpression(t *testing.T) {
+	t.Run("should parse assignment expression", func(t *testing.T) {
+		input := "أ = 100؛"
+
+		expected := ast.NewSourceFile([]*ast.Node{
+			ast.NewExpressionStatement(
+				ast.NewAssignmentExpression(
+					ast.EQUAL,
+					ast.NewIdentifier("أ", nil).ToNode(),
+					ast.NewDecimalLiteral("100").ToNode(),
+				).ToNode(),
+			).ToNode(),
+		}, []*ast.Directive{})
+
+		sourceFile := ParseSourceFile(input)
+
+		if !reflect.DeepEqual(sourceFile, expected) {
+			t.Error("AST structures are not equal")
+		}
+	})
+}

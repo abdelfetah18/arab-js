@@ -770,7 +770,45 @@ func (p *Parser) parseConditionalExpression() *ast.Node {
 }
 
 func (p *Parser) parseAssignmentExpression() *ast.Node {
-	return p.parseConditionalExpression()
+	node := p.parseConditionalExpression()
+
+	switch node.Type {
+	case
+		ast.NodeTypeIdentifier,
+		ast.NodeTypeStringLiteral,
+		ast.NodeTypeDecimalLiteral,
+		ast.NodeTypeNullLiteral,
+		ast.NodeTypeBooleanLiteral,
+		ast.NodeTypeArrayExpression,
+		ast.NodeTypeObjectExpression,
+		ast.NodeTypeMemberExpression,
+		ast.NodeTypeCallExpression:
+		{
+
+			token := p.lexer.Peek()
+			switch token.Type {
+			case
+				Equal,
+				StarEqual,
+				SlashEqual,
+				PercentEqual,
+				PlusEqual,
+				MinusEqual,
+				BitwiseAndEqual,
+				BitwiseXorEqual,
+				BitwiseOrEqual,
+				DoubleLeftArrowEqual,
+				DoubleRightArrowEqual,
+				DoubleStarEqual:
+				{
+					p.lexer.Next()
+					return ast.NewAssignmentExpression(token.Value, node, p.parseAssignmentExpression()).ToNode()
+				}
+			}
+		}
+	}
+
+	return node
 }
 
 func (p *Parser) parseExpression() *ast.Node {

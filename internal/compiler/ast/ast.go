@@ -36,6 +36,23 @@ const (
 	MINUS_MINUS UpdateExpressionOperator = "--"
 )
 
+type AssignmentExpressionOperator = string
+
+const (
+	EQUAL                    AssignmentExpressionOperator = "="
+	STAR_EQUAL               AssignmentExpressionOperator = "*="
+	SLASH_EQUAL              AssignmentExpressionOperator = "/="
+	PERCENT_EQUAL            AssignmentExpressionOperator = "%="
+	PLUS_EQUAL               AssignmentExpressionOperator = "+="
+	MINUS_EQUAL              AssignmentExpressionOperator = "-="
+	DOUBLE_LEFT_ARROW_EQUAL  AssignmentExpressionOperator = "<<="
+	DOUBLE_RIGHT_ARROW_EQUAL AssignmentExpressionOperator = ">>="
+	AND_EQUAL                AssignmentExpressionOperator = "&="
+	XOR_EQUAL                AssignmentExpressionOperator = "^="
+	OR_EQUAL                 AssignmentExpressionOperator = "|="
+	DOUBLE_STAR_EQUAL        AssignmentExpressionOperator = "**="
+)
+
 type Node struct {
 	Type NodeType
 	Data NodeData

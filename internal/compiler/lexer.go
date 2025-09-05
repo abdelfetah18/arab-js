@@ -69,6 +69,17 @@ const (
 	EqualRightArrow
 	DOUBLE_PLUS
 	DOUBLE_MINUS
+	StarEqual
+	SlashEqual
+	PercentEqual
+	PlusEqual
+	MinusEqual
+	DoubleLeftArrowEqual
+	DoubleRightArrowEqual
+	BitwiseAndEqual
+	BitwiseXorEqual
+	BitwiseOrEqual
+	DoubleStarEqual
 	Invalid
 )
 
@@ -132,6 +143,14 @@ var TwoCharTokens = map[string]TokenType{
 	"؛":  Semicolon, // Unicode character
 	"++": DOUBLE_PLUS,
 	"--": DOUBLE_MINUS,
+	"*=": StarEqual,
+	"/=": SlashEqual,
+	"%=": PercentEqual,
+	"+=": PlusEqual,
+	"-=": MinusEqual,
+	"&=": BitwiseAndEqual,
+	"^=": BitwiseXorEqual,
+	"|=": BitwiseOrEqual,
 }
 
 var ThreeCharTokens = map[string]TokenType{
@@ -139,6 +158,9 @@ var ThreeCharTokens = map[string]TokenType{
 	"!==": NotEqualEqual,
 	">>>": TripleRightArrow,
 	"...": TripleDots,
+	"<<=": DoubleLeftArrowEqual,
+	">>=": DoubleRightArrowEqual,
+	"**=": DoubleStarEqual,
 }
 
 type TypeKeyword = string
