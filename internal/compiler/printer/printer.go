@@ -61,6 +61,8 @@ func (printer *Printer) writeStatement(statement *ast.Node) {
 	case ast.NodeTypeReturnStatement:
 		printer.writeReturnStatement(statement.AsReturnStatement())
 		printer.Writer.Write(";")
+	case ast.NodeTypeForStatement:
+		printer.writeForStatement(statement.AsForStatement())
 	}
 }
 
@@ -172,6 +174,16 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 
 	case ast.NodeTypeMemberExpression:
 		printer.writeMemberExpression(expression.AsMemberExpression())
+	case ast.NodeTypeUpdateExpression:
+		updateExpression := expression.AsUpdateExpression()
+
+		if updateExpression.Prefix {
+			printer.Writer.Write(updateExpression.Operator)
+		}
+		printer.writeExpression(updateExpression.Argument)
+		if !updateExpression.Prefix {
+			printer.Writer.Write(updateExpression.Operator)
+		}
 	}
 }
 
@@ -250,4 +262,19 @@ func (printer *Printer) writeFunctionDeclaration(functionDeclaration *ast.Functi
 func (printer *Printer) writeReturnStatement(returnStatement *ast.ReturnStatement) {
 	printer.Writer.Write("return ")
 	printer.writeExpression(returnStatement.Argument)
+}
+
+func (printer *Printer) writeForStatement(forStatement *ast.ForStatement) {
+	printer.Writer.Write("for (")
+	if forStatement.Init.Type == ast.NodeTypeVariableDeclaration {
+		printer.writeVariableDeclaration(forStatement.Init.AsVariableDeclaration())
+	} else {
+		printer.writeExpression(forStatement.Init)
+	}
+	printer.Writer.Write("; ")
+	printer.writeExpression(forStatement.Test)
+	printer.Writer.Write("; ")
+	printer.writeExpression(forStatement.Update)
+	printer.Writer.Write(") ")
+	printer.writeBlockStatement(forStatement.Body.AsBlockStatement())
 }

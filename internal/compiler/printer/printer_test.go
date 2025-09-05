@@ -482,3 +482,27 @@ func TestFunctionDeclaration(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateExpression(t *testing.T) {
+	t.Run("should write a update expression", func(t *testing.T) {
+		input := "أ++؛"
+		output := WriteSourceFile(compiler.ParseSourceFile(input))
+		expected := "أ++;"
+
+		if output != expected {
+			t.Errorf("\nExpected %s, got %s\n", expected, output)
+		}
+	})
+}
+
+func TestForStatement(t *testing.T) {
+	t.Run("should parse a for statement", func(t *testing.T) {
+		input := "من_أجل (متغير أ = 0؛ أ <= 10؛ أ++) { أ؛ }"
+		output := WriteSourceFile(compiler.ParseSourceFile(input))
+		expected := "for (let أ = 0; أ <= 10; أ++) {\n  أ;\n}"
+
+		if output != expected {
+			t.Errorf("\nExpected %s, got %s\n", expected, output)
+		}
+	})
+}
