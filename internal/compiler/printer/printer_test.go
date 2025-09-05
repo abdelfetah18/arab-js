@@ -506,3 +506,15 @@ func TestForStatement(t *testing.T) {
 		}
 	})
 }
+
+func TestAssignmentExpression(t *testing.T) {
+	t.Run("should parse assignment expression", func(t *testing.T) {
+		input := "أ = 100؛"
+		output := WriteSourceFile(compiler.ParseSourceFile(input))
+		expected := "أ = 100;"
+
+		if output != expected {
+			t.Errorf("\nExpected %s, got %s\n", expected, output)
+		}
+	})
+}

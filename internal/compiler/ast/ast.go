@@ -1,7 +1,6 @@
 package ast
 
 type JavaScriptNode interface{}
-type LVal interface{}
 type FunctionParameter = Identifier
 
 type BinaryExpressionOperator = string
@@ -83,6 +82,9 @@ func (node *Node) AsObjectMethod() *ObjectMethod         { return node.Data.(*Ob
 func (node *Node) AsMemberExpression() *MemberExpression { return node.Data.(*MemberExpression) }
 func (node *Node) AsRestElement() *RestElement           { return node.Data.(*RestElement) }
 func (node *Node) AsUpdateExpression() *UpdateExpression { return node.Data.(*UpdateExpression) }
+func (node *Node) AsAssignmentExpression() *AssignmentExpression {
+	return node.Data.(*AssignmentExpression)
+}
 
 func (node *Node) AsIfStatement() *IfStatement         { return node.Data.(*IfStatement) }
 func (node *Node) AsForStatement() *ForStatement       { return node.Data.(*ForStatement) }
@@ -358,11 +360,11 @@ func (blockStatement *BlockStatement) ToNode() *Node {
 
 type AssignmentExpression struct {
 	Operator string
-	Left     LVal
+	Left     *Node
 	Right    *Node
 }
 
-func NewAssignmentExpression(operator string, left LVal, right *Node) *AssignmentExpression {
+func NewAssignmentExpression(operator string, left *Node, right *Node) *AssignmentExpression {
 	return &AssignmentExpression{Operator: operator, Left: left, Right: right}
 }
 

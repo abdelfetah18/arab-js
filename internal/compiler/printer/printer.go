@@ -184,6 +184,8 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 		if !updateExpression.Prefix {
 			printer.Writer.Write(updateExpression.Operator)
 		}
+	case ast.NodeTypeAssignmentExpression:
+		printer.writeAssignmentExpression(expression.AsAssignmentExpression())
 	}
 }
 
@@ -277,4 +279,10 @@ func (printer *Printer) writeForStatement(forStatement *ast.ForStatement) {
 	printer.writeExpression(forStatement.Update)
 	printer.Writer.Write(") ")
 	printer.writeBlockStatement(forStatement.Body.AsBlockStatement())
+}
+
+func (printer *Printer) writeAssignmentExpression(assignmentExpression *ast.AssignmentExpression) {
+	printer.writeExpression(assignmentExpression.Left)
+	printer.Writer.Writef(" %s ", assignmentExpression.Operator)
+	printer.writeExpression(assignmentExpression.Right)
 }
