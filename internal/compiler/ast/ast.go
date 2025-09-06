@@ -52,9 +52,15 @@ const (
 	DOUBLE_STAR_EQUAL        AssignmentExpressionOperator = "**="
 )
 
+type Location struct {
+	Pos uint
+	End uint
+}
+
 type Node struct {
-	Type NodeType
-	Data NodeData
+	Type     NodeType
+	Data     NodeData
+	Location Location
 }
 
 type NodeData interface{}
@@ -669,6 +675,7 @@ func (directive *Directive) ToNode() *Node {
 }
 
 type SourceFile struct {
+	Node
 	ContainerBase
 	Name       string
 	Body       []*Node

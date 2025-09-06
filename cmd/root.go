@@ -21,4 +21,5 @@ func init() {
 
 	rootCmd.AddCommand(buildCmd)
 	rootCmd.AddCommand(createCmd)
+	rootCmd.AddCommand(lspCmd)
 }

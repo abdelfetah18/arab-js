@@ -4,6 +4,8 @@ import (
 	"arab_js/internal/binder"
 	"arab_js/internal/bundled"
 	"arab_js/internal/compiler/ast"
+
+	"github.com/TobiasYin/go-lsp/logs"
 )
 
 type FileLoader struct {
@@ -30,4 +32,14 @@ func (l *FileLoader) LoadSourceFiles() {
 		binder.BindSourceFile(sourceFile)
 		l.SourceFiles = append(l.SourceFiles, sourceFile)
 	}
+}
+
+func (l *FileLoader) GetSourceFile(filename string) *ast.SourceFile {
+	for _, sourceFile := range l.SourceFiles {
+		logs.Printf("sourceFile.Name=%s\n", sourceFile.Name)
+		if sourceFile.Name == filename {
+			return sourceFile
+		}
+	}
+	return nil
 }
