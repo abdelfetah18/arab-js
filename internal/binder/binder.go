@@ -85,7 +85,7 @@ func (b *Binder) bindTInterfaceDeclaration(tInterfaceDeclaration *ast.TInterface
 	b.container.Scope.AddVariable(
 		tInterfaceDeclaration.Id.Name,
 		nil,
-		b.GetTypeFromTypeNode(tInterfaceDeclaration.Body.ToNode()),
+		b.GetTypeFromTypeNode(tInterfaceDeclaration.Body.AsNode()),
 	)
 }
 

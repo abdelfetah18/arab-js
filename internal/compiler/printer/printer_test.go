@@ -329,7 +329,7 @@ func TestObjectExpression(t *testing.T) {
   قيمة_منطقية: true,
   نص: "مرحبا",
   1: "رقم واحد",
-  "'رقم'": 1
+  "رقم": 1
 };`,
 		},
 		{

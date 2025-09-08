@@ -25,7 +25,7 @@ const (
 	KeywordFor      Keyword = "من_أجل"
 )
 
-type TokenType = int
+type TokenType int
 
 const (
 	KeywordToken TokenType = iota
@@ -67,8 +67,8 @@ const (
 	TripleDots
 	Colon
 	EqualRightArrow
-	DOUBLE_PLUS
-	DOUBLE_MINUS
+	DoublePlus
+	DoubleMinus
 	StarEqual
 	SlashEqual
 	PercentEqual
@@ -82,6 +82,119 @@ const (
 	DoubleStarEqual
 	Invalid
 )
+
+func (t TokenType) String() string {
+	switch t {
+	case KeywordToken:
+		return "KeywordToken"
+	case Identifier:
+		return "Identifier"
+	case Decimal:
+		return "Decimal"
+	case Equal:
+		return "Equal"
+	case Semicolon:
+		return "Semicolon"
+	case LeftSquareBracket:
+		return "LeftSquareBracket"
+	case RightSquareBracket:
+		return "RightSquareBracket"
+	case LeftCurlyBrace:
+		return "LeftCurlyBrace"
+	case RightCurlyBrace:
+		return "RightCurlyBrace"
+	case LeftParenthesis:
+		return "LeftParenthesis"
+	case RightParenthesis:
+		return "RightParenthesis"
+	case EOF:
+		return "EOF"
+	case DoubleQuoteString:
+		return "DoubleQuoteString"
+	case SingleQuoteString:
+		return "SingleQuoteString"
+	case Comma:
+		return "Comma"
+	case Dot:
+		return "Dot"
+	case Star:
+		return "Star"
+	case BitwiseOr:
+		return "BitwiseOr"
+	case BitwiseXor:
+		return "BitwiseXor"
+	case BitwiseAnd:
+		return "BitwiseAnd"
+	case EqualEqual:
+		return "EqualEqual"
+	case NotEqual:
+		return "NotEqual"
+	case EqualEqualEqual:
+		return "EqualEqualEqual"
+	case NotEqualEqual:
+		return "NotEqualEqual"
+	case LeftArrow:
+		return "LeftArrow"
+	case RightArrow:
+		return "RightArrow"
+	case LeftArrowEqual:
+		return "LeftArrowEqual"
+	case RightArrowEqual:
+		return "RightArrowEqual"
+	case DoubleLeftArrow:
+		return "DoubleLeftArrow"
+	case DoubleRightArrow:
+		return "DoubleRightArrow"
+	case TripleRightArrow:
+		return "TripleRightArrow"
+	case Plus:
+		return "Plus"
+	case Minus:
+		return "Minus"
+	case Slash:
+		return "Slash"
+	case Percent:
+		return "Percent"
+	case DoubleStar:
+		return "DoubleStar"
+	case TripleDots:
+		return "TripleDots"
+	case Colon:
+		return "Colon"
+	case EqualRightArrow:
+		return "EqualRightArrow"
+	case DoublePlus:
+		return "DoublePlus"
+	case DoubleMinus:
+		return "DoubleMinus"
+	case StarEqual:
+		return "StarEqual"
+	case SlashEqual:
+		return "SlashEqual"
+	case PercentEqual:
+		return "PercentEqual"
+	case PlusEqual:
+		return "PlusEqual"
+	case MinusEqual:
+		return "MinusEqual"
+	case DoubleLeftArrowEqual:
+		return "DoubleLeftArrowEqual"
+	case DoubleRightArrowEqual:
+		return "DoubleRightArrowEqual"
+	case BitwiseAndEqual:
+		return "BitwiseAndEqual"
+	case BitwiseXorEqual:
+		return "BitwiseXorEqual"
+	case BitwiseOrEqual:
+		return "BitwiseOrEqual"
+	case DoubleStarEqual:
+		return "DoubleStarEqual"
+	case Invalid:
+		return "Invalid"
+	default:
+		return "Unknown"
+	}
+}
 
 type Token struct {
 	Type     TokenType
@@ -141,8 +254,8 @@ var TwoCharTokens = map[string]TokenType{
 	"**": DoubleStar,
 	"=>": EqualRightArrow,
 	"؛":  Semicolon, // Unicode character
-	"++": DOUBLE_PLUS,
-	"--": DOUBLE_MINUS,
+	"++": DoublePlus,
+	"--": DoubleMinus,
 	"*=": StarEqual,
 	"/=": SlashEqual,
 	"%=": PercentEqual,
@@ -179,6 +292,8 @@ const (
 type Lexer struct {
 	input                             string
 	position                          int
+	startPosition                     int
+	beforeWhitespacePosition          int
 	currentToken                      Token
 	HasPrecedingOriginalNameDirective bool
 	OriginalNameDirectiveValue        string
@@ -271,7 +386,9 @@ func (l *Lexer) Peek() Token {
 func (l *Lexer) Next() Token {
 	l.HasPrecedingOriginalNameDirective = false
 	l.OriginalNameDirectiveValue = ""
+	l.beforeWhitespacePosition = l.position
 	l.currentToken = l.nextToken()
+	l.startPosition = l.currentToken.Position
 	return l.currentToken
 }
 
@@ -337,7 +454,7 @@ func (l *Lexer) nextToken() Token {
 	if l.current() == `"` {
 		start := l.position
 		l.increasePosition(1)
-		value := `"`
+		value := ""
 		for !l.isEOF() && l.current() != `"` {
 			char, size := l.charAndSize()
 			value += string(char)
@@ -346,7 +463,6 @@ func (l *Lexer) nextToken() Token {
 		if l.isEOF() {
 			return Token{Type: EOF, Value: l.current(), Position: l.position}
 		}
-		value += `"`
 		l.increasePosition(1)
 		return Token{Type: DoubleQuoteString, Value: value, Position: start}
 	}
@@ -354,7 +470,7 @@ func (l *Lexer) nextToken() Token {
 	if l.current() == `'` {
 		start := l.position
 		l.increasePosition(1)
-		value := `'`
+		value := ""
 		for !l.isEOF() && l.current() != `'` {
 			char, size := l.charAndSize()
 			value += string(char)
@@ -363,7 +479,6 @@ func (l *Lexer) nextToken() Token {
 		if l.isEOF() {
 			return Token{Type: EOF, Value: l.current(), Position: l.position}
 		}
-		value += `'`
 		l.increasePosition(1)
 		return Token{Type: SingleQuoteString, Value: value, Position: start}
 	}

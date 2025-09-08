@@ -4,13 +4,13 @@ import (
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
-	"bufio"
 	"context"
 	"errors"
 	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/TobiasYin/go-lsp/logs"
@@ -48,7 +48,7 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 	}
 	// 1. Locate Node By Position Line and Character
 	var findNode *ast.Node = nil
-	var currentScope *ast.Scope = nil
+	var currentScope *ast.Scope = sourceFile.Scope
 	nodeVisitor := ast.NewNodeVisitor(func(node *ast.Node) *ast.Node {
 		if node.Type == ast.NodeTypeBlockStatement {
 			currentScope = node.AsBlockStatement().Scope
@@ -61,7 +61,7 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 		return nil
 	})
 
-	nodeVisitor.VisitNode(sourceFile.ToNode())
+	nodeVisitor.VisitNode(sourceFile.AsNode())
 
 	if findNode == nil {
 		return nil, errors.New("cannot find node")
@@ -165,48 +165,40 @@ func listFilesWithExt(root, ext string) ([]string, error) {
 }
 
 func positionToIndex(filePath string, pos defines.Position) (uint, error) {
-	f, err := os.Open(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return 0, err
 	}
-	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-	var offset uint = 0
-	var lineNum uint = 0
+	var lineNum, runeCount uint
+	var offset uint
 
-	for scanner.Scan() {
-		line := scanner.Text()
-
+	for i := 0; i < len(data); {
 		if lineNum == pos.Line {
-			// Convert character to byte offset (respecting UTF-8 runes)
-			var runeCount uint = 0
-			var byteOffset uint = 0
-			for i := 0; i < len(line); {
+			// Count runes until reaching the desired character
+			for j := i; j < len(data); {
 				if runeCount == pos.Character {
-					byteOffset = uint(i)
-					break
+					return uint(j), nil
 				}
-				_, size := utf8.DecodeRuneInString(line[i:])
-				i += size
+				r, size := utf8.DecodeRune(data[j:])
+				if r == '\n' || r == utf8.RuneError && size == 1 {
+					break // end of line or invalid rune
+				}
 				runeCount++
+				j += size
 			}
-
-			if pos.Character >= runeCount {
-				// clamp to end of line
-				byteOffset = uint(len(line))
-			}
-
-			return offset + byteOffset, nil
+			// Clamp to end of line
+			return uint(len(data[:i]) + len(string(data[i:strings.IndexByte(string(data[i:]), '\n')]))), nil
 		}
 
-		// +1 because Scanner strips "\n"
-		offset += uint(len(line) + 1)
-		lineNum++
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, err
+		// Consume a line
+		r, size := utf8.DecodeRune(data[i:])
+		i += size
+		offset += uint(size)
+		if r == '\n' {
+			lineNum++
+			runeCount = 0
+		}
 	}
 
 	return 0, errors.New("position out of range")

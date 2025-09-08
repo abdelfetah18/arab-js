@@ -15,7 +15,7 @@ func (v *NodeVisitor) VisitNode(node *Node) *Node {
 
 	result := v.Visit(node)
 
-	if node.Type == NodeTypeProgram {
+	if node.Type == NodeTypeSourceFile {
 		v.visitProgram(node.AsSourceFile())
 	}
 
@@ -61,7 +61,7 @@ func (v *NodeVisitor) visitBlockStatement(blockStatement *BlockStatement) {
 }
 
 func (v *NodeVisitor) visitVariableDeclaration(variableDeclaration *VariableDeclaration) {
-	v.VisitNode(variableDeclaration.Identifier.ToNode())
+	v.VisitNode(variableDeclaration.Identifier.AsNode())
 
 	if variableDeclaration.Initializer != nil {
 		v.VisitNode(variableDeclaration.Initializer.Expression)

@@ -74,13 +74,13 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 func (c *Checker) checkExpression(expression *ast.Node) *ast.Type {
 	switch expression.Type {
 	case ast.NodeTypeStringLiteral:
-		return ast.InferTypeFromNode(expression.AsStringLiteral().ToNode())
+		return ast.InferTypeFromNode(expression.AsStringLiteral().AsNode())
 	case ast.NodeTypeDecimalLiteral:
-		return ast.InferTypeFromNode(expression.AsDecimalLiteral().ToNode())
+		return ast.InferTypeFromNode(expression.AsDecimalLiteral().AsNode())
 	case ast.NodeTypeBooleanLiteral:
-		return ast.InferTypeFromNode(expression.AsBooleanLiteral().ToNode())
+		return ast.InferTypeFromNode(expression.AsBooleanLiteral().AsNode())
 	case ast.NodeTypeNullLiteral:
-		return ast.InferTypeFromNode(expression.AsNullLiteral().ToNode())
+		return ast.InferTypeFromNode(expression.AsNullLiteral().AsNode())
 	}
 
 	return nil

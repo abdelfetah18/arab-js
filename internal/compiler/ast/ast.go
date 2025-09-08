@@ -1,5 +1,7 @@
 package ast
 
+import "encoding/json"
+
 type JavaScriptNode interface{}
 type FunctionParameter = Identifier
 
@@ -53,22 +55,39 @@ const (
 )
 
 type Location struct {
-	Pos uint
-	End uint
+	Pos uint `json:"pos"`
+	End uint `json:"end"`
 }
 
 type Node struct {
-	Type     NodeType
-	Data     NodeData
-	Location Location
+	Type     NodeType `json:"type,omitempty"`
+	Data     NodeData `json:"data,omitempty"`
+	Location Location `json:"location,omitempty"`
 }
 
-type NodeData interface{}
+type NodeData interface {
+	NodeType() NodeType
+	AsNode() *Node
+	// MarshalJSON() ([]byte, error)
+}
+
+type NodeBase struct {
+	Node `json:"-"`
+}
+
+func NewNode[T NodeData](nodeData T, location Location) T {
+	node := nodeData.AsNode()
+	node.Type = nodeData.NodeType()
+	node.Location = location
+	node.Data = nodeData
+	return nodeData
+}
+
+func (node *Node) AsNode() *Node { return node }
 
 func (node *Node) AsVariableDeclaration() *VariableDeclaration {
 	return node.Data.(*VariableDeclaration)
 }
-
 func (node *Node) AsFunctionDeclaration() *FunctionDeclaration {
 	return node.Data.(*FunctionDeclaration)
 }
@@ -117,6 +136,16 @@ func (node *Node) AsTTypeReference() *TTypeReference {
 	return node.Data.(*TTypeReference)
 }
 
+func wrapNode[T any](n Node, data *T) interface{} {
+	return struct {
+		Node
+		Data *T `json:"data"`
+	}{
+		Node: n,
+		Data: data,
+	}
+}
+
 type ContainerBase struct {
 	Scope *Scope
 }
@@ -128,264 +157,407 @@ type DeclarationBase struct {
 }
 
 type ExpressionStatement struct {
-	Expression *Node
+	NodeBase
+	Expression *Node `json:"expression,omitempty"`
 }
 
 func NewExpressionStatement(expression *Node) *ExpressionStatement {
 	return &ExpressionStatement{Expression: expression}
 }
 
-func (expressionStatement *ExpressionStatement) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeExpressionStatement,
-		Data: expressionStatement,
-	}
+func (expressionStatement *ExpressionStatement) MarshalJSON() ([]byte, error) {
+	type Alias ExpressionStatement
+	return json.Marshal(
+		wrapNode(
+			*expressionStatement.AsNode(),
+			(*Alias)(expressionStatement),
+		),
+	)
+}
+
+func (expressionStatement *ExpressionStatement) NodeType() NodeType {
+	return NodeTypeExpressionStatement
 }
 
 type VariableDeclaration struct {
+	NodeBase
 	DeclarationBase
-	Identifier  *Identifier
-	Initializer *Initializer
-	Declare     bool
+	Identifier  *Identifier  `json:"identifier,omitempty"`
+	Initializer *Initializer `json:"initializer,omitempty"`
+	Declare     bool         `json:"declare,omitempty"`
 }
 
 func NewVariableDeclaration(identifier *Identifier, initializer *Initializer, declare bool) *VariableDeclaration {
 	return &VariableDeclaration{Identifier: identifier, Initializer: initializer, Declare: declare}
 }
 
-func (variableDeclaration *VariableDeclaration) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeVariableDeclaration,
-		Data: variableDeclaration,
-	}
+func (variableDeclaration *VariableDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias VariableDeclaration
+	return json.Marshal(
+		wrapNode(
+			*variableDeclaration.AsNode(),
+			(*Alias)(variableDeclaration),
+		),
+	)
+}
+
+func (variableDeclaration *VariableDeclaration) NodeType() NodeType {
+	return NodeTypeVariableDeclaration
 }
 
 type TTypeAnnotation struct {
-	TypeAnnotation *Node // TStringKeyword | TNumberKeyword | TBooleanKeyword | TNullKeyword
+	NodeBase
+	TypeAnnotation *Node `json:"type_annotation,omitempty"`
 }
 
 func NewTTypeAnnotation(typeAnnotation *Node) *TTypeAnnotation {
 	return &TTypeAnnotation{TypeAnnotation: typeAnnotation}
 }
 
-func (tTypeAnnotation *TTypeAnnotation) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeVariableDeclaration,
-		Data: tTypeAnnotation,
-	}
+func (tTypeAnnotation *TTypeAnnotation) MarshalJSON() ([]byte, error) {
+	type Alias TTypeAnnotation
+	return json.Marshal(
+		wrapNode(
+			*tTypeAnnotation.AsNode(),
+			(*Alias)(tTypeAnnotation),
+		),
+	)
 }
 
-type TStringKeyword struct{}
+func (tTypeAnnotation *TTypeAnnotation) NodeType() NodeType {
+	return NodeTypeVariableDeclaration
+}
+
+type TStringKeyword struct {
+	NodeBase
+}
 
 func NewTStringKeyword() *TStringKeyword {
 	return &TStringKeyword{}
 }
 
-func (tStringKeyword TStringKeyword) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTStringKeyword,
-		Data: tStringKeyword,
-	}
+func (tStringKeyword *TStringKeyword) MarshalJSON() ([]byte, error) {
+	type Alias TStringKeyword
+	return json.Marshal(
+		wrapNode(
+			*tStringKeyword.AsNode(),
+			(*Alias)(tStringKeyword),
+		),
+	)
 }
 
-type TNumberKeyword struct{}
+func (tStringKeyword *TStringKeyword) NodeType() NodeType {
+	return NodeTypeTStringKeyword
+}
+
+type TNumberKeyword struct {
+	NodeBase
+}
 
 func NewTNumberKeyword() *TNumberKeyword {
 	return &TNumberKeyword{}
 }
 
-func (tNumberKeyword TNumberKeyword) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTNumberKeyword,
-		Data: tNumberKeyword,
-	}
+func (tNumberKeyword *TNumberKeyword) MarshalJSON() ([]byte, error) {
+	type Alias TNumberKeyword
+	return json.Marshal(
+		wrapNode(
+			*tNumberKeyword.AsNode(),
+			(*Alias)(tNumberKeyword),
+		),
+	)
 }
 
-type TBooleanKeyword struct{}
+func (tNumberKeyword *TNumberKeyword) NodeType() NodeType {
+	return NodeTypeTNumberKeyword
+}
+
+type TBooleanKeyword struct {
+	NodeBase
+}
 
 func NewTBooleanKeyword() *TBooleanKeyword {
 	return &TBooleanKeyword{}
 }
 
-func (tBooleanKeyword TBooleanKeyword) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTBooleanKeyword,
-		Data: tBooleanKeyword,
-	}
+func (tBooleanKeyword *TBooleanKeyword) MarshalJSON() ([]byte, error) {
+	type Alias TBooleanKeyword
+	return json.Marshal(
+		wrapNode(
+			*tBooleanKeyword.AsNode(),
+			(*Alias)(tBooleanKeyword),
+		),
+	)
 }
 
-type TNullKeyword struct{}
+func (tBooleanKeyword *TBooleanKeyword) NodeType() NodeType {
+	return NodeTypeTBooleanKeyword
+}
+
+type TNullKeyword struct {
+	NodeBase
+}
 
 func NewTNullKeyword() *TNullKeyword {
 	return &TNullKeyword{}
 }
 
-func (tNullKeyword TNullKeyword) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTNullKeyword,
-		Data: tNullKeyword,
-	}
+func (tNullKeyword *TNullKeyword) MarshalJSON() ([]byte, error) {
+	type Alias TNullKeyword
+	return json.Marshal(
+		wrapNode(
+			*tNullKeyword.AsNode(),
+			(*Alias)(tNullKeyword),
+		),
+	)
 }
 
-type TAnyKeyword struct{}
+func (tNullKeyword *TNullKeyword) NodeType() NodeType {
+	return NodeTypeTNullKeyword
+}
+
+type TAnyKeyword struct {
+	NodeBase
+}
 
 func NewTAnyKeyword() *TAnyKeyword {
 	return &TAnyKeyword{}
 }
 
-func (tAnyKeyword TAnyKeyword) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTAnyKeyword,
-		Data: tAnyKeyword,
-	}
+func (tAnyKeyword *TAnyKeyword) MarshalJSON() ([]byte, error) {
+	type Alias TAnyKeyword
+	return json.Marshal(
+		wrapNode(
+			*tAnyKeyword.AsNode(),
+			(*Alias)(tAnyKeyword),
+		),
+	)
+}
+
+func (tAnyKeyword *TAnyKeyword) NodeType() NodeType {
+	return NodeTypeTAnyKeyword
 }
 
 type Identifier struct {
-	Name           string
-	OriginalName   *string
-	TypeAnnotation *TTypeAnnotation
+	NodeBase
+	Name           string           `json:"name,omitempty"`
+	OriginalName   *string          `json:"original_name,omitempty"`
+	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
 }
 
 func NewIdentifier(name string, typeAnnotation *TTypeAnnotation) *Identifier {
 	return &Identifier{Name: name, TypeAnnotation: typeAnnotation, OriginalName: nil}
 }
 
-func (identifier *Identifier) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeIdentifier,
-		Data: identifier,
-	}
+func (identifier *Identifier) MarshalJSON() ([]byte, error) {
+	type Alias Identifier
+	return json.Marshal(
+		wrapNode(
+			*identifier.AsNode(),
+			(*Alias)(identifier),
+		),
+	)
+}
+
+func (identifier *Identifier) NodeType() NodeType {
+	return NodeTypeIdentifier
 }
 
 type Initializer struct {
-	Expression *Node
+	NodeBase
+	Expression *Node `json:"expression,omitempty"`
 }
 
 func NewInitializer(expression *Node) *Initializer {
 	return &Initializer{Expression: expression}
 }
 
-func (initializer *Initializer) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeInitializer,
-		Data: initializer,
-	}
+func (initializer *Initializer) MarshalJSON() ([]byte, error) {
+	type Alias Initializer
+	return json.Marshal(
+		wrapNode(
+			*initializer.AsNode(),
+			(*Alias)(initializer),
+		),
+	)
+}
+
+func (initializer *Initializer) NodeType() NodeType {
+	return NodeTypeInitializer
 }
 
 type StringLiteral struct {
-	Value string
+	NodeBase
+	Value string `json:"value,omitempty"`
 }
 
 func NewStringLiteral(value string) *StringLiteral {
 	return &StringLiteral{Value: value}
 }
 
-func (stringLiteral *StringLiteral) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeStringLiteral,
-		Data: stringLiteral,
-	}
+func (stringLiteral *StringLiteral) MarshalJSON() ([]byte, error) {
+	type Alias StringLiteral
+	return json.Marshal(
+		wrapNode(
+			*stringLiteral.AsNode(),
+			(*Alias)(stringLiteral),
+		),
+	)
 }
 
-type NullLiteral struct{}
+func (stringLiteral *StringLiteral) NodeType() NodeType {
+	return NodeTypeStringLiteral
+}
+
+type NullLiteral struct {
+	NodeBase
+}
 
 func NewNullLiteral() *NullLiteral {
 	return &NullLiteral{}
 }
 
-func (nullLiteral *NullLiteral) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeNullLiteral,
-		Data: nullLiteral,
-	}
+func (nullLiteral *NullLiteral) MarshalJSON() ([]byte, error) {
+	type Alias NullLiteral
+	return json.Marshal(
+		wrapNode(
+			*nullLiteral.AsNode(),
+			(*Alias)(nullLiteral),
+		),
+	)
+}
+
+func (nullLiteral *NullLiteral) NodeType() NodeType {
+	return NodeTypeNullLiteral
 }
 
 type BooleanLiteral struct {
-	Value bool
+	NodeBase
+	Value bool `json:"value,omitempty"`
 }
 
 func NewBooleanLiteral(value bool) *BooleanLiteral {
 	return &BooleanLiteral{Value: value}
 }
 
-func (booleanLiteral *BooleanLiteral) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeBooleanLiteral,
-		Data: booleanLiteral,
-	}
+func (booleanLiteral *BooleanLiteral) MarshalJSON() ([]byte, error) {
+	type Alias BooleanLiteral
+	return json.Marshal(
+		wrapNode(
+			*booleanLiteral.AsNode(),
+			(*Alias)(booleanLiteral),
+		),
+	)
+}
+
+func (booleanLiteral *BooleanLiteral) NodeType() NodeType {
+	return NodeTypeBooleanLiteral
 }
 
 type DecimalLiteral struct {
-	Value string
+	NodeBase
+	Value string `json:"value,omitempty"`
 }
 
 func NewDecimalLiteral(value string) *DecimalLiteral {
 	return &DecimalLiteral{Value: value}
 }
 
-func (decimalLiteral *DecimalLiteral) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeDecimalLiteral,
-		Data: decimalLiteral,
-	}
+func (decimalLiteral *DecimalLiteral) MarshalJSON() ([]byte, error) {
+	type Alias DecimalLiteral
+	return json.Marshal(
+		wrapNode(
+			*decimalLiteral.AsNode(),
+			(*Alias)(decimalLiteral),
+		),
+	)
+}
+
+func (decimalLiteral *DecimalLiteral) NodeType() NodeType {
+	return NodeTypeDecimalLiteral
 }
 
 type IfStatement struct {
-	TestExpression      *Node
-	ConsequentStatement *Node
-	AlternateStatement  *Node
+	NodeBase
+	TestExpression      *Node `json:"test_expression,omitempty"`
+	ConsequentStatement *Node `json:"consequence_statement,omitempty"`
+	AlternateStatement  *Node `json:"alternate_statement,omitempty"`
 }
 
 func NewIfStatement(test *Node, consequent *Node, alternate *Node) *IfStatement {
 	return &IfStatement{TestExpression: test, ConsequentStatement: consequent, AlternateStatement: alternate}
 }
 
-func (ifStatement *IfStatement) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeIfStatement,
-		Data: ifStatement,
-	}
+func (ifStatement *IfStatement) MarshalJSON() ([]byte, error) {
+	type Alias IfStatement
+	return json.Marshal(
+		wrapNode(
+			*ifStatement.AsNode(),
+			(*Alias)(ifStatement),
+		),
+	)
+}
+
+func (ifStatement *IfStatement) NodeType() NodeType {
+	return NodeTypeIfStatement
 }
 
 type BlockStatement struct {
-	ContainerBase
-	Body  []*Node
-	Scope *Scope
+	NodeBase
+	ContainerBase `json:"-"`
+	Body          []*Node `json:"body,omitempty"`
+	Scope         *Scope  `json:"-"`
 }
 
 func NewBlockStatement(body []*Node) *BlockStatement {
 	return &BlockStatement{Body: body, Scope: &Scope{}}
 }
 
-func (blockStatement *BlockStatement) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeBlockStatement,
-		Data: blockStatement,
-	}
+func (blockStatement *BlockStatement) MarshalJSON() ([]byte, error) {
+	type Alias BlockStatement
+	return json.Marshal(
+		wrapNode(
+			*blockStatement.AsNode(),
+			(*Alias)(blockStatement),
+		),
+	)
+}
+
+func (blockStatement *BlockStatement) NodeType() NodeType {
+	return NodeTypeBlockStatement
 }
 
 type AssignmentExpression struct {
-	Operator string
-	Left     *Node
-	Right    *Node
+	NodeBase
+	Operator string `json:"operator,omitempty"`
+	Left     *Node  `json:"left,omitempty"`
+	Right    *Node  `json:"right,omitempty"`
 }
 
 func NewAssignmentExpression(operator string, left *Node, right *Node) *AssignmentExpression {
 	return &AssignmentExpression{Operator: operator, Left: left, Right: right}
 }
 
-func (assignmentExpression *AssignmentExpression) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeAssignmentExpression,
-		Data: assignmentExpression,
-	}
+func (assignmentExpression *AssignmentExpression) MarshalJSON() ([]byte, error) {
+	type Alias AssignmentExpression
+	return json.Marshal(
+		wrapNode(
+			*assignmentExpression.AsNode(),
+			(*Alias)(assignmentExpression),
+		),
+	)
+}
+
+func (assignmentExpression *AssignmentExpression) NodeType() NodeType {
+	return NodeTypeAssignmentExpression
 }
 
 type FunctionDeclaration struct {
-	ID              *Identifier
-	Params          []*Node // Identifier | RestElement
-	Body            *BlockStatement
-	TTypeAnnotation *TTypeAnnotation
+	NodeBase
+	ID              *Identifier      `json:"id,omitempty"`
+	Params          []*Node          `json:"params,omitempty"`
+	Body            *BlockStatement  `json:"body,omitempty"`
+	TTypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
 }
 
 func NewFunctionDeclaration(id *Identifier, params []*Node, body *BlockStatement, tTypeAnnotation *TTypeAnnotation) *FunctionDeclaration {
@@ -397,307 +569,458 @@ func NewFunctionDeclaration(id *Identifier, params []*Node, body *BlockStatement
 	}
 }
 
-func (functionDeclaration *FunctionDeclaration) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeFunctionDeclaration,
-		Data: functionDeclaration,
-	}
+func (functionDeclaration *FunctionDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias FunctionDeclaration
+	return json.Marshal(
+		wrapNode(
+			*functionDeclaration.AsNode(),
+			(*Alias)(functionDeclaration),
+		),
+	)
+}
+
+func (functionDeclaration *FunctionDeclaration) NodeType() NodeType {
+	return NodeTypeFunctionDeclaration
 }
 
 type CallExpression struct {
-	Callee *Node
-	Args   []*Node
+	NodeBase
+	Callee *Node   `json:"callee,omitempty"`
+	Args   []*Node `json:"args,omitempty"`
 }
 
 func NewCallExpression(callee *Node, args []*Node) *CallExpression {
 	return &CallExpression{Callee: callee, Args: args}
 }
 
-func (callExpression *CallExpression) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeCallExpression,
-		Data: callExpression,
-	}
+func (callExpression *CallExpression) MarshalJSON() ([]byte, error) {
+	type Alias CallExpression
+	return json.Marshal(
+		wrapNode(
+			*callExpression.AsNode(),
+			(*Alias)(callExpression),
+		),
+	)
+}
+
+func (callExpression *CallExpression) NodeType() NodeType {
+	return NodeTypeCallExpression
 }
 
 type MemberExpression struct {
-	Object   *Node
-	Property *Node
+	NodeBase
+	Object   *Node `json:"object,omitempty"`
+	Property *Node `json:"property,omitempty"`
 }
 
 func NewMemberExpression(object *Node, property *Node) *MemberExpression {
 	return &MemberExpression{Object: object, Property: property}
 }
 
-func (memberExpression *MemberExpression) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeMemberExpression,
-		Data: memberExpression,
-	}
+func (memberExpression *MemberExpression) MarshalJSON() ([]byte, error) {
+	type Alias MemberExpression
+	return json.Marshal(
+		wrapNode(
+			*memberExpression.AsNode(),
+			(*Alias)(memberExpression),
+		),
+	)
+}
+
+func (memberExpression *MemberExpression) NodeType() NodeType {
+	return NodeTypeMemberExpression
 }
 
 type ImportSpecifier struct {
-	Local    *Identifier
-	Imported *Node
+	NodeBase
+	Local    *Identifier `json:"local,omitempty"`
+	Imported *Node       `json:"imported,omitempty"`
 }
 
 func NewImportSpecifier(local *Identifier, imported *Node) *ImportSpecifier {
 	return &ImportSpecifier{Local: local, Imported: imported}
 }
 
-func (importSpecifier *ImportSpecifier) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeImportSpecifier,
-		Data: importSpecifier,
-	}
+func (importSpecifier *ImportSpecifier) MarshalJSON() ([]byte, error) {
+	type Alias ImportSpecifier
+	return json.Marshal(
+		wrapNode(
+			*importSpecifier.AsNode(),
+			(*Alias)(importSpecifier),
+		),
+	)
+}
+
+func (importSpecifier *ImportSpecifier) NodeType() NodeType {
+	return NodeTypeImportSpecifier
 }
 
 type ImportDefaultSpecifier struct {
-	Local *Identifier
+	NodeBase
+	Local *Identifier `json:"local,omitempty"`
 }
 
 func NewImportDefaultSpecifier(local *Identifier) *ImportDefaultSpecifier {
 	return &ImportDefaultSpecifier{Local: local}
 }
 
-func (importDefaultSpecifier *ImportDefaultSpecifier) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeImportDefaultSpecifier,
-		Data: importDefaultSpecifier,
-	}
+func (importDefaultSpecifier *ImportDefaultSpecifier) MarshalJSON() ([]byte, error) {
+	type Alias ImportDefaultSpecifier
+	return json.Marshal(
+		wrapNode(
+			*importDefaultSpecifier.AsNode(),
+			(*Alias)(importDefaultSpecifier),
+		),
+	)
+}
+
+func (importDefaultSpecifier *ImportDefaultSpecifier) NodeType() NodeType {
+	return NodeTypeImportDefaultSpecifier
 }
 
 type ImportNamespaceSpecifier struct {
-	Local *Identifier
+	NodeBase
+	Local *Identifier `json:"local,omitempty"`
 }
 
 func NewImportNamespaceSpecifier(local *Identifier) *ImportNamespaceSpecifier {
 	return &ImportNamespaceSpecifier{Local: local}
 }
 
-func (importNamespaceSpecifier *ImportNamespaceSpecifier) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeImportNamespaceSpecifier,
-		Data: importNamespaceSpecifier,
-	}
+func (importNamespaceSpecifier *ImportNamespaceSpecifier) MarshalJSON() ([]byte, error) {
+	type Alias ImportNamespaceSpecifier
+	return json.Marshal(
+		wrapNode(
+			*importNamespaceSpecifier.AsNode(),
+			(*Alias)(importNamespaceSpecifier),
+		),
+	)
+}
+
+func (importNamespaceSpecifier *ImportNamespaceSpecifier) NodeType() NodeType {
+	return NodeTypeImportNamespaceSpecifier
 }
 
 type ImportSpecifierInterface interface{}
 
 type ImportDeclaration struct {
-	Specifiers []ImportSpecifierInterface
-	Source     *StringLiteral
+	NodeBase
+	Specifiers []ImportSpecifierInterface `json:"specifiers,omitempty"`
+	Source     *StringLiteral             `json:"source,omitempty"`
 }
 
 func NewImportDeclaration(specifiers []ImportSpecifierInterface, source *StringLiteral) *ImportDeclaration {
 	return &ImportDeclaration{Specifiers: specifiers, Source: source}
 }
 
-func (importDeclaration *ImportDeclaration) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeImportDeclaration,
-		Data: importDeclaration,
-	}
+func (importDeclaration *ImportDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias ImportDeclaration
+	return json.Marshal(
+		wrapNode(
+			*importDeclaration.AsNode(),
+			(*Alias)(importDeclaration),
+		),
+	)
+}
+
+func (importDeclaration *ImportDeclaration) NodeType() NodeType {
+	return NodeTypeImportDeclaration
 }
 
 type ExportNamedDeclaration struct {
-	Declaration *Node
-	Specifiers  []*ExportSpecifier
-	Source      *StringLiteral
+	NodeBase
+	Declaration *Node              `json:"declaration,omitempty"`
+	Specifiers  []*ExportSpecifier `json:"specifiers,omitempty"`
+	Source      *StringLiteral     `json:"source,omitempty"`
 }
 
 func NewExportNamedDeclaration(declaration *Node, specifiers []*ExportSpecifier, source *StringLiteral) *ExportNamedDeclaration {
 	return &ExportNamedDeclaration{Declaration: declaration, Specifiers: specifiers, Source: source}
 }
 
-func (exportNamedDeclaration *ExportNamedDeclaration) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeExportNamedDeclaration,
-		Data: exportNamedDeclaration,
-	}
+func (exportNamedDeclaration *ExportNamedDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias ExportNamedDeclaration
+	return json.Marshal(
+		wrapNode(
+			*exportNamedDeclaration.AsNode(),
+			(*Alias)(exportNamedDeclaration),
+		),
+	)
+}
+
+func (exportNamedDeclaration *ExportNamedDeclaration) NodeType() NodeType {
+	return NodeTypeExportNamedDeclaration
 }
 
 type ExportDefaultDeclaration struct {
-	Declaration *Node
+	NodeBase
+	Declaration *Node `json:"declaration,omitempty"`
 }
 
 func NewExportDefaultDeclaration(declaration *Node) *ExportDefaultDeclaration {
 	return &ExportDefaultDeclaration{Declaration: declaration}
 }
 
-func (exportDefaultDeclaration *ExportDefaultDeclaration) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeExportDefaultDeclaration,
-		Data: exportDefaultDeclaration,
-	}
+func (exportDefaultDeclaration *ExportDefaultDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias ExportDefaultDeclaration
+	return json.Marshal(
+		wrapNode(
+			*exportDefaultDeclaration.AsNode(),
+			(*Alias)(exportDefaultDeclaration),
+		),
+	)
+}
+
+func (exportDefaultDeclaration *ExportDefaultDeclaration) NodeType() NodeType {
+	return NodeTypeExportDefaultDeclaration
 }
 
 type ExportSpecifier struct {
-	Local    *Identifier
-	Exported *Node
+	NodeBase
+	Local    *Identifier `json:"local,omitempty"`
+	Exported *Node       `json:"exported,omitempty"`
 }
 
 func NewExportSpecifier(local *Identifier, exported *Node) *ExportSpecifier {
 	return &ExportSpecifier{Local: local, Exported: exported}
 }
 
-func (exportSpecifier *ExportSpecifier) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeExportSpecifier,
-		Data: exportSpecifier,
-	}
+func (exportSpecifier *ExportSpecifier) MarshalJSON() ([]byte, error) {
+	type Alias ExportSpecifier
+	return json.Marshal(
+		wrapNode(
+			*exportSpecifier.AsNode(),
+			(*Alias)(exportSpecifier),
+		),
+	)
+}
+
+func (exportSpecifier *ExportSpecifier) NodeType() NodeType {
+	return NodeTypeExportSpecifier
 }
 
 type BinaryExpression struct {
-	Operator BinaryExpressionOperator
-	Left     *Node
-	Right    *Node
+	NodeBase
+	Operator BinaryExpressionOperator `json:"operator,omitempty"`
+	Left     *Node                    `json:"left,omitempty"`
+	Right    *Node                    `json:"right,omitempty"`
 }
 
 func NewBinaryExpression(operator BinaryExpressionOperator, left *Node, right *Node) *BinaryExpression {
 	return &BinaryExpression{Operator: operator, Left: left, Right: right}
 }
 
-func (binaryExpression *BinaryExpression) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeBinaryExpression,
-		Data: binaryExpression,
-	}
+func (binaryExpression *BinaryExpression) MarshalJSON() ([]byte, error) {
+	type Alias BinaryExpression
+	return json.Marshal(
+		wrapNode(
+			*binaryExpression.AsNode(),
+			(*Alias)(binaryExpression),
+		),
+	)
+}
+
+func (binaryExpression *BinaryExpression) NodeType() NodeType {
+	return NodeTypeBinaryExpression
 }
 
 type SpreadElement struct {
-	Argument *Node
+	NodeBase
+	Argument *Node `json:"argument,omitempty"`
 }
 
 func NewSpreadElement(argument *Node) *SpreadElement {
 	return &SpreadElement{Argument: argument}
 }
 
-func (spreadElement *SpreadElement) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeSpreadElement,
-		Data: spreadElement,
-	}
+func (spreadElement *SpreadElement) MarshalJSON() ([]byte, error) {
+	type Alias SpreadElement
+	return json.Marshal(
+		wrapNode(
+			*spreadElement.AsNode(),
+			(*Alias)(spreadElement),
+		),
+	)
+}
+
+func (spreadElement *SpreadElement) NodeType() NodeType {
+	return NodeTypeSpreadElement
 }
 
 type ArrayExpression struct {
-	Elements []*Node
+	NodeBase
+	Elements []*Node `json:"elements,omitempty"`
 }
 
 func NewArrayExpression(elements []*Node) *ArrayExpression {
 	return &ArrayExpression{Elements: elements}
 }
 
-func (arrayExpression *ArrayExpression) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeArrayExpression,
-		Data: arrayExpression,
-	}
+func (arrayExpression *ArrayExpression) MarshalJSON() ([]byte, error) {
+	type Alias ArrayExpression
+	return json.Marshal(
+		wrapNode(
+			*arrayExpression.AsNode(),
+			(*Alias)(arrayExpression),
+		),
+	)
+}
+
+func (arrayExpression *ArrayExpression) NodeType() NodeType {
+	return NodeTypeArrayExpression
 }
 
 type ObjectProperty struct {
-	Key   *Node
-	Value *Node
+	NodeBase
+	Key   *Node `json:"key,omitempty"`
+	Value *Node `json:"value,omitempty"`
 }
 
 func NewObjectProperty(key *Node, value *Node) *ObjectProperty {
 	return &ObjectProperty{Key: key, Value: value}
 }
 
-func (objectProperty *ObjectProperty) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeObjectProperty,
-		Data: objectProperty,
-	}
+func (objectProperty *ObjectProperty) MarshalJSON() ([]byte, error) {
+	type Alias ObjectProperty
+	return json.Marshal(
+		wrapNode(
+			*objectProperty.AsNode(),
+			(*Alias)(objectProperty),
+		),
+	)
+}
+
+func (objectProperty *ObjectProperty) NodeType() NodeType {
+	return NodeTypeObjectProperty
 }
 
 type ObjectMethod struct {
-	Kind   string
-	Key    *Node
-	Params []*Identifier
-	Body   *BlockStatement
+	NodeBase
+	Kind   string          `json:"kind,omitempty"`
+	Key    *Node           `json:"key,omitempty"`
+	Params []*Identifier   `json:"Params,omitempty"`
+	Body   *BlockStatement `json:"body,omitempty"`
 }
 
 func NewObjectMethod(kind string, key *Node, params []*Identifier, body *BlockStatement) *ObjectMethod {
 	return &ObjectMethod{Kind: kind, Key: key, Params: params, Body: body}
 }
 
-func (objectMethod *ObjectMethod) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeObjectMethod,
-		Data: objectMethod,
-	}
+func (objectMethod *ObjectMethod) MarshalJSON() ([]byte, error) {
+	type Alias ObjectMethod
+	return json.Marshal(
+		wrapNode(
+			*objectMethod.AsNode(),
+			(*Alias)(objectMethod),
+		),
+	)
+}
+
+func (objectMethod *ObjectMethod) NodeType() NodeType {
+	return NodeTypeObjectMethod
 }
 
 type ObjectExpression struct {
-	Properties []*Node
+	NodeBase
+	Properties []*Node `json:"properties,omitempty"`
 }
 
 func NewObjectExpression(properties []*Node) *ObjectExpression {
 	return &ObjectExpression{Properties: properties}
 }
 
-func (objectExpression *ObjectExpression) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeObjectExpression,
-		Data: objectExpression,
-	}
+func (objectExpression *ObjectExpression) MarshalJSON() ([]byte, error) {
+	type Alias ObjectExpression
+	return json.Marshal(
+		wrapNode(
+			*objectExpression.AsNode(),
+			(*Alias)(objectExpression),
+		),
+	)
+}
+
+func (objectExpression *ObjectExpression) NodeType() NodeType {
+	return NodeTypeObjectExpression
 }
 
 type DirectiveLiteral struct {
-	Value string
+	NodeBase
+	Value string `json:"value,omitempty"`
 }
 
 func NewDirectiveLiteral(value string) *DirectiveLiteral {
 	return &DirectiveLiteral{Value: value}
 }
 
-func (directiveLiteral *DirectiveLiteral) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeDirectiveLiteral,
-		Data: directiveLiteral,
-	}
+func (directiveLiteral *DirectiveLiteral) MarshalJSON() ([]byte, error) {
+	type Alias DirectiveLiteral
+	return json.Marshal(
+		wrapNode(
+			*directiveLiteral.AsNode(),
+			(*Alias)(directiveLiteral),
+		),
+	)
+}
+
+func (directiveLiteral *DirectiveLiteral) NodeType() NodeType {
+	return NodeTypeDirectiveLiteral
 }
 
 type Directive struct {
-	Value *DirectiveLiteral
+	NodeBase
+	Value *DirectiveLiteral `json:"value,omitempty"`
 }
 
 func NewDirective(value *DirectiveLiteral) *Directive {
 	return &Directive{Value: value}
 }
 
-func (directive *Directive) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeDirective,
-		Data: directive,
-	}
+func (directive *Directive) MarshalJSON() ([]byte, error) {
+	type Alias Directive
+	return json.Marshal(
+		wrapNode(
+			*directive.AsNode(),
+			(*Alias)(directive),
+		),
+	)
+}
+
+func (directive *Directive) NodeType() NodeType {
+	return NodeTypeDirective
 }
 
 type SourceFile struct {
-	Node
-	ContainerBase
-	Name       string
-	Body       []*Node
-	Directives []*Directive
+	NodeBase
+	ContainerBase `json:"-"`
+	Name          string       `json:"name,omitempty"`
+	Body          []*Node      `json:"body,omitempty"`
+	Directives    []*Directive `json:"directives,omitempty"`
 
-	ExternalModuleIndicator *Node
+	ExternalModuleIndicator *Node `json:"-"`
 }
 
 func NewSourceFile(body []*Node, directives []*Directive) *SourceFile {
 	return &SourceFile{Name: "", Body: body, Directives: directives}
 }
 
-func (sourceFile *SourceFile) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeProgram,
-		Data: sourceFile,
-	}
+func (sourceFile *SourceFile) MarshalJSON() ([]byte, error) {
+	type Alias SourceFile
+	return json.Marshal(
+		wrapNode(
+			*sourceFile.AsNode(),
+			(*Alias)(sourceFile),
+		),
+	)
+}
+
+func (sourceFile *SourceFile) NodeType() NodeType {
+	return NodeTypeSourceFile
 }
 
 type TInterfaceDeclaration struct {
-	Id   *Identifier
-	Body *TInterfaceBody
+	NodeBase
+	Id   *Identifier     `json:"id,omitempty"`
+	Body *TInterfaceBody `json:"body,omitempty"`
 }
 
 func NewTInterfaceDeclaration(id *Identifier, body *TInterfaceBody) *TInterfaceDeclaration {
@@ -707,31 +1030,47 @@ func NewTInterfaceDeclaration(id *Identifier, body *TInterfaceBody) *TInterfaceD
 	}
 }
 
-func (tInterfaceDeclaration *TInterfaceDeclaration) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTInterfaceDeclaration,
-		Data: tInterfaceDeclaration,
-	}
+func (tInterfaceDeclaration *TInterfaceDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias TInterfaceDeclaration
+	return json.Marshal(
+		wrapNode(
+			*tInterfaceDeclaration.AsNode(),
+			(*Alias)(tInterfaceDeclaration),
+		),
+	)
+}
+
+func (tInterfaceDeclaration *TInterfaceDeclaration) NodeType() NodeType {
+	return NodeTypeTInterfaceDeclaration
 }
 
 type TInterfaceBody struct {
-	Body []*Node // TPropertySignature
+	NodeBase
+	Body []*Node `json:"body,omitempty"`
 }
 
 func NewTInterfaceBody(body []*Node) *TInterfaceBody {
 	return &TInterfaceBody{Body: body}
 }
 
-func (tInterfaceBody *TInterfaceBody) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTInterfaceBody,
-		Data: tInterfaceBody,
-	}
+func (tInterfaceBody *TInterfaceBody) MarshalJSON() ([]byte, error) {
+	type Alias TInterfaceBody
+	return json.Marshal(
+		wrapNode(
+			*tInterfaceBody.AsNode(),
+			(*Alias)(tInterfaceBody),
+		),
+	)
+}
+
+func (tInterfaceBody *TInterfaceBody) NodeType() NodeType {
+	return NodeTypeTInterfaceBody
 }
 
 type TPropertySignature struct {
-	Key            *Node
-	TypeAnnotation *TTypeAnnotation
+	NodeBase
+	Key            *Node            `json:"key,omitempty"`
+	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
 }
 
 func NewTPropertySignature(key *Node, typeAnnotation *TTypeAnnotation) *TPropertySignature {
@@ -741,31 +1080,47 @@ func NewTPropertySignature(key *Node, typeAnnotation *TTypeAnnotation) *TPropert
 	}
 }
 
-func (tPropertySignature *TPropertySignature) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTPropertySignature,
-		Data: tPropertySignature,
-	}
+func (tPropertySignature *TPropertySignature) MarshalJSON() ([]byte, error) {
+	type Alias TPropertySignature
+	return json.Marshal(
+		wrapNode(
+			*tPropertySignature.AsNode(),
+			(*Alias)(tPropertySignature),
+		),
+	)
+}
+
+func (tPropertySignature *TPropertySignature) NodeType() NodeType {
+	return NodeTypeTPropertySignature
 }
 
 type ReturnStatement struct {
-	Argument *Node
+	NodeBase
+	Argument *Node `json:"argument,omitempty"`
 }
 
 func NewReturnStatement(argument *Node) *ReturnStatement {
 	return &ReturnStatement{Argument: argument}
 }
 
-func (returnStatement *ReturnStatement) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeReturnStatement,
-		Data: returnStatement,
-	}
+func (returnStatement *ReturnStatement) MarshalJSON() ([]byte, error) {
+	type Alias ReturnStatement
+	return json.Marshal(
+		wrapNode(
+			*returnStatement.AsNode(),
+			(*Alias)(returnStatement),
+		),
+	)
+}
+
+func (returnStatement *ReturnStatement) NodeType() NodeType {
+	return NodeTypeReturnStatement
 }
 
 type TFunctionType struct {
-	Params         []*Node // Identifier | RestElement
-	TypeAnnotation *TTypeAnnotation
+	NodeBase
+	Params         []*Node          `json:"params,omitempty"`
+	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
 }
 
 func NewTFunctionType(params []*Node, typeAnnotation *TTypeAnnotation) *TFunctionType {
@@ -775,16 +1130,24 @@ func NewTFunctionType(params []*Node, typeAnnotation *TTypeAnnotation) *TFunctio
 	}
 }
 
-func (tFunctionType *TFunctionType) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTFunctionType,
-		Data: tFunctionType,
-	}
+func (tFunctionType *TFunctionType) MarshalJSON() ([]byte, error) {
+	type Alias TFunctionType
+	return json.Marshal(
+		wrapNode(
+			*tFunctionType.AsNode(),
+			(*Alias)(tFunctionType),
+		),
+	)
+}
+
+func (tFunctionType *TFunctionType) NodeType() NodeType {
+	return NodeTypeTFunctionType
 }
 
 type TTypeAliasDeclaration struct {
-	Id             *Identifier
-	TypeAnnotation *TTypeAnnotation
+	NodeBase
+	Id             *Identifier      `json:"id,omitempty"`
+	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
 }
 
 func NewTTypeAliasDeclaration(id *Identifier, typeAnnotation *TTypeAnnotation) *TTypeAliasDeclaration {
@@ -794,61 +1157,93 @@ func NewTTypeAliasDeclaration(id *Identifier, typeAnnotation *TTypeAnnotation) *
 	}
 }
 
-func (tTypeAliasDeclaration *TTypeAliasDeclaration) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTFunctionType,
-		Data: tTypeAliasDeclaration,
-	}
+func (tTypeAliasDeclaration *TTypeAliasDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias TTypeAliasDeclaration
+	return json.Marshal(
+		wrapNode(
+			*tTypeAliasDeclaration.AsNode(),
+			(*Alias)(tTypeAliasDeclaration),
+		),
+	)
+}
+
+func (tTypeAliasDeclaration *TTypeAliasDeclaration) NodeType() NodeType {
+	return NodeTypeTFunctionType
 }
 
 type TTypeLiteral struct {
-	Members []*Node
+	NodeBase
+	Members []*Node `json:"members,omitempty"`
 }
 
 func NewTTypeLiteral(members []*Node) *TTypeLiteral {
 	return &TTypeLiteral{Members: members}
 }
 
-func (tTypeLiteral *TTypeLiteral) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTFunctionType,
-		Data: tTypeLiteral,
-	}
+func (tTypeLiteral *TTypeLiteral) MarshalJSON() ([]byte, error) {
+	type Alias TTypeLiteral
+	return json.Marshal(
+		wrapNode(
+			*tTypeLiteral.AsNode(),
+			(*Alias)(tTypeLiteral),
+		),
+	)
+}
+
+func (tTypeLiteral *TTypeLiteral) NodeType() NodeType {
+	return NodeTypeTFunctionType
 }
 
 type TTypeReference struct {
-	TypeName *Identifier
+	NodeBase
+	TypeName *Identifier `json:"type_name,omitempty"`
 }
 
 func NewTTypeReference(TypeName *Identifier) *TTypeReference {
 	return &TTypeReference{TypeName: TypeName}
 }
 
-func (tTypeReference *TTypeReference) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTTypeReference,
-		Data: tTypeReference,
-	}
+func (tTypeReference *TTypeReference) MarshalJSON() ([]byte, error) {
+	type Alias TTypeReference
+	return json.Marshal(
+		wrapNode(
+			*tTypeReference.AsNode(),
+			(*Alias)(tTypeReference),
+		),
+	)
+}
+
+func (tTypeReference *TTypeReference) NodeType() NodeType {
+	return NodeTypeTTypeReference
 }
 
 type TArrayType struct {
-	ElementType *Node
+	NodeBase
+	ElementType *Node `json:"element_type,omitempty"`
 }
 
 func NewTArrayType(elementType *Node) *TArrayType {
 	return &TArrayType{ElementType: elementType}
 }
 
-func (tArrayType *TArrayType) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeTArrayType,
-		Data: tArrayType,
-	}
+func (tArrayType *TArrayType) MarshalJSON() ([]byte, error) {
+	type Alias TArrayType
+	return json.Marshal(
+		wrapNode(
+			*tArrayType.AsNode(),
+			(*Alias)(tArrayType),
+		),
+	)
+}
+
+func (tArrayType *TArrayType) NodeType() NodeType {
+	return NodeTypeTArrayType
 }
 
 type RestElement struct {
-	Argument       *Identifier
-	TypeAnnotation *TTypeAnnotation
+	NodeBase
+	Argument       *Identifier      `json:"argument,omitempty"`
+	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
 }
 
 func NewRestElement(argument *Identifier, typeAnnotation *TTypeAnnotation) *RestElement {
@@ -858,18 +1253,26 @@ func NewRestElement(argument *Identifier, typeAnnotation *TTypeAnnotation) *Rest
 	}
 }
 
-func (restElement *RestElement) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeRestElement,
-		Data: restElement,
-	}
+func (restElement *RestElement) MarshalJSON() ([]byte, error) {
+	type Alias RestElement
+	return json.Marshal(
+		wrapNode(
+			*restElement.AsNode(),
+			(*Alias)(restElement),
+		),
+	)
+}
+
+func (restElement *RestElement) NodeType() NodeType {
+	return NodeTypeRestElement
 }
 
 type ForStatement struct {
-	Init   *Node
-	Test   *Node
-	Update *Node
-	Body   *Node
+	NodeBase
+	Init   *Node `json:"init,omitempty"`
+	Test   *Node `json:"test,omitempty"`
+	Update *Node `json:"update,omitempty"`
+	Body   *Node `json:"body,omitempty"`
 }
 
 func NewForStatement(init *Node, test *Node, update *Node, body *Node) *ForStatement {
@@ -881,17 +1284,25 @@ func NewForStatement(init *Node, test *Node, update *Node, body *Node) *ForState
 	}
 }
 
-func (forStatement *ForStatement) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeForStatement,
-		Data: forStatement,
-	}
+func (forStatement *ForStatement) MarshalJSON() ([]byte, error) {
+	type Alias ForStatement
+	return json.Marshal(
+		wrapNode(
+			*forStatement.AsNode(),
+			(*Alias)(forStatement),
+		),
+	)
+}
+
+func (forStatement *ForStatement) NodeType() NodeType {
+	return NodeTypeForStatement
 }
 
 type UpdateExpression struct {
-	Operator UpdateExpressionOperator
-	Argument *Node
-	Prefix   bool
+	NodeBase
+	Operator UpdateExpressionOperator `json:"operator,omitempty"`
+	Argument *Node                    `json:"argument,omitempty"`
+	Prefix   bool                     `json:"perfix,omitempty"`
 }
 
 func NewUpdateExpression(operator UpdateExpressionOperator, argument *Node, prefix bool) *UpdateExpression {
@@ -902,9 +1313,16 @@ func NewUpdateExpression(operator UpdateExpressionOperator, argument *Node, pref
 	}
 }
 
-func (updateExpression *UpdateExpression) ToNode() *Node {
-	return &Node{
-		Type: NodeTypeUpdateExpression,
-		Data: updateExpression,
-	}
+func (updateExpression *UpdateExpression) MarshalJSON() ([]byte, error) {
+	type Alias UpdateExpression
+	return json.Marshal(
+		wrapNode(
+			*updateExpression.AsNode(),
+			(*Alias)(updateExpression),
+		),
+	)
+}
+
+func (updateExpression *UpdateExpression) NodeType() NodeType {
+	return NodeTypeUpdateExpression
 }

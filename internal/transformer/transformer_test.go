@@ -5,53 +5,62 @@ import (
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
-	"reflect"
+	"bytes"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 )
 
-func TestOriginalName(t *testing.T) {
-	t.Run("should update identifiers to original name", func(t *testing.T) {
-		input := "// @الاسم_الأصلي(\"console\")\nتصريح متغير وحدة_التحكم؛\nوحدة_التحكم؛"
+func TestTransformer(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..")
 
-		identifier := ast.NewIdentifier("وحدة_التحكم", nil)
-		s := "console"
-		identifier.OriginalName = &s
+	transformerDir := filepath.Join(repoRoot, "testdata", "transformer")
+	inputDir := filepath.Join(transformerDir, "input")
+	outputDir := filepath.Join(transformerDir, "output")
 
-		symbol := &ast.Symbol{
-			Name:         "وحدة_التحكم",
-			OriginalName: &s,
-			Type:         nil,
-		}
-		variableDeclaration := ast.NewVariableDeclaration(
-			identifier,
-			nil,
-			true,
-		)
+	entries, err := os.ReadDir(inputDir)
+	if err != nil {
+		t.Fatalf("failed to read input dir: %v", err)
+	}
 
-		variableDeclaration.Symbol = symbol
-
-		expected := ast.NewSourceFile([]*ast.Node{
-			variableDeclaration.ToNode(),
-			ast.NewExpressionStatement(ast.NewIdentifier("console", nil).ToNode()).ToNode(),
-		}, []*ast.Directive{})
-
-		expected.Scope = &ast.Scope{
-			Locals: map[string]*ast.Symbol{
-				"وحدة_التحكم": symbol,
-			},
-			Parent: nil,
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
 		}
 
-		sourceFile := compiler.ParseSourceFile(input)
-		binder.NewBinder(sourceFile).Bind()
-		_checker := checker.NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
-		_checker.Check()
+		t.Run(entry.Name(), func(t *testing.T) {
+			inputFilePath := filepath.Join(inputDir, entry.Name())
+			outputFilePath := filepath.Join(outputDir, entry.Name())
 
-		transformer := NewTransformer(compiler.NewProgram([]*ast.SourceFile{sourceFile}), _checker.NameResolver)
-		transformer.Transform()
+			inputBytes, err := os.ReadFile(inputFilePath)
+			if err != nil {
+				t.Fatalf("failed to read input file %s: %v", inputFilePath, err)
+			}
 
-		if !reflect.DeepEqual(sourceFile, expected) {
-			t.Error("AST structures are not equal")
-		}
-	})
+			outputBytes, err := os.ReadFile(outputFilePath)
+			if err != nil {
+				t.Fatalf("failed to read output file %s: %v", outputFilePath, err)
+			}
+
+			sourceFile := compiler.ParseSourceFile(string(inputBytes))
+			binder.NewBinder(sourceFile).Bind()
+			_checker := checker.NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
+			_checker.Check()
+
+			transformer := NewTransformer(compiler.NewProgram([]*ast.SourceFile{sourceFile}), _checker.NameResolver)
+			transformer.Transform()
+
+			data, err := json.Marshal(sourceFile)
+			if err != nil {
+				t.Fatalf("failed to marshal AST: %v", err)
+			}
+
+			if !bytes.Equal(outputBytes, data) {
+				t.Errorf("AST mismatch for %s\nGot:\n%s\nWant:\n%s", entry.Name(), data, outputBytes)
+			}
+		})
+	}
 }

@@ -79,7 +79,10 @@ func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpr
 	case ast.NodeTypeIdentifier:
 		objectIdentfier := memberExpression.Object.AsIdentifier()
 		symbol := t.NameResolver.Resolve(objectIdentfier.Name, t.currentScope)
-		objectIdentfier.Name = *symbol.OriginalName
+		if symbol.OriginalName != nil {
+			objectIdentfier.Name = *symbol.OriginalName
+		}
+
 		if symbol.Type.Flags&ast.TypeFlagsObject == ast.TypeFlagsObject {
 			objectType := symbol.Type.AsObjectType()
 			t.transformProperty(memberExpression.Property, objectType)
