@@ -68,7 +68,8 @@ type Node struct {
 type NodeData interface {
 	NodeType() NodeType
 	AsNode() *Node
-	// MarshalJSON() ([]byte, error)
+	MarshalJSON() ([]byte, error)
+	ForEachChild(v Visitor) bool
 }
 
 type NodeBase struct {
@@ -136,6 +137,9 @@ func (node *Node) AsTTypeReference() *TTypeReference {
 	return node.Data.(*TTypeReference)
 }
 
+func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }
+func (node *NodeBase) ForEachChild(v Visitor) bool { return false }
+
 func wrapNode[T any](n Node, data *T) interface{} {
 	return struct {
 		Node
@@ -179,6 +183,10 @@ func (expressionStatement *ExpressionStatement) NodeType() NodeType {
 	return NodeTypeExpressionStatement
 }
 
+func (expressionStatement *ExpressionStatement) ForEachChild(v Visitor) bool {
+	return visit(v, expressionStatement.Expression)
+}
+
 type VariableDeclaration struct {
 	NodeBase
 	DeclarationBase
@@ -205,6 +213,10 @@ func (variableDeclaration *VariableDeclaration) NodeType() NodeType {
 	return NodeTypeVariableDeclaration
 }
 
+func (variableDeclaration *VariableDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, variableDeclaration.Identifier.AsNode()) || visit(v, variableDeclaration.Initializer.AsNode())
+}
+
 type TTypeAnnotation struct {
 	NodeBase
 	TypeAnnotation *Node `json:"type_annotation,omitempty"`
@@ -226,6 +238,10 @@ func (tTypeAnnotation *TTypeAnnotation) MarshalJSON() ([]byte, error) {
 
 func (tTypeAnnotation *TTypeAnnotation) NodeType() NodeType {
 	return NodeTypeVariableDeclaration
+}
+
+func (tTypeAnnotation *TTypeAnnotation) ForEachChild(v Visitor) bool {
+	return visit(v, tTypeAnnotation.TypeAnnotation)
 }
 
 type TStringKeyword struct {
@@ -363,6 +379,10 @@ func (identifier *Identifier) NodeType() NodeType {
 	return NodeTypeIdentifier
 }
 
+func (identifier *Identifier) ForEachChild(v Visitor) bool {
+	return visit(v, identifier.TypeAnnotation.AsNode())
+}
+
 type Initializer struct {
 	NodeBase
 	Expression *Node `json:"expression,omitempty"`
@@ -384,6 +404,10 @@ func (initializer *Initializer) MarshalJSON() ([]byte, error) {
 
 func (initializer *Initializer) NodeType() NodeType {
 	return NodeTypeInitializer
+}
+
+func (initializer *Initializer) ForEachChild(v Visitor) bool {
+	return visit(v, initializer.Expression)
 }
 
 type StringLiteral struct {
@@ -502,6 +526,10 @@ func (ifStatement *IfStatement) NodeType() NodeType {
 	return NodeTypeIfStatement
 }
 
+func (ifStatement *IfStatement) ForEachChild(v Visitor) bool {
+	return visit(v, ifStatement.TestExpression) || visit(v, ifStatement.ConsequentStatement) || visit(v, ifStatement.AlternateStatement)
+}
+
 type BlockStatement struct {
 	NodeBase
 	ContainerBase `json:"-"`
@@ -527,6 +555,10 @@ func (blockStatement *BlockStatement) NodeType() NodeType {
 	return NodeTypeBlockStatement
 }
 
+func (blockStatement *BlockStatement) ForEachChild(v Visitor) bool {
+	return visitNodes(v, blockStatement.Body)
+}
+
 type AssignmentExpression struct {
 	NodeBase
 	Operator string `json:"operator,omitempty"`
@@ -550,6 +582,10 @@ func (assignmentExpression *AssignmentExpression) MarshalJSON() ([]byte, error) 
 
 func (assignmentExpression *AssignmentExpression) NodeType() NodeType {
 	return NodeTypeAssignmentExpression
+}
+
+func (assignmentExpression *AssignmentExpression) ForEachChild(v Visitor) bool {
+	return visit(v, assignmentExpression.Left) || visit(v, assignmentExpression.Right)
 }
 
 type FunctionDeclaration struct {
@@ -583,6 +619,13 @@ func (functionDeclaration *FunctionDeclaration) NodeType() NodeType {
 	return NodeTypeFunctionDeclaration
 }
 
+func (functionDeclaration *FunctionDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, functionDeclaration.ID.AsNode()) ||
+		visitNodes(v, functionDeclaration.Params) ||
+		visit(v, functionDeclaration.Body.AsNode()) ||
+		visit(v, functionDeclaration.TTypeAnnotation.AsNode())
+}
+
 type CallExpression struct {
 	NodeBase
 	Callee *Node   `json:"callee,omitempty"`
@@ -605,6 +648,10 @@ func (callExpression *CallExpression) MarshalJSON() ([]byte, error) {
 
 func (callExpression *CallExpression) NodeType() NodeType {
 	return NodeTypeCallExpression
+}
+
+func (callExpression *CallExpression) ForEachChild(v Visitor) bool {
+	return visit(v, callExpression.Callee) || visitNodes(v, callExpression.Args)
 }
 
 type MemberExpression struct {
@@ -631,6 +678,10 @@ func (memberExpression *MemberExpression) NodeType() NodeType {
 	return NodeTypeMemberExpression
 }
 
+func (memberExpression *MemberExpression) ForEachChild(v Visitor) bool {
+	return visit(v, memberExpression.Object) || visit(v, memberExpression.Property)
+}
+
 type ImportSpecifier struct {
 	NodeBase
 	Local    *Identifier `json:"local,omitempty"`
@@ -653,6 +704,10 @@ func (importSpecifier *ImportSpecifier) MarshalJSON() ([]byte, error) {
 
 func (importSpecifier *ImportSpecifier) NodeType() NodeType {
 	return NodeTypeImportSpecifier
+}
+
+func (importSpecifier *ImportSpecifier) ForEachChild(v Visitor) bool {
+	return visit(v, importSpecifier.Local.AsNode()) || visit(v, importSpecifier.Imported)
 }
 
 type ImportDefaultSpecifier struct {
@@ -678,6 +733,10 @@ func (importDefaultSpecifier *ImportDefaultSpecifier) NodeType() NodeType {
 	return NodeTypeImportDefaultSpecifier
 }
 
+func (importDefaultSpecifier *ImportDefaultSpecifier) ForEachChild(v Visitor) bool {
+	return visit(v, importDefaultSpecifier.Local.AsNode())
+}
+
 type ImportNamespaceSpecifier struct {
 	NodeBase
 	Local *Identifier `json:"local,omitempty"`
@@ -701,15 +760,17 @@ func (importNamespaceSpecifier *ImportNamespaceSpecifier) NodeType() NodeType {
 	return NodeTypeImportNamespaceSpecifier
 }
 
-type ImportSpecifierInterface interface{}
+func (importNamespaceSpecifier *ImportNamespaceSpecifier) ForEachChild(v Visitor) bool {
+	return visit(v, importNamespaceSpecifier.Local.AsNode())
+}
 
 type ImportDeclaration struct {
 	NodeBase
-	Specifiers []ImportSpecifierInterface `json:"specifiers,omitempty"`
-	Source     *StringLiteral             `json:"source,omitempty"`
+	Specifiers []*Node        `json:"specifiers,omitempty"`
+	Source     *StringLiteral `json:"source,omitempty"`
 }
 
-func NewImportDeclaration(specifiers []ImportSpecifierInterface, source *StringLiteral) *ImportDeclaration {
+func NewImportDeclaration(specifiers []*Node, source *StringLiteral) *ImportDeclaration {
 	return &ImportDeclaration{Specifiers: specifiers, Source: source}
 }
 
@@ -725,6 +786,10 @@ func (importDeclaration *ImportDeclaration) MarshalJSON() ([]byte, error) {
 
 func (importDeclaration *ImportDeclaration) NodeType() NodeType {
 	return NodeTypeImportDeclaration
+}
+
+func (importDeclaration *ImportDeclaration) ForEachChild(v Visitor) bool {
+	return visitNodes(v, importDeclaration.Specifiers) || visit(v, importDeclaration.Source.AsNode())
 }
 
 type ExportNamedDeclaration struct {
@@ -752,6 +817,15 @@ func (exportNamedDeclaration *ExportNamedDeclaration) NodeType() NodeType {
 	return NodeTypeExportNamedDeclaration
 }
 
+func (exportNamedDeclaration *ExportNamedDeclaration) ForEachChild(v Visitor) bool {
+	_specifiers := []*Node{}
+	for _, specifier := range exportNamedDeclaration.Specifiers {
+		_specifiers = append(_specifiers, specifier.AsNode())
+	}
+
+	return visit(v, exportNamedDeclaration.Declaration) || visitNodes(v, _specifiers) || visit(v, exportNamedDeclaration.Source.AsNode())
+}
+
 type ExportDefaultDeclaration struct {
 	NodeBase
 	Declaration *Node `json:"declaration,omitempty"`
@@ -773,6 +847,10 @@ func (exportDefaultDeclaration *ExportDefaultDeclaration) MarshalJSON() ([]byte,
 
 func (exportDefaultDeclaration *ExportDefaultDeclaration) NodeType() NodeType {
 	return NodeTypeExportDefaultDeclaration
+}
+
+func (exportDefaultDeclaration *ExportDefaultDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, exportDefaultDeclaration.Declaration)
 }
 
 type ExportSpecifier struct {
@@ -797,6 +875,10 @@ func (exportSpecifier *ExportSpecifier) MarshalJSON() ([]byte, error) {
 
 func (exportSpecifier *ExportSpecifier) NodeType() NodeType {
 	return NodeTypeExportSpecifier
+}
+
+func (exportSpecifier *ExportSpecifier) ForEachChild(v Visitor) bool {
+	return visit(v, exportSpecifier.Local.AsNode()) || visit(v, exportSpecifier.Exported)
 }
 
 type BinaryExpression struct {
@@ -824,6 +906,10 @@ func (binaryExpression *BinaryExpression) NodeType() NodeType {
 	return NodeTypeBinaryExpression
 }
 
+func (binaryExpression *BinaryExpression) ForEachChild(v Visitor) bool {
+	return visit(v, binaryExpression.Left) || visit(v, binaryExpression.Right)
+}
+
 type SpreadElement struct {
 	NodeBase
 	Argument *Node `json:"argument,omitempty"`
@@ -845,6 +931,10 @@ func (spreadElement *SpreadElement) MarshalJSON() ([]byte, error) {
 
 func (spreadElement *SpreadElement) NodeType() NodeType {
 	return NodeTypeSpreadElement
+}
+
+func (spreadElement *SpreadElement) ForEachChild(v Visitor) bool {
+	return visit(v, spreadElement.Argument)
 }
 
 type ArrayExpression struct {
@@ -870,6 +960,10 @@ func (arrayExpression *ArrayExpression) NodeType() NodeType {
 	return NodeTypeArrayExpression
 }
 
+func (arrayExpression *ArrayExpression) ForEachChild(v Visitor) bool {
+	return visitNodes(v, arrayExpression.Elements)
+}
+
 type ObjectProperty struct {
 	NodeBase
 	Key   *Node `json:"key,omitempty"`
@@ -892,6 +986,10 @@ func (objectProperty *ObjectProperty) MarshalJSON() ([]byte, error) {
 
 func (objectProperty *ObjectProperty) NodeType() NodeType {
 	return NodeTypeObjectProperty
+}
+
+func (objectProperty *ObjectProperty) ForEachChild(v Visitor) bool {
+	return visit(v, objectProperty.Key) || visit(v, objectProperty.Value)
 }
 
 type ObjectMethod struct {
@@ -920,6 +1018,15 @@ func (objectMethod *ObjectMethod) NodeType() NodeType {
 	return NodeTypeObjectMethod
 }
 
+func (objectMethod *ObjectMethod) ForEachChild(v Visitor) bool {
+	params := []*Node{}
+	for _, param := range objectMethod.Params {
+		params = append(params, param.AsNode())
+	}
+
+	return visit(v, objectMethod.Key) || visitNodes(v, params) || visit(v, objectMethod.Body.AsNode())
+}
+
 type ObjectExpression struct {
 	NodeBase
 	Properties []*Node `json:"properties,omitempty"`
@@ -941,6 +1048,10 @@ func (objectExpression *ObjectExpression) MarshalJSON() ([]byte, error) {
 
 func (objectExpression *ObjectExpression) NodeType() NodeType {
 	return NodeTypeObjectExpression
+}
+
+func (objectExpression *ObjectExpression) ForEachChild(v Visitor) bool {
+	return visitNodes(v, objectExpression.Properties)
 }
 
 type DirectiveLiteral struct {
@@ -989,6 +1100,10 @@ func (directive *Directive) NodeType() NodeType {
 	return NodeTypeDirective
 }
 
+func (directive *Directive) ForEachChild(v Visitor) bool {
+	return visit(v, directive.Value.AsNode())
+}
+
 type SourceFile struct {
 	NodeBase
 	ContainerBase `json:"-"`
@@ -1015,6 +1130,15 @@ func (sourceFile *SourceFile) MarshalJSON() ([]byte, error) {
 
 func (sourceFile *SourceFile) NodeType() NodeType {
 	return NodeTypeSourceFile
+}
+
+func (sourceFile *SourceFile) ForEachChild(v Visitor) bool {
+	directives := []*Node{}
+	for _, directive := range sourceFile.Directives {
+		directives = append(directives, directive.AsNode())
+	}
+
+	return visitNodes(v, directives) || visitNodes(v, sourceFile.Body) || visit(v, sourceFile.ExternalModuleIndicator)
 }
 
 type TInterfaceDeclaration struct {
@@ -1044,6 +1168,10 @@ func (tInterfaceDeclaration *TInterfaceDeclaration) NodeType() NodeType {
 	return NodeTypeTInterfaceDeclaration
 }
 
+func (tInterfaceDeclaration *TInterfaceDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, tInterfaceDeclaration.Id.AsNode()) || visit(v, tInterfaceDeclaration.Body.AsNode())
+}
+
 type TInterfaceBody struct {
 	NodeBase
 	Body []*Node `json:"body,omitempty"`
@@ -1065,6 +1193,10 @@ func (tInterfaceBody *TInterfaceBody) MarshalJSON() ([]byte, error) {
 
 func (tInterfaceBody *TInterfaceBody) NodeType() NodeType {
 	return NodeTypeTInterfaceBody
+}
+
+func (tInterfaceBody *TInterfaceBody) ForEachChild(v Visitor) bool {
+	return visitNodes(v, tInterfaceBody.Body)
 }
 
 type TPropertySignature struct {
@@ -1094,6 +1226,10 @@ func (tPropertySignature *TPropertySignature) NodeType() NodeType {
 	return NodeTypeTPropertySignature
 }
 
+func (tPropertySignature *TPropertySignature) ForEachChild(v Visitor) bool {
+	return visit(v, tPropertySignature.Key) || visit(v, tPropertySignature.TypeAnnotation.AsNode())
+}
+
 type ReturnStatement struct {
 	NodeBase
 	Argument *Node `json:"argument,omitempty"`
@@ -1115,6 +1251,10 @@ func (returnStatement *ReturnStatement) MarshalJSON() ([]byte, error) {
 
 func (returnStatement *ReturnStatement) NodeType() NodeType {
 	return NodeTypeReturnStatement
+}
+
+func (returnStatement *ReturnStatement) ForEachChild(v Visitor) bool {
+	return visit(v, returnStatement.Argument)
 }
 
 type TFunctionType struct {
@@ -1144,6 +1284,10 @@ func (tFunctionType *TFunctionType) NodeType() NodeType {
 	return NodeTypeTFunctionType
 }
 
+func (tFunctionType *TFunctionType) ForEachChild(v Visitor) bool {
+	return visitNodes(v, tFunctionType.Params) || visit(v, tFunctionType.TypeAnnotation.AsNode())
+}
+
 type TTypeAliasDeclaration struct {
 	NodeBase
 	Id             *Identifier      `json:"id,omitempty"`
@@ -1171,6 +1315,10 @@ func (tTypeAliasDeclaration *TTypeAliasDeclaration) NodeType() NodeType {
 	return NodeTypeTFunctionType
 }
 
+func (tTypeAliasDeclaration *TTypeAliasDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, tTypeAliasDeclaration.Id.AsNode()) || visit(v, tTypeAliasDeclaration.TypeAnnotation.AsNode())
+}
+
 type TTypeLiteral struct {
 	NodeBase
 	Members []*Node `json:"members,omitempty"`
@@ -1192,6 +1340,10 @@ func (tTypeLiteral *TTypeLiteral) MarshalJSON() ([]byte, error) {
 
 func (tTypeLiteral *TTypeLiteral) NodeType() NodeType {
 	return NodeTypeTFunctionType
+}
+
+func (tTypeLiteral *TTypeLiteral) ForEachChild(v Visitor) bool {
+	return visitNodes(v, tTypeLiteral.Members)
 }
 
 type TTypeReference struct {
@@ -1217,6 +1369,10 @@ func (tTypeReference *TTypeReference) NodeType() NodeType {
 	return NodeTypeTTypeReference
 }
 
+func (tTypeReference *TTypeReference) ForEachChild(v Visitor) bool {
+	return visit(v, tTypeReference.TypeName.AsNode())
+}
+
 type TArrayType struct {
 	NodeBase
 	ElementType *Node `json:"element_type,omitempty"`
@@ -1238,6 +1394,10 @@ func (tArrayType *TArrayType) MarshalJSON() ([]byte, error) {
 
 func (tArrayType *TArrayType) NodeType() NodeType {
 	return NodeTypeTArrayType
+}
+
+func (tArrayType *TArrayType) ForEachChild(v Visitor) bool {
+	return visit(v, tArrayType.AsNode())
 }
 
 type RestElement struct {
@@ -1265,6 +1425,10 @@ func (restElement *RestElement) MarshalJSON() ([]byte, error) {
 
 func (restElement *RestElement) NodeType() NodeType {
 	return NodeTypeRestElement
+}
+
+func (restElement *RestElement) ForEachChild(v Visitor) bool {
+	return visit(v, restElement.Argument.AsNode()) || visit(v, restElement.TypeAnnotation.AsNode())
 }
 
 type ForStatement struct {
@@ -1298,6 +1462,13 @@ func (forStatement *ForStatement) NodeType() NodeType {
 	return NodeTypeForStatement
 }
 
+func (forStatement *ForStatement) ForEachChild(v Visitor) bool {
+	return visit(v, forStatement.Init) ||
+		visit(v, forStatement.Test) ||
+		visit(v, forStatement.Update) ||
+		visit(v, forStatement.Body)
+}
+
 type UpdateExpression struct {
 	NodeBase
 	Operator UpdateExpressionOperator `json:"operator,omitempty"`
@@ -1325,4 +1496,26 @@ func (updateExpression *UpdateExpression) MarshalJSON() ([]byte, error) {
 
 func (updateExpression *UpdateExpression) NodeType() NodeType {
 	return NodeTypeUpdateExpression
+}
+
+func (updateExpression *UpdateExpression) ForEachChild(v Visitor) bool {
+	return visit(v, updateExpression.Argument)
+}
+
+type Visitor func(*Node) bool
+
+func visit(v Visitor, node *Node) bool {
+	if node != nil {
+		return v(node)
+	}
+	return false
+}
+
+func visitNodes(v Visitor, nodes []*Node) bool {
+	for _, node := range nodes {
+		if v(node) {
+			return true
+		}
+	}
+	return false
 }

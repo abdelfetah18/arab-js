@@ -146,7 +146,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 
 	p.expectedKeyword(KeywordImport)
 
-	importSpecifiers := []ast.ImportSpecifierInterface{}
+	importSpecifiers := []*ast.Node{}
 
 	token := p.lexer.Peek()
 	switch token.Type {
@@ -158,7 +158,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 			ast.NewNode(
 				ast.NewImportDefaultSpecifier(identifier),
 				identifier.Location,
-			),
+			).AsNode(),
 		)
 
 		if p.optional(Comma) {
@@ -176,7 +176,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 			ast.NewNode(
 				ast.NewImportNamespaceSpecifier(identifier),
 				identifier.Location,
-			),
+			).AsNode(),
 		)
 	default:
 		panic("unexpected token got '" + token.Value + "'")
@@ -195,7 +195,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 	)
 }
 
-func (p *Parser) parseImportSpecifiers(importSpecifiers []ast.ImportSpecifierInterface) []ast.ImportSpecifierInterface {
+func (p *Parser) parseImportSpecifiers(importSpecifiers []*ast.Node) []*ast.Node {
 	p.expected(LeftCurlyBrace)
 	token := p.lexer.Peek()
 	for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
@@ -208,7 +208,7 @@ func (p *Parser) parseImportSpecifiers(importSpecifiers []ast.ImportSpecifierInt
 					identifier.AsNode(),
 				),
 				identifier.Location,
-			),
+			).AsNode(),
 		)
 
 		token = p.lexer.Peek()
