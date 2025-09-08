@@ -2,9 +2,6 @@ package ast
 
 import "encoding/json"
 
-type JavaScriptNode interface{}
-type FunctionParameter = Identifier
-
 type BinaryExpressionOperator = string
 
 const (
