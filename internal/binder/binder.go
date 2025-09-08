@@ -34,6 +34,9 @@ func (b *Binder) Bind() {
 		case ast.NodeTypeTInterfaceDeclaration:
 			b.bindTInterfaceDeclaration(node.AsTInterfaceDeclaration())
 			continue
+		case ast.NodeTypeFunctionDeclaration:
+			b.bindFunctionDeclaration(node.AsFunctionDeclaration())
+			continue
 		default:
 			b.bindStatement(node)
 			continue
@@ -65,9 +68,12 @@ func (b *Binder) bindVariableDeclaration(variableDeclaration *ast.VariableDeclar
 }
 
 func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
-	blockStatement.Scope.Parent = b.container.Scope
 	saveContainer := b.container
-	b.container = blockStatement.ContainerBaseData()
+
+	if blockStatement.Parent.Type != ast.NodeTypeFunctionDeclaration {
+		blockStatement.Scope.Parent = b.container.Scope
+		b.container = blockStatement.ContainerBaseData()
+	}
 
 	for _, node := range b.sourceFile.Body {
 		switch node.Type {
@@ -125,4 +131,43 @@ func (b *Binder) GetTypeFromTypeNode(node *ast.Node) *ast.Type {
 	}
 
 	return nil
+}
+
+func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
+	b.container.Scope.AddVariable(
+		functionDeclaration.ID.Name,
+		nil,
+		b.GetTypeFromTypeAnnotationNode(functionDeclaration.TTypeAnnotation),
+	)
+
+	saveContainer := b.container
+	functionDeclaration.Scope.Parent = b.container.Scope
+	b.container = functionDeclaration.ContainerBaseData()
+
+	for _, param := range functionDeclaration.Params {
+		b.bindParam(param)
+	}
+
+	b.bindBlockStatement(functionDeclaration.Body)
+
+	b.container = saveContainer
+}
+
+func (b *Binder) bindParam(node *ast.Node) {
+	switch node.Type {
+	case ast.NodeTypeRestElement:
+		restElement := node.AsRestElement()
+		b.container.Scope.AddVariable(
+			restElement.Argument.Name,
+			nil,
+			b.GetTypeFromTypeAnnotationNode(restElement.TypeAnnotation),
+		)
+	case ast.NodeTypeIdentifier:
+		identifier := node.AsIdentifier()
+		b.container.Scope.AddVariable(
+			identifier.Name,
+			nil,
+			b.GetTypeFromTypeAnnotationNode(identifier.TypeAnnotation),
+		)
+	}
 }

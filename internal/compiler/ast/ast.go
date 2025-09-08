@@ -594,6 +594,7 @@ func (assignmentExpression *AssignmentExpression) ForEachChild(v Visitor) bool {
 
 type FunctionDeclaration struct {
 	NodeBase
+	ContainerBase
 	ID              *Identifier      `json:"id,omitempty"`
 	Params          []*Node          `json:"params,omitempty"`
 	Body            *BlockStatement  `json:"body,omitempty"`
