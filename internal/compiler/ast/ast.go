@@ -80,7 +80,7 @@ func NewNode[T NodeData](nodeData T, location Location) T {
 	node.Location = location
 	node.Data = nodeData
 
-	node.Data.ForEachChild(func(n *Node) bool {
+	node.ForEachChild(func(n *Node) bool {
 		n.Parent = node
 		return false
 	})
@@ -218,7 +218,7 @@ func (variableDeclaration *VariableDeclaration) NodeType() NodeType {
 }
 
 func (variableDeclaration *VariableDeclaration) ForEachChild(v Visitor) bool {
-	return visit(v, variableDeclaration.Identifier.AsNode()) || visit(v, variableDeclaration.Initializer.AsNode())
+	return visit(v, variableDeclaration.Identifier.AsNode()) || (variableDeclaration.Initializer != nil && visit(v, variableDeclaration.Initializer.AsNode()))
 }
 
 type TTypeAnnotation struct {
@@ -384,7 +384,7 @@ func (identifier *Identifier) NodeType() NodeType {
 }
 
 func (identifier *Identifier) ForEachChild(v Visitor) bool {
-	return visit(v, identifier.TypeAnnotation.AsNode())
+	return identifier.TypeAnnotation != nil && visit(v, identifier.TypeAnnotation.AsNode())
 }
 
 type Initializer struct {
@@ -628,7 +628,7 @@ func (functionDeclaration *FunctionDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, functionDeclaration.ID.AsNode()) ||
 		visitNodes(v, functionDeclaration.Params) ||
 		visit(v, functionDeclaration.Body.AsNode()) ||
-		visit(v, functionDeclaration.TTypeAnnotation.AsNode())
+		(functionDeclaration.TTypeAnnotation != nil && visit(v, functionDeclaration.TTypeAnnotation.AsNode()))
 }
 
 type CallExpression struct {
@@ -1433,7 +1433,7 @@ func (restElement *RestElement) NodeType() NodeType {
 }
 
 func (restElement *RestElement) ForEachChild(v Visitor) bool {
-	return visit(v, restElement.Argument.AsNode()) || visit(v, restElement.TypeAnnotation.AsNode())
+	return visit(v, restElement.Argument.AsNode()) || (restElement.TypeAnnotation != nil && visit(v, restElement.TypeAnnotation.AsNode()))
 }
 
 type ForStatement struct {

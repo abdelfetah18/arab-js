@@ -141,6 +141,7 @@ func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclar
 	)
 
 	saveContainer := b.container
+	functionDeclaration.Scope = &ast.Scope{}
 	functionDeclaration.Scope.Parent = b.container.Scope
 	b.container = functionDeclaration.ContainerBaseData()
 

@@ -50,7 +50,7 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 	var findNode *ast.Node = nil
 	var currentScope *ast.Scope = sourceFile.Scope
 	nodeVisitor := ast.NewNodeVisitor(func(node *ast.Node) *ast.Node {
-		if node.Parent.Type != ast.NodeTypeFunctionDeclaration && node.Type == ast.NodeTypeBlockStatement {
+		if node.Parent != nil && node.Parent.Type != ast.NodeTypeFunctionDeclaration && node.Type == ast.NodeTypeBlockStatement {
 			currentScope = node.AsBlockStatement().Scope
 		}
 
