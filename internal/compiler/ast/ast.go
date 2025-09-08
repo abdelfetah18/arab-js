@@ -60,6 +60,7 @@ type Node struct {
 	Type     NodeType `json:"type,omitempty"`
 	Data     NodeData `json:"data,omitempty"`
 	Location Location `json:"location,omitempty"`
+	Parent   *Node    `json:"-"`
 }
 
 type NodeData interface {
@@ -78,6 +79,12 @@ func NewNode[T NodeData](nodeData T, location Location) T {
 	node.Type = nodeData.NodeType()
 	node.Location = location
 	node.Data = nodeData
+
+	node.Data.ForEachChild(func(n *Node) bool {
+		n.Parent = node
+		return false
+	})
+
 	return nodeData
 }
 
