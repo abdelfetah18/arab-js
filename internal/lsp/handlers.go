@@ -6,6 +6,7 @@ import (
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/compiler/fileloader"
 	"context"
+	"encoding/json"
 	"errors"
 	"io/fs"
 	"net/url"
@@ -15,16 +16,19 @@ import (
 	"unicode/utf8"
 
 	"github.com/TobiasYin/go-lsp/logs"
+	"github.com/TobiasYin/go-lsp/lsp"
 	"github.com/TobiasYin/go-lsp/lsp/defines"
 )
 
 type Handlers struct {
 	FileLoader *fileloader.FileLoader
+	Server     *lsp.Server
 }
 
-func NewHandlers() *Handlers {
+func NewHandlers(server *lsp.Server) *Handlers {
 	return &Handlers{
 		FileLoader: nil,
+		Server:     server,
 	}
 }
 
@@ -92,7 +96,8 @@ func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *define
 
 		projectFiles, err := listFilesWithExt(projectPath, ".كود")
 		if err != nil {
-			panic(err)
+			logs.Println(err)
+			return err
 		}
 
 		logs.Printf("projectFiles=%v\n", projectFiles)
@@ -104,10 +109,40 @@ func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *define
 		_checker.Check()
 
 		if len(_checker.Errors) > 0 {
+			type Diagnostic struct {
+				Range   defines.Range `json:"range"`
+				Message string        `json:"message"`
+			}
+
+			type PublishDiagnosticsParams struct {
+				Uri         defines.DocumentUri `json:"uri"`
+				Version     int                 `json:"version"`
+				Diagnostics []Diagnostic        `json:"diagnostics"`
+			}
+
+			diagnostics := make([]Diagnostic, 0, len(_checker.Errors))
 			for _, message := range _checker.Errors {
+				diagnostics = append(diagnostics, Diagnostic{
+					Range:   defines.Range{}, // TODO: fill with actual error position if available
+					Message: message,
+				})
 				println(message)
 			}
-			panic("type checking errors")
+
+			params := PublishDiagnosticsParams{
+				Uri:         req.TextDocument.Uri,
+				Version:     req.TextDocument.Version,
+				Diagnostics: diagnostics,
+			}
+
+			payload, err := json.Marshal(params)
+			if err != nil {
+				logs.Println(err) // or handle gracefully
+				return err
+			}
+
+			h.Server.SendNotification("textDocument/publishDiagnostics", payload)
+			logs.Println("type checking errors")
 		}
 	}
 

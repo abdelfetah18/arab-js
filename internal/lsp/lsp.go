@@ -11,18 +11,14 @@ import (
 	"github.com/TobiasYin/go-lsp/lsp/defines"
 )
 
-func strPtr(str string) *string {
-	return &str
-}
-
 func StartLSP() {
-	handlers := NewHandlers()
-
 	server := lsp.NewServer(&lsp.Options{
 		CompletionProvider: &defines.CompletionOptions{
 			TriggerCharacters: &[]string{"."},
 		},
 	})
+
+	handlers := NewHandlers(server)
 
 	server.OnInitialized(func(ctx context.Context, req *defines.InitializeParams) (err error) {
 		logs.Println("OnInitialized")
