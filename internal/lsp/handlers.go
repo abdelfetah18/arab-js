@@ -48,39 +48,35 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 	}
 	// 1. Locate Node By Position Line and Character
 	var findNode *ast.Node = nil
-	var currentScope *ast.Scope = sourceFile.Scope
-	nodeVisitor := ast.NewNodeVisitor(func(node *ast.Node) *ast.Node {
-		if node.Parent != nil && node.Parent.Type != ast.NodeTypeFunctionDeclaration && node.Type == ast.NodeTypeBlockStatement {
-			currentScope = node.AsBlockStatement().Scope
+	var current *ast.Node = sourceFile.AsNode()
+	var next *ast.Node = nil
+
+	visitAll := func(n *ast.Node) bool {
+		if position >= n.Location.Pos && position <= n.Location.End {
+			next = n
+			return true
 		}
 
-		if node.Type == ast.NodeTypeFunctionDeclaration {
-			currentScope = node.AsFunctionDeclaration().Scope
-		}
-
-		if position >= node.Location.Pos && position <= node.Location.End {
-			findNode = node
-		}
-
-		return nil
-	})
-
-	nodeVisitor.VisitNode(sourceFile.AsNode())
-
-	if findNode == nil {
-		return nil, errors.New("cannot find node")
+		return false
 	}
+
+	for {
+		found := current.ForEachChild(visitAll)
+		if next == nil && !found {
+			findNode = current
+			break
+		}
+
+		current = next
+		next = nil
+	}
+
+	logs.Printf("findNode=%s\n", findNode.Type)
 
 	// 2. Fetch Symbols From That Location
-	d := defines.CompletionItemKindText
-	keys := make([]defines.CompletionItem, 0, len(currentScope.Locals))
-	for k := range currentScope.Locals {
-		keys = append(keys, defines.CompletionItem{
-			Label:      "code",
-			Kind:       &d,
-			InsertText: &k,
-		})
-	}
+	keys := getAllEntires(findNode)
+
+	logs.Printf("keys=%v\n", keys)
 
 	return &keys, nil
 }
@@ -206,4 +202,40 @@ func positionToIndex(filePath string, pos defines.Position) (uint, error) {
 	}
 
 	return 0, errors.New("position out of range")
+}
+
+func getAllEntires(node *ast.Node) []defines.CompletionItem {
+	var currentScope *ast.Scope = getPrentContainer(node)
+	keys := []defines.CompletionItem{}
+
+	for currentScope != nil {
+		d := defines.CompletionItemKindText
+		for k := range currentScope.Locals {
+			keys = append(keys, defines.CompletionItem{
+				Label:      "code",
+				Kind:       &d,
+				InsertText: &k,
+			})
+		}
+		currentScope = currentScope.Parent
+	}
+
+	return keys
+}
+
+func getPrentContainer(node *ast.Node) *ast.Scope {
+	if node.Type == ast.NodeTypeBlockStatement && node.Parent.Type == ast.NodeTypeFunctionDeclaration {
+		return node.Parent.AsFunctionDeclaration().Scope
+	}
+
+	switch node.Type {
+	case ast.NodeTypeSourceFile:
+		return node.AsSourceFile().Scope
+	case ast.NodeTypeBlockStatement:
+		return node.AsBlockStatement().Scope
+	case ast.NodeTypeFunctionDeclaration:
+		return node.AsFunctionDeclaration().Scope
+	default:
+		return getPrentContainer(node.Parent)
+	}
 }

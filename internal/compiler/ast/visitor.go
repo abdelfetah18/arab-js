@@ -13,39 +13,7 @@ func (v *NodeVisitor) VisitNode(node *Node) *Node {
 		return node
 	}
 
-	result := v.Visit(node)
-
-	if node.Type == NodeTypeSourceFile {
-		v.visitProgram(node.AsSourceFile())
-	}
-
-	if node.Type == NodeTypeBlockStatement {
-		v.visitBlockStatement(node.AsBlockStatement())
-	}
-
-	if node.Type == NodeTypeVariableDeclaration {
-		v.visitVariableDeclaration(node.AsVariableDeclaration())
-	}
-
-	if node.Type == NodeTypeExpressionStatement {
-		v.VisitNode(node.AsExpressionStatement().Expression)
-	}
-
-	if node.Type == NodeTypeCallExpression {
-		callExpression := node.AsCallExpression()
-		for _, node := range callExpression.Args {
-			v.VisitNode(node)
-		}
-		v.VisitNode(callExpression.Callee)
-	}
-
-	if node.Type == NodeTypeMemberExpression {
-		memberExpression := node.AsMemberExpression()
-		v.VisitNode(memberExpression.Object)
-		v.VisitNode(memberExpression.Property)
-	}
-
-	return result
+	return v.Visit(node)
 }
 
 func (v *NodeVisitor) visitProgram(sourceFile *SourceFile) {
