@@ -1437,6 +1437,7 @@ func (restElement *RestElement) ForEachChild(v Visitor) bool {
 
 type ForStatement struct {
 	NodeBase
+	ContainerBase
 	Init   *Node `json:"init,omitempty"`
 	Test   *Node `json:"test,omitempty"`
 	Update *Node `json:"update,omitempty"`

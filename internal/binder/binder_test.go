@@ -61,6 +61,42 @@ func TestBindVariableDeclaration(t *testing.T) {
 			return
 		}
 	})
+
+	t.Run("should bind variable declaration at for statement init", func(t *testing.T) {
+		input := "من_أجل (متغير رقم : عدد = 0؛ رقم <= 10؛ رقم++) {}"
+		sourceFile := compiler.ParseSourceFile(input)
+		BindSourceFile(sourceFile)
+		nameResolver := NewNameResolver(sourceFile.Scope)
+		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsForStatement().Scope)
+
+		if symbol == nil {
+			t.Errorf("expected symbol %q to exist, but got nil", "رقم")
+			return
+		}
+
+		if symbol.Type.Flags != ast.TypeFlagsNumber {
+			t.Errorf("expected symbol %q to have type %v, but got %v", "رقم", ast.TypeFlagsNumber, symbol.Type.Flags)
+			return
+		}
+	})
+
+	t.Run("should bind variable declaration at for statement scope", func(t *testing.T) {
+		input := "من_أجل (متغير أ : عدد = 0؛ أ <= 10؛ أ++) { متغير رقم: عدد = 100؛ }"
+		sourceFile := compiler.ParseSourceFile(input)
+		BindSourceFile(sourceFile)
+		nameResolver := NewNameResolver(sourceFile.Scope)
+		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsForStatement().Scope)
+
+		if symbol == nil {
+			t.Errorf("expected symbol %q to exist, but got nil", "رقم")
+			return
+		}
+
+		if symbol.Type.Flags != ast.TypeFlagsNumber {
+			t.Errorf("expected symbol %q to have type %v, but got %v", "رقم", ast.TypeFlagsNumber, symbol.Type.Flags)
+			return
+		}
+	})
 }
 
 func TestBindFunctionDeclaration(t *testing.T) {
@@ -117,6 +153,24 @@ func TestBindFunctionDeclaration(t *testing.T) {
 			return
 		}
 	})
+
+	t.Run("should bind function declaration at for statement scope", func(t *testing.T) {
+		input := "من_أجل (متغير أ : عدد = 0؛ أ <= 10؛ أ++) { دالة تجربة() { متغير رقم : عدد = 100؛ } }"
+		sourceFile := compiler.ParseSourceFile(input)
+		BindSourceFile(sourceFile)
+		nameResolver := NewNameResolver(sourceFile.Scope)
+		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsForStatement().Scope)
+
+		if symbol == nil {
+			t.Errorf("expected symbol %q to exist in block scope, but got nil", "تجربة")
+			return
+		}
+
+		if symbol.Type.Flags != ast.TypeFlagsFunction {
+			t.Errorf("expected symbol %q to have type %v, but got %v", "تجربة", ast.TypeFlagsFunction, symbol.Type.Flags)
+			return
+		}
+	})
 }
 
 func TestBindInterfaceDeclaration(t *testing.T) {
@@ -165,6 +219,24 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in function scope, but got nil", "شخص")
+			return
+		}
+
+		if symbol.Type.Flags != ast.TypeFlagsObject {
+			t.Errorf("expected symbol %q to have type %v, but got %v", "شخص", ast.TypeFlagsObject, symbol.Type.Flags)
+			return
+		}
+	})
+
+	t.Run("should bind interface declaration at for statement scope", func(t *testing.T) {
+		input := "من_أجل (متغير أ : عدد = 0؛ أ <= 10؛ أ++) { واجهة شخص { اسم: نص } }"
+		sourceFile := compiler.ParseSourceFile(input)
+		BindSourceFile(sourceFile)
+		nameResolver := NewNameResolver(sourceFile.Scope)
+		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsForStatement().Scope)
+
+		if symbol == nil {
+			t.Errorf("expected symbol %q to exist in block scope, but got nil", "شخص")
 			return
 		}
 

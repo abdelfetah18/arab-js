@@ -45,6 +45,8 @@ func (b *Binder) bindStatement(node *ast.Node) {
 		b.bindTInterfaceDeclaration(node.AsTInterfaceDeclaration())
 	case ast.NodeTypeFunctionDeclaration:
 		b.bindFunctionDeclaration(node.AsFunctionDeclaration())
+	case ast.NodeTypeForStatement:
+		b.bindForStatement(node.AsForStatement())
 	}
 }
 
@@ -63,7 +65,7 @@ func (b *Binder) bindVariableDeclaration(variableDeclaration *ast.VariableDeclar
 func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 	saveContainer := b.container
 
-	if blockStatement.Parent.Type != ast.NodeTypeFunctionDeclaration {
+	if canCreateNewScope(blockStatement.AsNode()) {
 		blockStatement.Scope = &ast.Scope{}
 		blockStatement.Scope.Parent = b.container.Scope
 		b.container = blockStatement.ContainerBaseData()
@@ -178,5 +180,34 @@ func (b *Binder) bindParam(node *ast.Node) {
 			nil,
 			b.GetTypeFromTypeAnnotationNode(identifier.TypeAnnotation),
 		)
+	}
+}
+
+func (b *Binder) bindForStatement(forStatement *ast.ForStatement) {
+	saveContainer := b.container
+	forStatement.Scope = &ast.Scope{}
+	forStatement.Scope.Parent = b.container.Scope
+	b.container = forStatement.ContainerBaseData()
+
+	switch forStatement.Init.Type {
+	case ast.NodeTypeVariableDeclaration:
+		b.bindVariableDeclaration(forStatement.Init.AsVariableDeclaration())
+	}
+
+	b.bindStatement(forStatement.Body)
+
+	b.container = saveContainer
+}
+
+func canCreateNewScope(node *ast.Node) bool {
+	if node.Parent == nil {
+		return true
+	}
+
+	switch node.Parent.Type {
+	case ast.NodeTypeFunctionDeclaration, ast.NodeTypeForStatement:
+		return false
+	default:
+		return true
 	}
 }
