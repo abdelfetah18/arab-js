@@ -14,20 +14,17 @@ func NewNameResolver(globals *ast.Scope) *NameResolver {
 
 func (n *NameResolver) Resolve(name string, scope *ast.Scope) *ast.Symbol {
 	currentScope := scope
-	symbol := currentScope.GetVariableSymbol(name)
-	if symbol == nil {
-		currentScope = scope.Parent
-		for currentScope != nil {
-			symbol = currentScope.GetVariableSymbol(name)
-			if symbol == nil {
-				currentScope = scope.Parent
-			} else {
-				return symbol
-			}
-		}
 
-		symbol = n.Globals.GetVariableSymbol(name)
+	for currentScope != nil {
+		if symbol := currentScope.GetVariableSymbol(name); symbol != nil {
+			return symbol
+		}
+		currentScope = currentScope.Parent
 	}
 
-	return symbol
+	if n.Globals != nil {
+		return n.Globals.GetVariableSymbol(name)
+	}
+
+	return nil
 }

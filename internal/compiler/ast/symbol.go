@@ -77,54 +77,97 @@ type TypeFlags uint32
 const (
 	TypeFlagsNone TypeFlags = 0
 
-	TypeFlagsAny     TypeFlags = 1 << 0
-	TypeFlagsObject  TypeFlags = 1 << 1
-	TypeFlagsString  TypeFlags = 1 << 2
-	TypeFlagsNumber  TypeFlags = 1 << 3
-	TypeFlagsBoolean TypeFlags = 1 << 4
-	TypeFlagsNull    TypeFlags = 1 << 5
+	TypeFlagsAny      TypeFlags = 1 << 0
+	TypeFlagsObject   TypeFlags = 1 << 1
+	TypeFlagsString   TypeFlags = 1 << 2
+	TypeFlagsNumber   TypeFlags = 1 << 3
+	TypeFlagsBoolean  TypeFlags = 1 << 4
+	TypeFlagsNull     TypeFlags = 1 << 5
+	TypeFlagsFunction TypeFlags = 1 << 6
 )
+
+func (t TypeFlags) String() string {
+	switch t {
+	case TypeFlagsNone:
+		return "none"
+	case TypeFlagsAny:
+		return "any"
+	case TypeFlagsObject:
+		return "object"
+	case TypeFlagsString:
+		return "string"
+	case TypeFlagsNumber:
+		return "number"
+	case TypeFlagsBoolean:
+		return "boolean"
+	case TypeFlagsNull:
+		return "null"
+	case TypeFlagsFunction:
+		return "function"
+	default:
+		return "unknown"
+	}
+}
 
 type Type struct {
 	Flags TypeFlags
 	Data  TypeData
 }
 
+func NewType[T TypeData](typeData T) T {
+	_type := typeData.AsType()
+	_type.Flags = typeData.Flags()
+	_type.Data = typeData
+	return typeData
+}
+
 type TypeData interface {
+	AsType() *Type
+	Flags() TypeFlags
 	Name() string
 }
 
+func (t *Type) AsType() *Type               { return t }
 func (t *Type) AsStringType() *StringType   { return t.Data.(*StringType) }
 func (t *Type) AsNumberType() *NumberType   { return t.Data.(*NumberType) }
 func (t *Type) AsBooleanType() *BooleanType { return t.Data.(*BooleanType) }
 func (t *Type) AsNullType() *NullType       { return t.Data.(*NullType) }
 func (t *Type) AsObjectType() *ObjectType   { return t.Data.(*ObjectType) }
 
-type StringType struct{}
+type StringType struct {
+	Type
+}
 
-func NewStringType() *StringType    { return &StringType{} }
-func (s *StringType) ToType() *Type { return &Type{Data: s, Flags: TypeFlagsString} }
-func (s *StringType) Name() string  { return "string" }
+func NewStringType() *StringType       { return &StringType{} }
+func (t *StringType) Flags() TypeFlags { return TypeFlagsString }
+func (t *StringType) Name() string     { return "string" }
 
-type NumberType struct{}
+type NumberType struct {
+	Type
+}
 
-func NewNumberType() *NumberType    { return &NumberType{} }
-func (s *NumberType) ToType() *Type { return &Type{Data: s, Flags: TypeFlagsNumber} }
-func (s *NumberType) Name() string  { return "number" }
+func NewNumberType() *NumberType       { return &NumberType{} }
+func (t *NumberType) Flags() TypeFlags { return TypeFlagsNumber }
+func (t *NumberType) Name() string     { return "number" }
 
-type BooleanType struct{}
+type BooleanType struct {
+	Type
+}
 
-func NewBooleanType() *BooleanType   { return &BooleanType{} }
-func (s *BooleanType) ToType() *Type { return &Type{Data: s, Flags: TypeFlagsBoolean} }
-func (s *BooleanType) Name() string  { return "boolean" }
+func NewBooleanType() *BooleanType      { return &BooleanType{} }
+func (t *BooleanType) Flags() TypeFlags { return TypeFlagsBoolean }
+func (t *BooleanType) Name() string     { return "boolean" }
 
-type NullType struct{}
+type NullType struct {
+	Type
+}
 
-func NewNullType() *NullType      { return &NullType{} }
-func (s *NullType) ToType() *Type { return &Type{Data: s, Flags: TypeFlagsNull} }
-func (s *NullType) Name() string  { return "null" }
+func NewNullType() *NullType         { return &NullType{} }
+func (t *NullType) Flags() TypeFlags { return TypeFlagsNull }
+func (t *NullType) Name() string     { return "null" }
 
 type ObjectType struct {
+	Type
 	Properties map[string]*PropertyType
 }
 
@@ -134,24 +177,34 @@ type PropertyType struct {
 	Type         *Type
 }
 
-func NewObjectType() *ObjectType    { return &ObjectType{Properties: make(map[string]*PropertyType)} }
-func (s *ObjectType) ToType() *Type { return &Type{Data: s, Flags: TypeFlagsObject} }
-func (s *ObjectType) Name() string  { return "object" }
-
-func (s *ObjectType) AddProperty(name string, propertyType *PropertyType) {
-	s.Properties[name] = propertyType
+func NewObjectType() *ObjectType       { return &ObjectType{Properties: make(map[string]*PropertyType)} }
+func (t *ObjectType) Flags() TypeFlags { return TypeFlagsObject }
+func (t *ObjectType) Name() string     { return "object" }
+func (t *ObjectType) AddProperty(name string, propertyType *PropertyType) {
+	t.Properties[name] = propertyType
 }
+
+type FunctionType struct {
+	Type
+	Params     []*Type
+	ReturnType *Type
+}
+
+func NewFunctionType() *FunctionType             { return &FunctionType{Params: []*Type{}, ReturnType: &Type{}} }
+func (t *FunctionType) Flags() TypeFlags         { return TypeFlagsFunction }
+func (t *FunctionType) Name() string             { return "function" }
+func (t *FunctionType) AddParamType(_type *Type) { t.Params = append(t.Params, _type) }
 
 func InferTypeFromNode(node *Node) *Type {
 	switch node.Type {
 	case NodeTypeStringLiteral:
-		return NewStringType().ToType()
+		return NewType(NewStringType()).AsType()
 	case NodeTypeDecimalLiteral:
-		return NewNumberType().ToType()
+		return NewType(NewNumberType()).AsType()
 	case NodeTypeBooleanLiteral:
-		return NewBooleanType().ToType()
+		return NewType(NewBooleanType()).AsType()
 	case NodeTypeNullLiteral:
-		return NewNullType().ToType()
+		return NewType(NewNullType()).AsType()
 	}
 
 	return nil

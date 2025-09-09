@@ -538,11 +538,10 @@ type BlockStatement struct {
 	NodeBase
 	ContainerBase `json:"-"`
 	Body          []*Node `json:"body,omitempty"`
-	Scope         *Scope  `json:"-"`
 }
 
 func NewBlockStatement(body []*Node) *BlockStatement {
-	return &BlockStatement{Body: body, Scope: &Scope{}}
+	return &BlockStatement{Body: body}
 }
 
 func (blockStatement *BlockStatement) MarshalJSON() ([]byte, error) {

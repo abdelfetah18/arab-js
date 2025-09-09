@@ -27,20 +27,7 @@ func (b *Binder) Bind() {
 	}
 
 	for _, node := range b.sourceFile.Body {
-		switch node.Type {
-		case ast.NodeTypeVariableDeclaration:
-			b.bindVariableDeclaration(node.AsVariableDeclaration())
-			continue
-		case ast.NodeTypeTInterfaceDeclaration:
-			b.bindTInterfaceDeclaration(node.AsTInterfaceDeclaration())
-			continue
-		case ast.NodeTypeFunctionDeclaration:
-			b.bindFunctionDeclaration(node.AsFunctionDeclaration())
-			continue
-		default:
-			b.bindStatement(node)
-			continue
-		}
+		b.bindStatement(node)
 	}
 }
 
@@ -52,6 +39,12 @@ func (b *Binder) bindStatement(node *ast.Node) {
 		b.bindStatement(ifStatement.AlternateStatement)
 	case ast.NodeTypeBlockStatement:
 		b.bindBlockStatement(node.AsBlockStatement())
+	case ast.NodeTypeVariableDeclaration:
+		b.bindVariableDeclaration(node.AsVariableDeclaration())
+	case ast.NodeTypeTInterfaceDeclaration:
+		b.bindTInterfaceDeclaration(node.AsTInterfaceDeclaration())
+	case ast.NodeTypeFunctionDeclaration:
+		b.bindFunctionDeclaration(node.AsFunctionDeclaration())
 	}
 }
 
@@ -71,17 +64,13 @@ func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 	saveContainer := b.container
 
 	if blockStatement.Parent.Type != ast.NodeTypeFunctionDeclaration {
+		blockStatement.Scope = &ast.Scope{}
 		blockStatement.Scope.Parent = b.container.Scope
 		b.container = blockStatement.ContainerBaseData()
 	}
 
-	for _, node := range b.sourceFile.Body {
-		switch node.Type {
-		case ast.NodeTypeVariableDeclaration:
-			b.bindVariableDeclaration(node.AsVariableDeclaration())
-		case ast.NodeTypeBlockStatement:
-			b.bindBlockStatement(node.AsBlockStatement())
-		}
+	for _, node := range blockStatement.Body {
+		b.bindStatement(node)
 	}
 
 	b.container = saveContainer
@@ -102,13 +91,13 @@ func (b *Binder) GetTypeFromTypeAnnotationNode(node *ast.TTypeAnnotation) *ast.T
 func (b *Binder) GetTypeFromTypeNode(node *ast.Node) *ast.Type {
 	switch node.Type {
 	case ast.NodeTypeTStringKeyword:
-		return ast.NewStringType().ToType()
+		return ast.NewType(ast.NewStringType()).AsType()
 	case ast.NodeTypeTBooleanKeyword:
-		return ast.NewBooleanType().ToType()
+		return ast.NewType(ast.NewBooleanType()).AsType()
 	case ast.NodeTypeTNumberKeyword:
-		return ast.NewNumberType().ToType()
+		return ast.NewType(ast.NewNumberType()).AsType()
 	case ast.NodeTypeTNullKeyword:
-		return ast.NewNullType().ToType()
+		return ast.NewType(ast.NewNullType()).AsType()
 	case ast.NodeTypeTTypeReference:
 		tTypeReference := node.AsTTypeReference()
 		symbol := b.container.Scope.GetVariableSymbol(tTypeReference.TypeName.Name)
@@ -117,7 +106,7 @@ func (b *Binder) GetTypeFromTypeNode(node *ast.Node) *ast.Type {
 		}
 		return symbol.Type
 	case ast.NodeTypeTInterfaceBody:
-		objectType := ast.NewObjectType()
+		objectType := ast.NewType(ast.NewObjectType())
 		tInterfaceBody := node.AsTInterfaceBody()
 		for _, node := range tInterfaceBody.Body {
 			tPropertySignature := node.AsTPropertySignature()
@@ -127,17 +116,36 @@ func (b *Binder) GetTypeFromTypeNode(node *ast.Node) *ast.Type {
 				Type:         b.GetTypeFromTypeAnnotationNode(tPropertySignature.TypeAnnotation),
 			})
 		}
-		return objectType.ToType()
+		return objectType.AsType()
 	}
 
 	return nil
 }
 
 func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
+	functionType := ast.NewType(ast.NewFunctionType())
+	if functionDeclaration.TTypeAnnotation != nil {
+		for _, param := range functionDeclaration.Params {
+			switch param.Type {
+			case ast.NodeTypeIdentifier:
+				identifier := param.AsIdentifier()
+				if identifier.TypeAnnotation != nil {
+					functionType.AddParamType(b.GetTypeFromTypeAnnotationNode(identifier.TypeAnnotation))
+				}
+			case ast.NodeTypeRestElement:
+				restElement := param.AsRestElement()
+				if restElement.TypeAnnotation != nil {
+					functionType.AddParamType(b.GetTypeFromTypeAnnotationNode(restElement.TypeAnnotation))
+				}
+			}
+		}
+		functionType.ReturnType = b.GetTypeFromTypeAnnotationNode(functionDeclaration.TTypeAnnotation)
+	}
+
 	b.container.Scope.AddVariable(
 		functionDeclaration.ID.Name,
 		nil,
-		b.GetTypeFromTypeAnnotationNode(functionDeclaration.TTypeAnnotation),
+		functionType.AsType(),
 	)
 
 	saveContainer := b.container
