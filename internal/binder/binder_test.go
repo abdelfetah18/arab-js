@@ -171,6 +171,24 @@ func TestBindFunctionDeclaration(t *testing.T) {
 			return
 		}
 	})
+
+	t.Run("should bind function declaration params at function scope", func(t *testing.T) {
+		input := "دالة جمع (أ: عدد, ب: عدد) { إرجاع أ + ب؛ }"
+		sourceFile := compiler.ParseSourceFile(input)
+		BindSourceFile(sourceFile)
+		nameResolver := NewNameResolver(sourceFile.Scope)
+		symbol := nameResolver.Resolve("أ", sourceFile.Body[0].AsFunctionDeclaration().Scope)
+
+		if symbol == nil {
+			t.Errorf("expected symbol %q to exist in block scope, but got nil", "أ")
+			return
+		}
+
+		if symbol.Type.Flags != ast.TypeFlagsNumber {
+			t.Errorf("expected symbol %q to have type %v, but got %v", "أ", ast.TypeFlagsNumber, symbol.Type.Flags)
+			return
+		}
+	})
 }
 
 func TestBindInterfaceDeclaration(t *testing.T) {
