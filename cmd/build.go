@@ -3,6 +3,7 @@ package cmd
 import (
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
+	"arab_js/internal/compiler/fileloader"
 	"arab_js/internal/compiler/printer"
 	"arab_js/internal/package_definition"
 	"arab_js/internal/transformer"
@@ -57,7 +58,7 @@ var buildCmd = &cobra.Command{
 			panic(err)
 		}
 
-		fileLoader := compiler.NewFileLoader(files)
+		fileLoader := fileloader.NewFileLoader(files)
 		fileLoader.LoadSourceFiles()
 
 		program := compiler.NewProgram(fileLoader.SourceFiles)

@@ -1,12 +1,12 @@
 package lsp
 
-import "arab_js/internal/compiler"
+import "arab_js/internal/compiler/fileloader"
 
 type Session struct {
-	FileLoader compiler.FileLoader
+	FileLoader fileloader.FileLoader
 }
 
-func NewSession(fileLoader compiler.FileLoader) *Session {
+func NewSession(fileLoader fileloader.FileLoader) *Session {
 	return &Session{
 		FileLoader: fileLoader,
 	}

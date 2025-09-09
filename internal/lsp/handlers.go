@@ -4,6 +4,7 @@ import (
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/fileloader"
 	"context"
 	"errors"
 	"io/fs"
@@ -18,7 +19,7 @@ import (
 )
 
 type Handlers struct {
-	FileLoader *compiler.FileLoader
+	FileLoader *fileloader.FileLoader
 }
 
 func NewHandlers() *Handlers {
@@ -96,7 +97,7 @@ func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *define
 
 		logs.Printf("projectFiles=%v\n", projectFiles)
 
-		h.FileLoader = compiler.NewFileLoader(projectFiles)
+		h.FileLoader = fileloader.NewFileLoader(projectFiles)
 		h.FileLoader.LoadSourceFiles()
 		program := compiler.NewProgram(h.FileLoader.SourceFiles)
 		_checker := checker.NewChecker(program)
