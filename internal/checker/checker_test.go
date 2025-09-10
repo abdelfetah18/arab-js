@@ -16,7 +16,7 @@ func TestCheckVariableDeclaration(t *testing.T) {
 		_checker := NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
 		_checker.Check()
 
-		if len(_checker.Errors) == 0 {
+		if len(_checker.Diagnostics) == 0 {
 			t.Error("should detect error")
 		}
 	})
@@ -29,7 +29,7 @@ func TestCheckVariableDeclaration(t *testing.T) {
 		_checker := NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
 		_checker.Check()
 
-		if len(_checker.Errors) > 0 {
+		if len(_checker.Diagnostics) > 0 {
 			t.Error("should not detect errors")
 		}
 	})

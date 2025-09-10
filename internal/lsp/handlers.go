@@ -108,7 +108,7 @@ func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *define
 		_checker := checker.NewChecker(program)
 		_checker.Check()
 
-		if len(_checker.Errors) > 0 {
+		if len(_checker.Diagnostics) > 0 {
 			type Diagnostic struct {
 				Range   defines.Range `json:"range"`
 				Message string        `json:"message"`
@@ -120,13 +120,26 @@ func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *define
 				Diagnostics []Diagnostic        `json:"diagnostics"`
 			}
 
-			diagnostics := make([]Diagnostic, 0, len(_checker.Errors))
-			for _, message := range _checker.Errors {
+			diagnostics := make([]Diagnostic, 0, len(_checker.Diagnostics))
+			for _, diagnostic := range _checker.Diagnostics {
+				start, err := indexToPosition(getPath(req.TextDocument.Uri), diagnostic.Location.Pos)
+				if err != nil {
+					start = defines.Position{Line: 0, Character: 0}
+				}
+
+				end, err := indexToPosition(getPath(req.TextDocument.Uri), diagnostic.Location.End)
+				if err != nil {
+					end = defines.Position{Line: 0, Character: 0}
+				}
+
 				diagnostics = append(diagnostics, Diagnostic{
-					Range:   defines.Range{}, // TODO: fill with actual error position if available
-					Message: message,
+					Range: defines.Range{
+						Start: start,
+						End:   end,
+					},
+					Message: diagnostic.Message,
 				})
-				println(message)
+				println(diagnostic.Message)
 			}
 
 			params := PublishDiagnosticsParams{
@@ -274,4 +287,51 @@ func getPrentContainer(node *ast.Node) *ast.Scope {
 	default:
 		return getPrentContainer(node.Parent)
 	}
+}
+
+func indexToPosition(filePath string, idx uint) (defines.Position, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return defines.Position{}, err
+	}
+	if idx > uint(len(data)) {
+		return defines.Position{}, errors.New("index out of range")
+	}
+
+	var lineNum, runeCount, byteCount uint
+
+	for i := 0; i < len(data); {
+		if byteCount == idx {
+			return defines.Position{Line: lineNum, Character: runeCount}, nil
+		}
+
+		r, size := utf8.DecodeRune(data[i:])
+		if r == utf8.RuneError && size == 1 {
+			// invalid rune, but still move one byte forward
+			size = 1
+		}
+
+		if r == '\n' {
+			lineNum++
+			runeCount = 0
+		} else {
+			runeCount++
+		}
+
+		i += size
+		byteCount += uint(size)
+
+		// If idx falls inside the rune boundary (shouldn’t in UTF-8 safe input),
+		// treat it as if pointing to that rune.
+		if byteCount > idx {
+			return defines.Position{Line: lineNum, Character: runeCount}, nil
+		}
+	}
+
+	// idx == len(data) (EOF case)
+	if idx == uint(len(data)) {
+		return defines.Position{Line: lineNum, Character: runeCount}, nil
+	}
+
+	return defines.Position{}, errors.New("index out of range")
 }

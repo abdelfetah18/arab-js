@@ -66,9 +66,9 @@ var buildCmd = &cobra.Command{
 		_checker := checker.NewChecker(program)
 		_checker.Check()
 
-		if len(_checker.Errors) > 0 {
-			for _, message := range _checker.Errors {
-				println(message)
+		if len(_checker.Diagnostics) > 0 {
+			for _, diagnostic := range _checker.Diagnostics {
+				println(diagnostic.Message)
 			}
 			panic("Checker Errors")
 		}

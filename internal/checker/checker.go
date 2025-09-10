@@ -10,7 +10,9 @@ import (
 type Checker struct {
 	program      *compiler.Program
 	NameResolver *binder.NameResolver
-	Errors       []string
+	Diagnostics  []*ast.Diagnostic
+
+	currentSourceFile *ast.SourceFile
 }
 
 func NewChecker(program *compiler.Program) *Checker {
@@ -24,17 +26,23 @@ func NewChecker(program *compiler.Program) *Checker {
 
 	return &Checker{
 		program:      program,
-		Errors:       []string{},
+		Diagnostics:  []*ast.Diagnostic{},
 		NameResolver: binder.NewNameResolver(globalScope),
 	}
 }
 
-func (c *Checker) error(msg string) {
-	c.Errors = append(c.Errors, msg)
+func (c *Checker) error(location ast.Location, message string) {
+	c.Diagnostics = append(c.Diagnostics,
+		ast.NewDiagnostic(
+			c.currentSourceFile,
+			location,
+			message,
+		),
+	)
 }
 
-func (c *Checker) errorf(format string, a ...any) {
-	c.error(fmt.Sprintf(format, a...))
+func (c *Checker) errorf(location ast.Location, format string, a ...any) {
+	c.error(location, fmt.Sprintf(format, a...))
 }
 
 func (c *Checker) Check() {
@@ -66,7 +74,7 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 	initializerType := c.checkExpression(variableDeclaration.Initializer.Expression)
 
 	if identifierType.Data.Name() != initializerType.Data.Name() {
-		c.errorf(TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, identifierType.Data.Name(), initializerType.Data.Name())
+		c.errorf(variableDeclaration.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, identifierType.Data.Name(), initializerType.Data.Name())
 		return
 	}
 }
