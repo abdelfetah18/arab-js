@@ -594,6 +594,7 @@ func (assignmentExpression *AssignmentExpression) ForEachChild(v Visitor) bool {
 type FunctionDeclaration struct {
 	NodeBase
 	ContainerBase
+	DeclarationBase
 	ID              *Identifier      `json:"id,omitempty"`
 	Params          []*Node          `json:"params,omitempty"`
 	Body            *BlockStatement  `json:"body,omitempty"`
@@ -1147,6 +1148,7 @@ func (sourceFile *SourceFile) ForEachChild(v Visitor) bool {
 
 type TInterfaceDeclaration struct {
 	NodeBase
+	DeclarationBase
 	Id   *Identifier     `json:"id,omitempty"`
 	Body *TInterfaceBody `json:"body,omitempty"`
 }

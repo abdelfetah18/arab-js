@@ -79,7 +79,7 @@ func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 }
 
 func (b *Binder) bindTInterfaceDeclaration(tInterfaceDeclaration *ast.TInterfaceDeclaration) {
-	b.container.Scope.AddVariable(
+	tInterfaceDeclaration.Symbol = b.container.Scope.AddVariable(
 		tInterfaceDeclaration.Id.Name,
 		nil,
 		b.GetTypeFromTypeNode(tInterfaceDeclaration.Body.AsNode()),
@@ -146,7 +146,7 @@ func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclar
 		functionType.ReturnType = b.GetTypeFromTypeAnnotationNode(functionDeclaration.TTypeAnnotation)
 	}
 
-	b.container.Scope.AddVariable(
+	functionDeclaration.Symbol = b.container.Scope.AddVariable(
 		functionDeclaration.ID.Name,
 		nil,
 		functionType.AsType(),
