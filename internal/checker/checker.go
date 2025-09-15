@@ -118,7 +118,35 @@ func (c *Checker) checkExpression(expression *ast.Node) *ast.Type {
 			return nil
 		}
 		return leftType
+	case ast.NodeTypeCallExpression:
+		callExpression := expression.AsCallExpression()
+		return c.checkCallExpression(callExpression)
 	}
 
 	return nil
+}
+
+func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *ast.Type {
+	_type := c.checkExpression(callExpression.Callee)
+	if _type.Flags&ast.TypeFlagsFunction != ast.TypeFlagsFunction {
+		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.Data.Name())
+		return nil
+	}
+
+	functionType := _type.AsFunctionType()
+	if len(functionType.Params) != len(callExpression.Args) {
+		c.errorf(callExpression.Location, EXPECTED_0_ARGUMENTS_BUT_GOT_1, len(functionType.Params), len(callExpression.Args))
+		return nil
+	}
+
+	for index, expression := range callExpression.Args {
+		typeName := functionType.Params[index].Data.Name()
+		_type := c.checkExpression(expression)
+		if typeName != _type.Data.Name() {
+			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), typeName)
+			return nil
+		}
+	}
+
+	return functionType.ReturnType
 }

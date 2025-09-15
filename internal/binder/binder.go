@@ -126,21 +126,23 @@ func (b *Binder) GetTypeFromTypeNode(node *ast.Node) *ast.Type {
 
 func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
 	functionType := ast.NewType(ast.NewFunctionType())
-	if functionDeclaration.TTypeAnnotation != nil {
-		for _, param := range functionDeclaration.Params {
-			switch param.Type {
-			case ast.NodeTypeIdentifier:
-				identifier := param.AsIdentifier()
-				if identifier.TypeAnnotation != nil {
-					functionType.AddParamType(b.GetTypeFromTypeAnnotationNode(identifier.TypeAnnotation))
-				}
-			case ast.NodeTypeRestElement:
-				restElement := param.AsRestElement()
-				if restElement.TypeAnnotation != nil {
-					functionType.AddParamType(b.GetTypeFromTypeAnnotationNode(restElement.TypeAnnotation))
-				}
+
+	for _, param := range functionDeclaration.Params {
+		switch param.Type {
+		case ast.NodeTypeIdentifier:
+			identifier := param.AsIdentifier()
+			if identifier.TypeAnnotation != nil {
+				functionType.AddParamType(b.GetTypeFromTypeAnnotationNode(identifier.TypeAnnotation))
+			}
+		case ast.NodeTypeRestElement:
+			restElement := param.AsRestElement()
+			if restElement.TypeAnnotation != nil {
+				functionType.AddParamType(b.GetTypeFromTypeAnnotationNode(restElement.TypeAnnotation))
 			}
 		}
+	}
+
+	if functionDeclaration.TTypeAnnotation != nil {
 		functionType.ReturnType = b.GetTypeFromTypeAnnotationNode(functionDeclaration.TTypeAnnotation)
 	}
 

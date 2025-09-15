@@ -127,12 +127,13 @@ type TypeData interface {
 	Name() string
 }
 
-func (t *Type) AsType() *Type               { return t }
-func (t *Type) AsStringType() *StringType   { return t.Data.(*StringType) }
-func (t *Type) AsNumberType() *NumberType   { return t.Data.(*NumberType) }
-func (t *Type) AsBooleanType() *BooleanType { return t.Data.(*BooleanType) }
-func (t *Type) AsNullType() *NullType       { return t.Data.(*NullType) }
-func (t *Type) AsObjectType() *ObjectType   { return t.Data.(*ObjectType) }
+func (t *Type) AsType() *Type                 { return t }
+func (t *Type) AsStringType() *StringType     { return t.Data.(*StringType) }
+func (t *Type) AsNumberType() *NumberType     { return t.Data.(*NumberType) }
+func (t *Type) AsBooleanType() *BooleanType   { return t.Data.(*BooleanType) }
+func (t *Type) AsNullType() *NullType         { return t.Data.(*NullType) }
+func (t *Type) AsObjectType() *ObjectType     { return t.Data.(*ObjectType) }
+func (t *Type) AsFunctionType() *FunctionType { return t.Data.(*FunctionType) }
 
 type StringType struct {
 	Type
