@@ -177,19 +177,19 @@ func (c *Checker) getTypeFromTypeNode(typeNode *ast.Node) *Type {
 	}
 
 	switch typeNode.Type {
-	case ast.NodeTypeTStringKeyword:
+	case ast.NodeTypeStringKeyword:
 		return NewType(NewStringType()).AsType()
-	case ast.NodeTypeTBooleanKeyword:
+	case ast.NodeTypeBooleanKeyword:
 		return NewType(NewBooleanType()).AsType()
-	case ast.NodeTypeTNullKeyword:
+	case ast.NodeTypeNullKeyword:
 		return NewType(NewNullType()).AsType()
-	case ast.NodeTypeTNumberKeyword:
+	case ast.NodeTypeNumberKeyword:
 		return NewType(NewNumberType()).AsType()
-	case ast.NodeTypeTTypeLiteral:
+	case ast.NodeTypeTypeLiteral:
 		objectType := NewObjectType()
-		typeLiteral := typeNode.AsTTypeLiteral()
+		typeLiteral := typeNode.AsTypeLiteral()
 		for _, member := range typeLiteral.Members {
-			propertySignature := member.AsTPropertySignature()
+			propertySignature := member.AsPropertySignature()
 			switch propertySignature.Key.Type {
 			case ast.NodeTypeIdentifier:
 				identifier := propertySignature.Key.AsIdentifier()

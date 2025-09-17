@@ -126,28 +126,28 @@ func (node *Node) AsExpressionStatement() *ExpressionStatement {
 	return node.Data.(*ExpressionStatement)
 }
 
-func (node *Node) AsTInterfaceDeclaration() *TInterfaceDeclaration {
-	return node.Data.(*TInterfaceDeclaration)
+func (node *Node) AsInterfaceDeclaration() *InterfaceDeclaration {
+	return node.Data.(*InterfaceDeclaration)
 }
 
-func (node *Node) AsTInterfaceBody() *TInterfaceBody {
-	return node.Data.(*TInterfaceBody)
+func (node *Node) AsInterfaceBody() *InterfaceBody {
+	return node.Data.(*InterfaceBody)
 }
 
-func (node *Node) AsTPropertySignature() *TPropertySignature {
-	return node.Data.(*TPropertySignature)
+func (node *Node) AsPropertySignature() *PropertySignature {
+	return node.Data.(*PropertySignature)
 }
 
-func (node *Node) AsTTypeReference() *TTypeReference {
-	return node.Data.(*TTypeReference)
+func (node *Node) AsTypeReference() *TypeReference {
+	return node.Data.(*TypeReference)
 }
 
-func (node *Node) AsTTypeLiteral() *TTypeLiteral {
-	return node.Data.(*TTypeLiteral)
+func (node *Node) AsTypeLiteral() *TypeLiteral {
+	return node.Data.(*TypeLiteral)
 }
 
-func (node *Node) AsTTypeAliasDeclaration() *TTypeAliasDeclaration {
-	return node.Data.(*TTypeAliasDeclaration)
+func (node *Node) AsTypeAliasDeclaration() *TypeAliasDeclaration {
+	return node.Data.(*TypeAliasDeclaration)
 }
 
 func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }
@@ -162,17 +162,17 @@ func (node *Node) TypeNode() *Node {
 		if node.AsVariableDeclaration().Identifier.TypeAnnotation != nil {
 			return node.AsVariableDeclaration().Identifier.TypeAnnotation.TypeAnnotation
 		}
-	case NodeTypeTPropertySignature:
-		if node.AsTPropertySignature().TypeAnnotation != nil {
-			return node.AsTPropertySignature().TypeAnnotation.TypeAnnotation
+	case NodeTypePropertySignature:
+		if node.AsPropertySignature().TypeAnnotation != nil {
+			return node.AsPropertySignature().TypeAnnotation.TypeAnnotation
 		}
-	case NodeTypeTTypeAliasDeclaration:
-		if node.AsTTypeAliasDeclaration().TypeAnnotation != nil {
-			return node.AsTTypeAliasDeclaration().TypeAnnotation.TypeAnnotation
+	case NodeTypeTypeAliasDeclaration:
+		if node.AsTypeAliasDeclaration().TypeAnnotation != nil {
+			return node.AsTypeAliasDeclaration().TypeAnnotation.TypeAnnotation
 		}
 	case NodeTypeFunctionDeclaration:
-		if node.AsFunctionDeclaration().TTypeAnnotation != nil {
-			return node.AsFunctionDeclaration().TTypeAnnotation.TypeAnnotation
+		if node.AsFunctionDeclaration().TypeAnnotation != nil {
+			return node.AsFunctionDeclaration().TypeAnnotation.TypeAnnotation
 		}
 	case NodeTypeIdentifier:
 		if node.AsIdentifier().TypeAnnotation != nil {
@@ -268,151 +268,151 @@ func (variableDeclaration *VariableDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, variableDeclaration.Identifier.AsNode()) || (variableDeclaration.Initializer != nil && visit(v, variableDeclaration.Initializer.AsNode()))
 }
 
-type TTypeAnnotation struct {
+type TypeAnnotation struct {
 	NodeBase
 	TypeAnnotation *Node `json:"type_annotation,omitempty"`
 }
 
-func NewTTypeAnnotation(typeAnnotation *Node) *TTypeAnnotation {
-	return &TTypeAnnotation{TypeAnnotation: typeAnnotation}
+func NewTypeAnnotation(typeAnnotation *Node) *TypeAnnotation {
+	return &TypeAnnotation{TypeAnnotation: typeAnnotation}
 }
 
-func (tTypeAnnotation *TTypeAnnotation) MarshalJSON() ([]byte, error) {
-	type Alias TTypeAnnotation
+func (typeAnnotation *TypeAnnotation) MarshalJSON() ([]byte, error) {
+	type Alias TypeAnnotation
 	return json.Marshal(
 		wrapNode(
-			*tTypeAnnotation.AsNode(),
-			(*Alias)(tTypeAnnotation),
+			*typeAnnotation.AsNode(),
+			(*Alias)(typeAnnotation),
 		),
 	)
 }
 
-func (tTypeAnnotation *TTypeAnnotation) NodeType() NodeType {
+func (typeAnnotation *TypeAnnotation) NodeType() NodeType {
 	return NodeTypeVariableDeclaration
 }
 
-func (tTypeAnnotation *TTypeAnnotation) ForEachChild(v Visitor) bool {
-	return visit(v, tTypeAnnotation.TypeAnnotation)
+func (typeAnnotation *TypeAnnotation) ForEachChild(v Visitor) bool {
+	return visit(v, typeAnnotation.TypeAnnotation)
 }
 
-type TStringKeyword struct {
+type StringKeyword struct {
 	NodeBase
 }
 
-func NewTStringKeyword() *TStringKeyword {
-	return &TStringKeyword{}
+func NewStringKeyword() *StringKeyword {
+	return &StringKeyword{}
 }
 
-func (tStringKeyword *TStringKeyword) MarshalJSON() ([]byte, error) {
-	type Alias TStringKeyword
+func (stringKeyword *StringKeyword) MarshalJSON() ([]byte, error) {
+	type Alias StringKeyword
 	return json.Marshal(
 		wrapNode(
-			*tStringKeyword.AsNode(),
-			(*Alias)(tStringKeyword),
+			*stringKeyword.AsNode(),
+			(*Alias)(stringKeyword),
 		),
 	)
 }
 
-func (tStringKeyword *TStringKeyword) NodeType() NodeType {
-	return NodeTypeTStringKeyword
+func (stringKeyword *StringKeyword) NodeType() NodeType {
+	return NodeTypeStringKeyword
 }
 
-type TNumberKeyword struct {
+type NumberKeyword struct {
 	NodeBase
 }
 
-func NewTNumberKeyword() *TNumberKeyword {
-	return &TNumberKeyword{}
+func NewNumberKeyword() *NumberKeyword {
+	return &NumberKeyword{}
 }
 
-func (tNumberKeyword *TNumberKeyword) MarshalJSON() ([]byte, error) {
-	type Alias TNumberKeyword
+func (numberKeyword *NumberKeyword) MarshalJSON() ([]byte, error) {
+	type Alias NumberKeyword
 	return json.Marshal(
 		wrapNode(
-			*tNumberKeyword.AsNode(),
-			(*Alias)(tNumberKeyword),
+			*numberKeyword.AsNode(),
+			(*Alias)(numberKeyword),
 		),
 	)
 }
 
-func (tNumberKeyword *TNumberKeyword) NodeType() NodeType {
-	return NodeTypeTNumberKeyword
+func (numberKeyword *NumberKeyword) NodeType() NodeType {
+	return NodeTypeNumberKeyword
 }
 
-type TBooleanKeyword struct {
+type BooleanKeyword struct {
 	NodeBase
 }
 
-func NewTBooleanKeyword() *TBooleanKeyword {
-	return &TBooleanKeyword{}
+func NewBooleanKeyword() *BooleanKeyword {
+	return &BooleanKeyword{}
 }
 
-func (tBooleanKeyword *TBooleanKeyword) MarshalJSON() ([]byte, error) {
-	type Alias TBooleanKeyword
+func (booleanKeyword *BooleanKeyword) MarshalJSON() ([]byte, error) {
+	type Alias BooleanKeyword
 	return json.Marshal(
 		wrapNode(
-			*tBooleanKeyword.AsNode(),
-			(*Alias)(tBooleanKeyword),
+			*booleanKeyword.AsNode(),
+			(*Alias)(booleanKeyword),
 		),
 	)
 }
 
-func (tBooleanKeyword *TBooleanKeyword) NodeType() NodeType {
-	return NodeTypeTBooleanKeyword
+func (booleanKeyword *BooleanKeyword) NodeType() NodeType {
+	return NodeTypeBooleanKeyword
 }
 
-type TNullKeyword struct {
+type NullKeyword struct {
 	NodeBase
 }
 
-func NewTNullKeyword() *TNullKeyword {
-	return &TNullKeyword{}
+func NewNullKeyword() *NullKeyword {
+	return &NullKeyword{}
 }
 
-func (tNullKeyword *TNullKeyword) MarshalJSON() ([]byte, error) {
-	type Alias TNullKeyword
+func (nullKeyword *NullKeyword) MarshalJSON() ([]byte, error) {
+	type Alias NullKeyword
 	return json.Marshal(
 		wrapNode(
-			*tNullKeyword.AsNode(),
-			(*Alias)(tNullKeyword),
+			*nullKeyword.AsNode(),
+			(*Alias)(nullKeyword),
 		),
 	)
 }
 
-func (tNullKeyword *TNullKeyword) NodeType() NodeType {
-	return NodeTypeTNullKeyword
+func (nullKeyword *NullKeyword) NodeType() NodeType {
+	return NodeTypeNullKeyword
 }
 
-type TAnyKeyword struct {
+type AnyKeyword struct {
 	NodeBase
 }
 
-func NewTAnyKeyword() *TAnyKeyword {
-	return &TAnyKeyword{}
+func NewAnyKeyword() *AnyKeyword {
+	return &AnyKeyword{}
 }
 
-func (tAnyKeyword *TAnyKeyword) MarshalJSON() ([]byte, error) {
-	type Alias TAnyKeyword
+func (anyKeyword *AnyKeyword) MarshalJSON() ([]byte, error) {
+	type Alias AnyKeyword
 	return json.Marshal(
 		wrapNode(
-			*tAnyKeyword.AsNode(),
-			(*Alias)(tAnyKeyword),
+			*anyKeyword.AsNode(),
+			(*Alias)(anyKeyword),
 		),
 	)
 }
 
-func (tAnyKeyword *TAnyKeyword) NodeType() NodeType {
-	return NodeTypeTAnyKeyword
+func (anyKeyword *AnyKeyword) NodeType() NodeType {
+	return NodeTypeAnyKeyword
 }
 
 type Identifier struct {
 	NodeBase
-	Name           string           `json:"name,omitempty"`
-	OriginalName   *string          `json:"original_name,omitempty"`
-	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
+	Name           string          `json:"name,omitempty"`
+	OriginalName   *string         `json:"original_name,omitempty"`
+	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
 }
 
-func NewIdentifier(name string, typeAnnotation *TTypeAnnotation) *Identifier {
+func NewIdentifier(name string, typeAnnotation *TypeAnnotation) *Identifier {
 	return &Identifier{Name: name, TypeAnnotation: typeAnnotation, OriginalName: nil}
 }
 
@@ -646,18 +646,18 @@ type FunctionDeclaration struct {
 	NodeBase
 	ContainerBase
 	DeclarationBase `json:"-"`
-	ID              *Identifier      `json:"id,omitempty"`
-	Params          []*Node          `json:"params,omitempty"`
-	Body            *BlockStatement  `json:"body,omitempty"`
-	TTypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
+	ID              *Identifier     `json:"id,omitempty"`
+	Params          []*Node         `json:"params,omitempty"`
+	Body            *BlockStatement `json:"body,omitempty"`
+	TypeAnnotation  *TypeAnnotation `json:"type_annotation,omitempty"`
 }
 
-func NewFunctionDeclaration(id *Identifier, params []*Node, body *BlockStatement, tTypeAnnotation *TTypeAnnotation) *FunctionDeclaration {
+func NewFunctionDeclaration(id *Identifier, params []*Node, body *BlockStatement, typeAnnotation *TypeAnnotation) *FunctionDeclaration {
 	return &FunctionDeclaration{
-		ID:              id,
-		Params:          params,
-		Body:            body,
-		TTypeAnnotation: tTypeAnnotation,
+		ID:             id,
+		Params:         params,
+		Body:           body,
+		TypeAnnotation: typeAnnotation,
 	}
 }
 
@@ -679,7 +679,7 @@ func (functionDeclaration *FunctionDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, functionDeclaration.ID.AsNode()) ||
 		visitNodes(v, functionDeclaration.Params) ||
 		visit(v, functionDeclaration.Body.AsNode()) ||
-		(functionDeclaration.TTypeAnnotation != nil && visit(v, functionDeclaration.TTypeAnnotation.AsNode()))
+		(functionDeclaration.TypeAnnotation != nil && visit(v, functionDeclaration.TypeAnnotation.AsNode()))
 }
 
 func (functionDeclaration *FunctionDeclaration) ContainerBaseData() *ContainerBase {
@@ -1205,94 +1205,94 @@ func (sourceFile *SourceFile) ContainerBaseData() *ContainerBase {
 	return &sourceFile.ContainerBase
 }
 
-type TInterfaceDeclaration struct {
+type InterfaceDeclaration struct {
 	NodeBase
 	DeclarationBase `json:"-"`
-	Id              *Identifier     `json:"id,omitempty"`
-	Body            *TInterfaceBody `json:"body,omitempty"`
+	Id              *Identifier    `json:"id,omitempty"`
+	Body            *InterfaceBody `json:"body,omitempty"`
 }
 
-func NewTInterfaceDeclaration(id *Identifier, body *TInterfaceBody) *TInterfaceDeclaration {
-	return &TInterfaceDeclaration{
+func NewInterfaceDeclaration(id *Identifier, body *InterfaceBody) *InterfaceDeclaration {
+	return &InterfaceDeclaration{
 		Id:   id,
 		Body: body,
 	}
 }
 
-func (tInterfaceDeclaration *TInterfaceDeclaration) MarshalJSON() ([]byte, error) {
-	type Alias TInterfaceDeclaration
+func (interfaceDeclaration *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias InterfaceDeclaration
 	return json.Marshal(
 		wrapNode(
-			*tInterfaceDeclaration.AsNode(),
-			(*Alias)(tInterfaceDeclaration),
+			*interfaceDeclaration.AsNode(),
+			(*Alias)(interfaceDeclaration),
 		),
 	)
 }
 
-func (tInterfaceDeclaration *TInterfaceDeclaration) NodeType() NodeType {
-	return NodeTypeTInterfaceDeclaration
+func (interfaceDeclaration *InterfaceDeclaration) NodeType() NodeType {
+	return NodeTypeInterfaceDeclaration
 }
 
-func (tInterfaceDeclaration *TInterfaceDeclaration) ForEachChild(v Visitor) bool {
-	return visit(v, tInterfaceDeclaration.Id.AsNode()) || visit(v, tInterfaceDeclaration.Body.AsNode())
+func (interfaceDeclaration *InterfaceDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, interfaceDeclaration.Id.AsNode()) || visit(v, interfaceDeclaration.Body.AsNode())
 }
 
-type TInterfaceBody struct {
+type InterfaceBody struct {
 	NodeBase
 	Body []*Node `json:"body,omitempty"`
 }
 
-func NewTInterfaceBody(body []*Node) *TInterfaceBody {
-	return &TInterfaceBody{Body: body}
+func NewInterfaceBody(body []*Node) *InterfaceBody {
+	return &InterfaceBody{Body: body}
 }
 
-func (tInterfaceBody *TInterfaceBody) MarshalJSON() ([]byte, error) {
-	type Alias TInterfaceBody
+func (interfaceBody *InterfaceBody) MarshalJSON() ([]byte, error) {
+	type Alias InterfaceBody
 	return json.Marshal(
 		wrapNode(
-			*tInterfaceBody.AsNode(),
-			(*Alias)(tInterfaceBody),
+			*interfaceBody.AsNode(),
+			(*Alias)(interfaceBody),
 		),
 	)
 }
 
-func (tInterfaceBody *TInterfaceBody) NodeType() NodeType {
-	return NodeTypeTInterfaceBody
+func (interfaceBody *InterfaceBody) NodeType() NodeType {
+	return NodeTypeInterfaceBody
 }
 
-func (tInterfaceBody *TInterfaceBody) ForEachChild(v Visitor) bool {
-	return visitNodes(v, tInterfaceBody.Body)
+func (interfaceBody *InterfaceBody) ForEachChild(v Visitor) bool {
+	return visitNodes(v, interfaceBody.Body)
 }
 
-type TPropertySignature struct {
+type PropertySignature struct {
 	NodeBase
-	Key            *Node            `json:"key,omitempty"`
-	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
+	Key            *Node           `json:"key,omitempty"`
+	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
 }
 
-func NewTPropertySignature(key *Node, typeAnnotation *TTypeAnnotation) *TPropertySignature {
-	return &TPropertySignature{
+func NewPropertySignature(key *Node, typeAnnotation *TypeAnnotation) *PropertySignature {
+	return &PropertySignature{
 		Key:            key,
 		TypeAnnotation: typeAnnotation,
 	}
 }
 
-func (tPropertySignature *TPropertySignature) MarshalJSON() ([]byte, error) {
-	type Alias TPropertySignature
+func (propertySignature *PropertySignature) MarshalJSON() ([]byte, error) {
+	type Alias PropertySignature
 	return json.Marshal(
 		wrapNode(
-			*tPropertySignature.AsNode(),
-			(*Alias)(tPropertySignature),
+			*propertySignature.AsNode(),
+			(*Alias)(propertySignature),
 		),
 	)
 }
 
-func (tPropertySignature *TPropertySignature) NodeType() NodeType {
-	return NodeTypeTPropertySignature
+func (propertySignature *PropertySignature) NodeType() NodeType {
+	return NodeTypePropertySignature
 }
 
-func (tPropertySignature *TPropertySignature) ForEachChild(v Visitor) bool {
-	return visit(v, tPropertySignature.Key) || visit(v, tPropertySignature.TypeAnnotation.AsNode())
+func (propertySignature *PropertySignature) ForEachChild(v Visitor) bool {
+	return visit(v, propertySignature.Key) || visit(v, propertySignature.TypeAnnotation.AsNode())
 }
 
 type ReturnStatement struct {
@@ -1322,156 +1322,156 @@ func (returnStatement *ReturnStatement) ForEachChild(v Visitor) bool {
 	return visit(v, returnStatement.Argument)
 }
 
-type TFunctionType struct {
+type FunctionType struct {
 	NodeBase
-	Params         []*Node          `json:"params,omitempty"`
-	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
+	Params         []*Node         `json:"params,omitempty"`
+	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
 }
 
-func NewTFunctionType(params []*Node, typeAnnotation *TTypeAnnotation) *TFunctionType {
-	return &TFunctionType{
+func NewFunctionType(params []*Node, typeAnnotation *TypeAnnotation) *FunctionType {
+	return &FunctionType{
 		Params:         params,
 		TypeAnnotation: typeAnnotation,
 	}
 }
 
-func (tFunctionType *TFunctionType) MarshalJSON() ([]byte, error) {
-	type Alias TFunctionType
+func (functionType *FunctionType) MarshalJSON() ([]byte, error) {
+	type Alias FunctionType
 	return json.Marshal(
 		wrapNode(
-			*tFunctionType.AsNode(),
-			(*Alias)(tFunctionType),
+			*functionType.AsNode(),
+			(*Alias)(functionType),
 		),
 	)
 }
 
-func (tFunctionType *TFunctionType) NodeType() NodeType {
-	return NodeTypeTFunctionType
+func (functionType *FunctionType) NodeType() NodeType {
+	return NodeTypeFunctionType
 }
 
-func (tFunctionType *TFunctionType) ForEachChild(v Visitor) bool {
-	return visitNodes(v, tFunctionType.Params) || visit(v, tFunctionType.TypeAnnotation.AsNode())
+func (functionType *FunctionType) ForEachChild(v Visitor) bool {
+	return visitNodes(v, functionType.Params) || visit(v, functionType.TypeAnnotation.AsNode())
 }
 
-type TTypeAliasDeclaration struct {
+type TypeAliasDeclaration struct {
 	NodeBase
-	Id             *Identifier      `json:"id,omitempty"`
-	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
+	Id             *Identifier     `json:"id,omitempty"`
+	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
 }
 
-func NewTTypeAliasDeclaration(id *Identifier, typeAnnotation *TTypeAnnotation) *TTypeAliasDeclaration {
-	return &TTypeAliasDeclaration{
+func NewTypeAliasDeclaration(id *Identifier, typeAnnotation *TypeAnnotation) *TypeAliasDeclaration {
+	return &TypeAliasDeclaration{
 		Id:             id,
 		TypeAnnotation: typeAnnotation,
 	}
 }
 
-func (tTypeAliasDeclaration *TTypeAliasDeclaration) MarshalJSON() ([]byte, error) {
-	type Alias TTypeAliasDeclaration
+func (typeAliasDeclaration *TypeAliasDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias TypeAliasDeclaration
 	return json.Marshal(
 		wrapNode(
-			*tTypeAliasDeclaration.AsNode(),
-			(*Alias)(tTypeAliasDeclaration),
+			*typeAliasDeclaration.AsNode(),
+			(*Alias)(typeAliasDeclaration),
 		),
 	)
 }
 
-func (tTypeAliasDeclaration *TTypeAliasDeclaration) NodeType() NodeType {
-	return NodeTypeTTypeAliasDeclaration
+func (typeAliasDeclaration *TypeAliasDeclaration) NodeType() NodeType {
+	return NodeTypeTypeAliasDeclaration
 }
 
-func (tTypeAliasDeclaration *TTypeAliasDeclaration) ForEachChild(v Visitor) bool {
-	return visit(v, tTypeAliasDeclaration.Id.AsNode()) || visit(v, tTypeAliasDeclaration.TypeAnnotation.AsNode())
+func (typeAliasDeclaration *TypeAliasDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, typeAliasDeclaration.Id.AsNode()) || visit(v, typeAliasDeclaration.TypeAnnotation.AsNode())
 }
 
-type TTypeLiteral struct {
+type TypeLiteral struct {
 	NodeBase
 	Members []*Node `json:"members,omitempty"`
 }
 
-func NewTTypeLiteral(members []*Node) *TTypeLiteral {
-	return &TTypeLiteral{Members: members}
+func NewTypeLiteral(members []*Node) *TypeLiteral {
+	return &TypeLiteral{Members: members}
 }
 
-func (tTypeLiteral *TTypeLiteral) MarshalJSON() ([]byte, error) {
-	type Alias TTypeLiteral
+func (typeLiteral *TypeLiteral) MarshalJSON() ([]byte, error) {
+	type Alias TypeLiteral
 	return json.Marshal(
 		wrapNode(
-			*tTypeLiteral.AsNode(),
-			(*Alias)(tTypeLiteral),
+			*typeLiteral.AsNode(),
+			(*Alias)(typeLiteral),
 		),
 	)
 }
 
-func (tTypeLiteral *TTypeLiteral) NodeType() NodeType {
-	return NodeTypeTTypeLiteral
+func (typeLiteral *TypeLiteral) NodeType() NodeType {
+	return NodeTypeTypeLiteral
 }
 
-func (tTypeLiteral *TTypeLiteral) ForEachChild(v Visitor) bool {
-	return visitNodes(v, tTypeLiteral.Members)
+func (typeLiteral *TypeLiteral) ForEachChild(v Visitor) bool {
+	return visitNodes(v, typeLiteral.Members)
 }
 
-type TTypeReference struct {
+type TypeReference struct {
 	NodeBase
 	TypeName *Identifier `json:"type_name,omitempty"`
 }
 
-func NewTTypeReference(TypeName *Identifier) *TTypeReference {
-	return &TTypeReference{TypeName: TypeName}
+func NewTypeReference(TypeName *Identifier) *TypeReference {
+	return &TypeReference{TypeName: TypeName}
 }
 
-func (tTypeReference *TTypeReference) MarshalJSON() ([]byte, error) {
-	type Alias TTypeReference
+func (typeReference *TypeReference) MarshalJSON() ([]byte, error) {
+	type Alias TypeReference
 	return json.Marshal(
 		wrapNode(
-			*tTypeReference.AsNode(),
-			(*Alias)(tTypeReference),
+			*typeReference.AsNode(),
+			(*Alias)(typeReference),
 		),
 	)
 }
 
-func (tTypeReference *TTypeReference) NodeType() NodeType {
-	return NodeTypeTTypeReference
+func (typeReference *TypeReference) NodeType() NodeType {
+	return NodeTypeTypeReference
 }
 
-func (tTypeReference *TTypeReference) ForEachChild(v Visitor) bool {
-	return visit(v, tTypeReference.TypeName.AsNode())
+func (typeReference *TypeReference) ForEachChild(v Visitor) bool {
+	return visit(v, typeReference.TypeName.AsNode())
 }
 
-type TArrayType struct {
+type ArrayType struct {
 	NodeBase
 	ElementType *Node `json:"element_type,omitempty"`
 }
 
-func NewTArrayType(elementType *Node) *TArrayType {
-	return &TArrayType{ElementType: elementType}
+func NewArrayType(elementType *Node) *ArrayType {
+	return &ArrayType{ElementType: elementType}
 }
 
-func (tArrayType *TArrayType) MarshalJSON() ([]byte, error) {
-	type Alias TArrayType
+func (arrayType *ArrayType) MarshalJSON() ([]byte, error) {
+	type Alias ArrayType
 	return json.Marshal(
 		wrapNode(
-			*tArrayType.AsNode(),
-			(*Alias)(tArrayType),
+			*arrayType.AsNode(),
+			(*Alias)(arrayType),
 		),
 	)
 }
 
-func (tArrayType *TArrayType) NodeType() NodeType {
-	return NodeTypeTArrayType
+func (arrayType *ArrayType) NodeType() NodeType {
+	return NodeTypeArrayType
 }
 
-func (tArrayType *TArrayType) ForEachChild(v Visitor) bool {
-	return visit(v, tArrayType.AsNode())
+func (arrayType *ArrayType) ForEachChild(v Visitor) bool {
+	return visit(v, arrayType.AsNode())
 }
 
 type RestElement struct {
 	NodeBase
-	Argument       *Identifier      `json:"argument,omitempty"`
-	TypeAnnotation *TTypeAnnotation `json:"type_annotation,omitempty"`
+	Argument       *Identifier     `json:"argument,omitempty"`
+	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
 }
 
-func NewRestElement(argument *Identifier, typeAnnotation *TTypeAnnotation) *RestElement {
+func NewRestElement(argument *Identifier, typeAnnotation *TypeAnnotation) *RestElement {
 	return &RestElement{
 		Argument:       argument,
 		TypeAnnotation: typeAnnotation,

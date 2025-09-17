@@ -91,9 +91,9 @@ func (p *Parser) parseStatement() *ast.Node {
 	case Identifier:
 		switch token.Value {
 		case TypeKeywordInterface:
-			return p.parseTInterfaceDeclaration().AsNode()
+			return p.parseInterfaceDeclaration().AsNode()
 		case TypeKeywordType:
-			return p.parseTTypeAliasDeclaration().AsNode()
+			return p.parseTypeAliasDeclaration().AsNode()
 		case TypeKeywordDeclare:
 			p.markStartPosition()
 
@@ -387,16 +387,16 @@ func (p *Parser) parseTypeNode() *ast.Node {
 
 	switch token.Value {
 	case TypeKeywordString:
-		return p.parseTStringKeyword().AsNode()
+		return p.parseStringKeyword().AsNode()
 	case TypeKeywordNumber:
-		return p.parseTNumberKeyword().AsNode()
+		return p.parseNumberKeyword().AsNode()
 	case TypeKeywordBoolean:
-		return p.parseTBooleanKeyword().AsNode()
+		return p.parseBooleanKeyword().AsNode()
 	case TypeKeywordAny:
-		return p.parseTAnyKeyword().AsNode()
+		return p.parseAnyKeyword().AsNode()
 
 	default:
-		return p.parseTTypeReference().AsNode()
+		return p.parseTypeReference().AsNode()
 	}
 }
 
@@ -444,9 +444,9 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 		pos := uint(p.lexer.position)
 		if p.optional(TripleDots) {
 			identifier := p.parseIdentifier(false)
-			var typeAnnotation *ast.TTypeAnnotation = nil
+			var typeAnnotation *ast.TypeAnnotation = nil
 			if p.optional(Colon) {
-				typeAnnotation = p.parseTTypeAnnotation()
+				typeAnnotation = p.parseTypeAnnotation()
 			}
 
 			params = append(params,
@@ -470,9 +470,9 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 
 	p.expected(RightParenthesis)
 
-	var typeAnnotation *ast.TTypeAnnotation = nil
+	var typeAnnotation *ast.TypeAnnotation = nil
 	if p.optional(Colon) {
-		typeAnnotation = p.parseTTypeAnnotation()
+		typeAnnotation = p.parseTypeAnnotation()
 	}
 
 	body := p.parseBlockStatement()
@@ -814,18 +814,18 @@ func (p *Parser) parseExpression() *ast.Node {
 	return p.parseAssignmentExpression()
 }
 
-func (p *Parser) parseTInterfaceDeclaration() *ast.TInterfaceDeclaration {
+func (p *Parser) parseInterfaceDeclaration() *ast.InterfaceDeclaration {
 	p.markStartPosition()
 
 	p.expectedTypeKeyword(TypeKeywordInterface)
 
 	identifier := p.parseIdentifier(false)
-	body := p.parseTInterfaceBody()
+	body := p.parseInterfaceBody()
 
 	p.optional(Semicolon)
 
 	return ast.NewNode(
-		ast.NewTInterfaceDeclaration(identifier, body),
+		ast.NewInterfaceDeclaration(identifier, body),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -833,7 +833,7 @@ func (p *Parser) parseTInterfaceDeclaration() *ast.TInterfaceDeclaration {
 	)
 }
 
-func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
+func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 	p.markStartPosition()
 
 	p.expected(LeftCurlyBrace)
@@ -865,7 +865,7 @@ func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
 		if p.optional(Colon) {
 			body = append(body,
 				ast.NewNode(
-					ast.NewTPropertySignature(key, p.parseTTypeAnnotation()),
+					ast.NewPropertySignature(key, p.parseTypeAnnotation()),
 					ast.Location{
 						Pos: key.Location.Pos,
 						End: p.getEndPosition(),
@@ -884,7 +884,7 @@ func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
 			if key.Type == ast.NodeTypeIdentifier {
 				body = append(body,
 					ast.NewNode(
-						ast.NewTPropertySignature(key, p.parseTTypeAnnotation()),
+						ast.NewPropertySignature(key, p.parseTypeAnnotation()),
 						ast.Location{
 							Pos: key.Location.Pos,
 							End: p.getEndPosition(),
@@ -902,7 +902,7 @@ func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
 	p.expected(RightCurlyBrace)
 
 	return ast.NewNode(
-		ast.NewTInterfaceBody(body),
+		ast.NewInterfaceBody(body),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -910,14 +910,14 @@ func (p *Parser) parseTInterfaceBody() *ast.TInterfaceBody {
 	)
 }
 
-func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
+func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	p.markStartPosition()
 
 	switch p.lexer.Peek().Type {
 	case LeftParenthesis:
 		return ast.NewNode(
-			ast.NewTTypeAnnotation(
-				p.parseTFunctionType().AsNode(),
+			ast.NewTypeAnnotation(
+				p.parseFunctionType().AsNode(),
 			),
 			ast.Location{
 				Pos: p.startPositions.Pop(),
@@ -926,8 +926,8 @@ func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
 		)
 	case LeftCurlyBrace:
 		return ast.NewNode(
-			ast.NewTTypeAnnotation(
-				p.parseTTypeLiteral().AsNode(),
+			ast.NewTypeAnnotation(
+				p.parseTypeLiteral().AsNode(),
 			),
 			ast.Location{
 				Pos: p.startPositions.Pop(),
@@ -941,7 +941,7 @@ func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
 	if p.optional(LeftSquareBracket) && p.optional(RightSquareBracket) {
 		pos := p.startPositions.Pop()
 		arrayType := ast.NewNode(
-			ast.NewTArrayType(typeNode),
+			ast.NewArrayType(typeNode),
 			ast.Location{
 				Pos: pos,
 				End: p.getEndPosition(),
@@ -949,7 +949,7 @@ func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
 		)
 
 		return ast.NewNode(
-			ast.NewTTypeAnnotation(arrayType.AsNode()),
+			ast.NewTypeAnnotation(arrayType.AsNode()),
 			ast.Location{
 				Pos: pos,
 				End: p.getEndPosition(),
@@ -958,7 +958,7 @@ func (p *Parser) parseTTypeAnnotation() *ast.TTypeAnnotation {
 	}
 
 	return ast.NewNode(
-		ast.NewTTypeAnnotation(typeNode),
+		ast.NewTypeAnnotation(typeNode),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -982,7 +982,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	)
 }
 
-func (p *Parser) parseTFunctionType() *ast.TFunctionType {
+func (p *Parser) parseFunctionType() *ast.FunctionType {
 	p.markStartPosition()
 
 	p.expected(LeftParenthesis)
@@ -995,7 +995,7 @@ func (p *Parser) parseTFunctionType() *ast.TFunctionType {
 		if p.optional(TripleDots) {
 			identifier := p.parseIdentifier(false)
 			p.expected(Colon)
-			typeAnnotation := p.parseTTypeAnnotation()
+			typeAnnotation := p.parseTypeAnnotation()
 			params = append(params,
 				ast.NewNode(
 					ast.NewRestElement(identifier, typeAnnotation),
@@ -1020,10 +1020,10 @@ func (p *Parser) parseTFunctionType() *ast.TFunctionType {
 	p.expected(RightParenthesis)
 	p.expected(EqualRightArrow)
 
-	typeAnnotation := p.parseTTypeAnnotation()
+	typeAnnotation := p.parseTypeAnnotation()
 
 	return ast.NewNode(
-		ast.NewTFunctionType(params, typeAnnotation),
+		ast.NewFunctionType(params, typeAnnotation),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1031,16 +1031,16 @@ func (p *Parser) parseTFunctionType() *ast.TFunctionType {
 	)
 }
 
-func (p *Parser) parseTTypeAliasDeclaration() *ast.TTypeAliasDeclaration {
+func (p *Parser) parseTypeAliasDeclaration() *ast.TypeAliasDeclaration {
 	p.markStartPosition()
 
 	p.expectedTypeKeyword(TypeKeywordType)
 	identifier := p.parseIdentifier(false)
 	p.expected(Equal)
-	typeAnnotation := p.parseTTypeAnnotation()
+	typeAnnotation := p.parseTypeAnnotation()
 
 	return ast.NewNode(
-		ast.NewTTypeAliasDeclaration(identifier, typeAnnotation),
+		ast.NewTypeAliasDeclaration(identifier, typeAnnotation),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1048,7 +1048,7 @@ func (p *Parser) parseTTypeAliasDeclaration() *ast.TTypeAliasDeclaration {
 	)
 }
 
-func (p *Parser) parseTTypeLiteral() *ast.TTypeLiteral {
+func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 	p.markStartPosition()
 
 	p.expected(LeftCurlyBrace)
@@ -1072,7 +1072,7 @@ func (p *Parser) parseTTypeLiteral() *ast.TTypeLiteral {
 		if p.optional(Colon) {
 			members = append(members,
 				ast.NewNode(
-					ast.NewTPropertySignature(key, p.parseTTypeAnnotation()),
+					ast.NewPropertySignature(key, p.parseTypeAnnotation()),
 					ast.Location{
 						Pos: key.Location.Pos,
 						End: p.getEndPosition(),
@@ -1090,7 +1090,7 @@ func (p *Parser) parseTTypeLiteral() *ast.TTypeLiteral {
 			if key.Type == ast.NodeTypeIdentifier {
 				members = append(members,
 					ast.NewNode(
-						ast.NewTPropertySignature(key, p.parseTTypeAnnotation()),
+						ast.NewPropertySignature(key, p.parseTypeAnnotation()),
 						ast.Location{
 							Pos: key.Location.Pos,
 							End: p.getEndPosition(),
@@ -1108,7 +1108,7 @@ func (p *Parser) parseTTypeLiteral() *ast.TTypeLiteral {
 	p.expected(RightCurlyBrace)
 
 	return ast.NewNode(
-		ast.NewTTypeLiteral(members),
+		ast.NewTypeLiteral(members),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1173,9 +1173,9 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 	identifierName := p.lexer.Peek().Value
 	p.expected(Identifier)
 
-	var typeAnnotation *ast.TTypeAnnotation = nil
+	var typeAnnotation *ast.TypeAnnotation = nil
 	if doParseTypeAnnotation && p.optional(Colon) {
-		typeAnnotation = p.parseTTypeAnnotation()
+		typeAnnotation = p.parseTypeAnnotation()
 	}
 
 	return ast.NewNode(
@@ -1428,13 +1428,13 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 	)
 }
 
-func (p *Parser) parseTStringKeyword() *ast.TStringKeyword {
+func (p *Parser) parseStringKeyword() *ast.StringKeyword {
 	p.markStartPosition()
 
 	p.expectedTypeKeyword(TypeKeywordString)
 
 	return ast.NewNode(
-		ast.NewTStringKeyword(),
+		ast.NewStringKeyword(),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1442,13 +1442,13 @@ func (p *Parser) parseTStringKeyword() *ast.TStringKeyword {
 	)
 }
 
-func (p *Parser) parseTNumberKeyword() *ast.TNumberKeyword {
+func (p *Parser) parseNumberKeyword() *ast.NumberKeyword {
 	p.markStartPosition()
 
 	p.expectedTypeKeyword(TypeKeywordNumber)
 
 	return ast.NewNode(
-		ast.NewTNumberKeyword(),
+		ast.NewNumberKeyword(),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1456,13 +1456,13 @@ func (p *Parser) parseTNumberKeyword() *ast.TNumberKeyword {
 	)
 }
 
-func (p *Parser) parseTBooleanKeyword() *ast.TBooleanKeyword {
+func (p *Parser) parseBooleanKeyword() *ast.BooleanKeyword {
 	p.markStartPosition()
 
 	p.expectedTypeKeyword(TypeKeywordBoolean)
 
 	return ast.NewNode(
-		ast.NewTBooleanKeyword(),
+		ast.NewBooleanKeyword(),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1470,13 +1470,13 @@ func (p *Parser) parseTBooleanKeyword() *ast.TBooleanKeyword {
 	)
 }
 
-func (p *Parser) parseTAnyKeyword() *ast.TAnyKeyword {
+func (p *Parser) parseAnyKeyword() *ast.AnyKeyword {
 	p.markStartPosition()
 
 	p.expectedTypeKeyword(TypeKeywordAny)
 
 	return ast.NewNode(
-		ast.NewTAnyKeyword(),
+		ast.NewAnyKeyword(),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1484,13 +1484,13 @@ func (p *Parser) parseTAnyKeyword() *ast.TAnyKeyword {
 	)
 }
 
-func (p *Parser) parseTTypeReference() *ast.TTypeReference {
+func (p *Parser) parseTypeReference() *ast.TypeReference {
 	p.markStartPosition()
 
 	identifier := p.parseIdentifier(false)
 
 	return ast.NewNode(
-		ast.NewTTypeReference(identifier),
+		ast.NewTypeReference(identifier),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),

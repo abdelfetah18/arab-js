@@ -40,20 +40,20 @@ const (
 	NodeTypeDirective
 	NodeTypeSourceFile
 
-	NodeTypeTTypeAnnotation
-	NodeTypeTStringKeyword
-	NodeTypeTNumberKeyword
-	NodeTypeTBooleanKeyword
-	NodeTypeTNullKeyword
-	NodeTypeTAnyKeyword
-	NodeTypeTInterfaceDeclaration
-	NodeTypeTInterfaceBody
-	NodeTypeTPropertySignature
-	NodeTypeTFunctionType
-	NodeTypeTTypeLiteral
-	NodeTypeTTypeAliasDeclaration
-	NodeTypeTTypeReference
-	NodeTypeTArrayType
+	NodeTypeTypeAnnotation
+	NodeTypeStringKeyword
+	NodeTypeNumberKeyword
+	NodeTypeBooleanKeyword
+	NodeTypeNullKeyword
+	NodeTypeAnyKeyword
+	NodeTypeInterfaceDeclaration
+	NodeTypeInterfaceBody
+	NodeTypePropertySignature
+	NodeTypeFunctionType
+	NodeTypeTypeLiteral
+	NodeTypeTypeAliasDeclaration
+	NodeTypeTypeReference
+	NodeTypeArrayType
 	NodeTypeRestElement
 )
 
@@ -127,36 +127,36 @@ func (t NodeType) String() string {
 		return "Directive"
 	case NodeTypeSourceFile:
 		return "SourceFile"
-	case NodeTypeTTypeAnnotation:
-		return "TTypeAnnotation"
-	case NodeTypeTStringKeyword:
-		return "TStringKeyword"
-	case NodeTypeTNumberKeyword:
-		return "TNumberKeyword"
-	case NodeTypeTBooleanKeyword:
-		return "TBooleanKeyword"
-	case NodeTypeTNullKeyword:
-		return "TNullKeyword"
-	case NodeTypeTAnyKeyword:
-		return "TAnyKeyword"
-	case NodeTypeTInterfaceDeclaration:
-		return "TInterfaceDeclaration"
-	case NodeTypeTInterfaceBody:
-		return "TInterfaceBody"
-	case NodeTypeTPropertySignature:
-		return "TPropertySignature"
-	case NodeTypeTFunctionType:
-		return "TFunctionType"
-	case NodeTypeTTypeAliasDeclaration:
-		return "TTypeAliasDeclaration"
-	case NodeTypeTTypeReference:
-		return "TTypeReference"
-	case NodeTypeTArrayType:
-		return "TArrayType"
+	case NodeTypeTypeAnnotation:
+		return "TypeAnnotation"
+	case NodeTypeStringKeyword:
+		return "StringKeyword"
+	case NodeTypeNumberKeyword:
+		return "NumberKeyword"
+	case NodeTypeBooleanKeyword:
+		return "BooleanKeyword"
+	case NodeTypeNullKeyword:
+		return "NullKeyword"
+	case NodeTypeAnyKeyword:
+		return "AnyKeyword"
+	case NodeTypeInterfaceDeclaration:
+		return "InterfaceDeclaration"
+	case NodeTypeInterfaceBody:
+		return "InterfaceBody"
+	case NodeTypePropertySignature:
+		return "PropertySignature"
+	case NodeTypeFunctionType:
+		return "FunctionType"
+	case NodeTypeTypeAliasDeclaration:
+		return "TypeAliasDeclaration"
+	case NodeTypeTypeReference:
+		return "TypeReference"
+	case NodeTypeArrayType:
+		return "ArrayType"
 	case NodeTypeRestElement:
 		return "RestElement"
-	case NodeTypeTTypeLiteral:
-		return "TTypeLiteral"
+	case NodeTypeTypeLiteral:
+		return "TypeLiteral"
 	default:
 		return "Unknown"
 	}

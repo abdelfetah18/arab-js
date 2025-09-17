@@ -204,8 +204,8 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 			return
 		}
 
-		if symbol.Node.Type != ast.NodeTypeTInterfaceDeclaration {
-			t.Errorf("expected symbol %q to be %v, but got %v", "تجربة", ast.NodeTypeTInterfaceDeclaration, symbol.Node.Type)
+		if symbol.Node.Type != ast.NodeTypeInterfaceDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "تجربة", ast.NodeTypeInterfaceDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -222,8 +222,8 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 			return
 		}
 
-		if symbol.Node.Type != ast.NodeTypeTInterfaceDeclaration {
-			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeTInterfaceDeclaration, symbol.Node.Type)
+		if symbol.Node.Type != ast.NodeTypeInterfaceDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeInterfaceDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -240,8 +240,8 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 			return
 		}
 
-		if symbol.Node.Type != ast.NodeTypeTInterfaceDeclaration {
-			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeTInterfaceDeclaration, symbol.Node.Type)
+		if symbol.Node.Type != ast.NodeTypeInterfaceDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeInterfaceDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -258,8 +258,8 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 			return
 		}
 
-		if symbol.Node.Type != ast.NodeTypeTInterfaceDeclaration {
-			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeTInterfaceDeclaration, symbol.Node.Type)
+		if symbol.Node.Type != ast.NodeTypeInterfaceDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeInterfaceDeclaration, symbol.Node.Type)
 			return
 		}
 	})

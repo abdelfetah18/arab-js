@@ -41,8 +41,8 @@ func (b *Binder) bindStatement(node *ast.Node) {
 		b.bindBlockStatement(node.AsBlockStatement())
 	case ast.NodeTypeVariableDeclaration:
 		b.bindVariableDeclaration(node.AsVariableDeclaration())
-	case ast.NodeTypeTInterfaceDeclaration:
-		b.bindTInterfaceDeclaration(node.AsTInterfaceDeclaration())
+	case ast.NodeTypeInterfaceDeclaration:
+		b.bindInterfaceDeclaration(node.AsInterfaceDeclaration())
 	case ast.NodeTypeFunctionDeclaration:
 		b.bindFunctionDeclaration(node.AsFunctionDeclaration())
 	case ast.NodeTypeForStatement:
@@ -74,11 +74,11 @@ func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 	b.container = saveContainer
 }
 
-func (b *Binder) bindTInterfaceDeclaration(tInterfaceDeclaration *ast.TInterfaceDeclaration) {
-	tInterfaceDeclaration.Symbol = b.container.Scope.AddVariable(
-		tInterfaceDeclaration.Id.Name,
+func (b *Binder) bindInterfaceDeclaration(interfaceDeclaration *ast.InterfaceDeclaration) {
+	interfaceDeclaration.Symbol = b.container.Scope.AddVariable(
+		interfaceDeclaration.Id.Name,
 		nil,
-		tInterfaceDeclaration.AsNode(),
+		interfaceDeclaration.AsNode(),
 	)
 }
 
