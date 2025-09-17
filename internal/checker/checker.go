@@ -126,6 +126,9 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	case ast.NodeTypeObjectExpression:
 		objectExpression := expression.AsObjectExpression()
 		return c.checkObjectExpression(objectExpression)
+	case ast.NodeTypeMemberExpression:
+		memberExpression := expression.AsMemberExpression()
+		return c.checkMemberExpression(memberExpression)
 	}
 
 	return nil
@@ -178,6 +181,24 @@ func (c *Checker) checkObjectExpression(objectExpression *ast.ObjectExpression) 
 	}
 
 	return objectType.AsType()
+}
+
+func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) *Type {
+	objectType := c.checkExpression(memberExpression.Object)
+	propertyName := c.getPropertyName(memberExpression.Property)
+
+	if objectType.Flags&TypeFlagsObject != TypeFlagsObject {
+		// FIXME: in JavaScript everything is object
+		return nil
+	}
+
+	propertyType := objectType.AsObjectType().GetProperty(propertyName)
+	if propertyType == nil {
+		c.errorf(memberExpression.AsNode().Location, PROPERTY_0_DOES_NOT_EXIST_ON_TYPE_1, propertyName, objectType.Data.Name())
+		return nil
+	}
+
+	return propertyType.Type
 }
 
 func (c *Checker) getTypeFromSymbol(symbol *ast.Symbol) *Type {

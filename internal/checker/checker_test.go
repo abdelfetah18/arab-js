@@ -61,6 +61,32 @@ func TestCheckAssignmentExpression(t *testing.T) {
 			t.Error("should not detect errors")
 		}
 	})
+
+	t.Run("should error on wrong type in object", func(t *testing.T) {
+		input := "متغير شخص: { اسم: نص } = { اسم: \"شخص\" }؛\nشخص.اسم = 100؛"
+
+		sourceFile := compiler.ParseSourceFile(input)
+		binder.NewBinder(sourceFile).Bind()
+		_checker := NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
+		_checker.Check()
+
+		if len(_checker.Diagnostics) == 0 {
+			t.Error("should detect error")
+		}
+	})
+
+	t.Run("should allow correct type in object", func(t *testing.T) {
+		input := "متغير شخص: { اسم: نص } = { اسم: \"شخص\" }؛\nشخص.اسم = \"شخص\"؛"
+
+		sourceFile := compiler.ParseSourceFile(input)
+		binder.BindSourceFile(sourceFile)
+		_checker := NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
+		_checker.Check()
+
+		if len(_checker.Diagnostics) > 0 {
+			t.Error("should not detect errors")
+		}
+	})
 }
 
 func TestCheckCallExpression(t *testing.T) {
@@ -141,6 +167,21 @@ func TestCheckObjectExpression(t *testing.T) {
 
 		if len(_checker.Diagnostics) > 0 {
 			t.Error("should not detect errors")
+		}
+	})
+}
+
+func TestCheckMemberExpression(t *testing.T) {
+	t.Run("should report error when property does not exist", func(t *testing.T) {
+		input := "متغير شخص: { اسم: نص } = { اسم: \"شخص\" }؛\nشخص.رقم = 100؛"
+
+		sourceFile := compiler.ParseSourceFile(input)
+		binder.BindSourceFile(sourceFile)
+		_checker := NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
+		_checker.Check()
+
+		if len(_checker.Diagnostics) == 0 {
+			t.Error("should detect errors")
 		}
 	})
 }

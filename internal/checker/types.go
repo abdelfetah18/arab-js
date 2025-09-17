@@ -111,8 +111,18 @@ type PropertyType struct {
 func NewObjectType() *ObjectType       { return &ObjectType{Properties: make(map[string]*PropertyType)} }
 func (t *ObjectType) Flags() TypeFlags { return TypeFlagsObject }
 func (t *ObjectType) Name() string     { return "object" }
+
 func (t *ObjectType) AddProperty(name string, propertyType *PropertyType) {
 	t.Properties[name] = propertyType
+}
+
+func (t *ObjectType) GetProperty(name string) *PropertyType {
+	return t.Properties[name]
+}
+
+func (t *ObjectType) HasProperty(propertyName string) bool {
+	_, exists := t.Properties[propertyName]
+	return exists
 }
 
 type FunctionType struct {

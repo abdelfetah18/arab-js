@@ -6,4 +6,5 @@ const (
 	THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES = "This expression is not callable. Type '%s' has no call signatures."
 	EXPECTED_0_ARGUMENTS_BUT_GOT_1                                = "Expected %d arguments, but got %d"
 	ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1   = "Argument of type '%s' is not assignable to parameter of type '%s'"
+	PROPERTY_0_DOES_NOT_EXIST_ON_TYPE_1                           = "Property '%s' does not exist on type '%s'"
 )
