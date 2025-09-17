@@ -75,8 +75,11 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 		return
 	}
 	initializerType := c.checkExpression(variableDeclaration.Initializer.Expression)
+	if initializerType == nil {
+		return
+	}
 
-	if identifierType.Data.Name() != initializerType.Data.Name() {
+	if !AreTypesCompatible(identifierType, initializerType) {
 		c.errorf(variableDeclaration.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, identifierType.Data.Name(), initializerType.Data.Name())
 		return
 	}
@@ -112,7 +115,7 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 			return nil
 		}
 
-		if leftType.Data.Name() != rightType.Data.Name() {
+		if !AreTypesCompatible(leftType, rightType) {
 			c.errorf(assignmentExpression.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, leftType.Data.Name(), rightType.Data.Name())
 			return nil
 		}
@@ -120,6 +123,9 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	case ast.NodeTypeCallExpression:
 		callExpression := expression.AsCallExpression()
 		return c.checkCallExpression(callExpression)
+	case ast.NodeTypeObjectExpression:
+		objectExpression := expression.AsObjectExpression()
+		return c.checkObjectExpression(objectExpression)
 	}
 
 	return nil
@@ -145,15 +151,33 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 	}
 
 	for index, expression := range callExpression.Args {
-		typeName := functionType.Params[index].Data.Name()
+		paramType := functionType.Params[index]
 		_type := c.checkExpression(expression)
-		if typeName != _type.Data.Name() {
-			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), typeName)
+		if !AreTypesCompatible(paramType, _type) {
+			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), paramType.Data.Name())
 			return nil
 		}
 	}
 
 	return functionType.ReturnType
+}
+
+func (c *Checker) checkObjectExpression(objectExpression *ast.ObjectExpression) *Type {
+	objectType := NewType(NewObjectType())
+	for _, property := range objectExpression.Properties {
+		switch property.Type {
+		case ast.NodeTypeObjectProperty:
+			objectProperty := property.AsObjectProperty()
+			propertyName := c.getPropertyName(objectProperty.Key)
+			objectType.AddProperty(propertyName, &PropertyType{
+				Name:         propertyName,
+				OriginalName: nil,
+				Type:         InferTypeFromNode(objectProperty.Value),
+			})
+		}
+	}
+
+	return objectType.AsType()
 }
 
 func (c *Checker) getTypeFromSymbol(symbol *ast.Symbol) *Type {
@@ -208,4 +232,16 @@ func (c *Checker) getTypeFromTypeNode(typeNode *ast.Node) *Type {
 	}
 
 	return nil
+}
+
+func (c *Checker) getPropertyName(node *ast.Node) string {
+	switch node.Type {
+	case ast.NodeTypeStringLiteral:
+		return node.AsStringLiteral().Value
+	case ast.NodeTypeIdentifier:
+		return node.AsIdentifier().Name
+	case ast.NodeTypeDecimalLiteral:
+		return node.AsDecimalLiteral().Value
+	}
+	return ""
 }

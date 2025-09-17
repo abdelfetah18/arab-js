@@ -162,3 +162,55 @@ func GetTypeOfChildNode(scope *ast.Scope, child *ast.Node, objectType *ObjectTyp
 
 	return nil
 }
+
+func AreTypesCompatible(leftType *Type, rightType *Type) bool {
+	if leftType == nil || rightType == nil {
+		return false
+	}
+
+	if leftType.Flags == TypeFlagsAny || rightType.Flags == TypeFlagsAny {
+		return true
+	}
+
+	if leftType.Flags == rightType.Flags {
+		switch leftType.Flags {
+		case TypeFlagsString, TypeFlagsNumber, TypeFlagsBoolean, TypeFlagsNull:
+			return true
+		}
+	}
+
+	if leftType.Flags == TypeFlagsObject && rightType.Flags == TypeFlagsObject {
+		leftObj := leftType.AsObjectType()
+		rightObj := rightType.AsObjectType()
+
+		for name, rightProp := range rightObj.Properties {
+			leftProp, ok := leftObj.Properties[name]
+			if !ok {
+				return false
+			}
+			if !AreTypesCompatible(leftProp.Type, rightProp.Type) {
+				return false
+			}
+		}
+		return true
+	}
+
+	if leftType.Flags == TypeFlagsFunction && rightType.Flags == TypeFlagsFunction {
+		leftFn := leftType.AsFunctionType()
+		rightFn := rightType.AsFunctionType()
+
+		if len(leftFn.Params) != len(rightFn.Params) {
+			return false
+		}
+
+		for i := range leftFn.Params {
+			if !AreTypesCompatible(leftFn.Params[i], rightFn.Params[i]) {
+				return false
+			}
+		}
+
+		return AreTypesCompatible(leftFn.ReturnType, rightFn.ReturnType)
+	}
+
+	return false
+}
