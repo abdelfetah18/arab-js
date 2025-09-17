@@ -68,6 +68,7 @@ type NodeData interface {
 	AsNode() *Node
 	MarshalJSON() ([]byte, error)
 	ForEachChild(v Visitor) bool
+	ContainerBaseData() *ContainerBase
 }
 
 type NodeBase struct {
@@ -141,8 +142,54 @@ func (node *Node) AsTTypeReference() *TTypeReference {
 	return node.Data.(*TTypeReference)
 }
 
+func (node *Node) AsTTypeLiteral() *TTypeLiteral {
+	return node.Data.(*TTypeLiteral)
+}
+
+func (node *Node) AsTTypeAliasDeclaration() *TTypeAliasDeclaration {
+	return node.Data.(*TTypeAliasDeclaration)
+}
+
 func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }
 func (node *NodeBase) ForEachChild(v Visitor) bool { return false }
+
+func (node *Node) ContainerBaseData() *ContainerBase     { return node.Data.ContainerBaseData() }
+func (node *NodeBase) ContainerBaseData() *ContainerBase { return nil }
+
+func (node *Node) TypeNode() *Node {
+	switch node.Type {
+	case NodeTypeVariableDeclaration:
+		if node.AsVariableDeclaration().Identifier.TypeAnnotation != nil {
+			return node.AsVariableDeclaration().Identifier.TypeAnnotation.TypeAnnotation
+		}
+	case NodeTypeTPropertySignature:
+		if node.AsTPropertySignature().TypeAnnotation != nil {
+			return node.AsTPropertySignature().TypeAnnotation.TypeAnnotation
+		}
+	case NodeTypeTTypeAliasDeclaration:
+		if node.AsTTypeAliasDeclaration().TypeAnnotation != nil {
+			return node.AsTTypeAliasDeclaration().TypeAnnotation.TypeAnnotation
+		}
+	case NodeTypeFunctionDeclaration:
+		if node.AsFunctionDeclaration().TTypeAnnotation != nil {
+			return node.AsFunctionDeclaration().TTypeAnnotation.TypeAnnotation
+		}
+	case NodeTypeIdentifier:
+		if node.AsIdentifier().TypeAnnotation != nil {
+			return node.AsIdentifier().TypeAnnotation.TypeAnnotation
+		}
+	}
+
+	return nil
+}
+
+func (node *Node) LocalScope() *Scope {
+	data := node.ContainerBaseData()
+	if data != nil {
+		return data.Scope
+	}
+	return nil
+}
 
 func wrapNode[T any](n Node, data *T) interface{} {
 	return struct {
@@ -193,10 +240,10 @@ func (expressionStatement *ExpressionStatement) ForEachChild(v Visitor) bool {
 
 type VariableDeclaration struct {
 	NodeBase
-	DeclarationBase
-	Identifier  *Identifier  `json:"identifier,omitempty"`
-	Initializer *Initializer `json:"initializer,omitempty"`
-	Declare     bool         `json:"declare,omitempty"`
+	DeclarationBase `json:"-"`
+	Identifier      *Identifier  `json:"identifier,omitempty"`
+	Initializer     *Initializer `json:"initializer,omitempty"`
+	Declare         bool         `json:"declare,omitempty"`
 }
 
 func NewVariableDeclaration(identifier *Identifier, initializer *Initializer, declare bool) *VariableDeclaration {
@@ -562,6 +609,10 @@ func (blockStatement *BlockStatement) ForEachChild(v Visitor) bool {
 	return visitNodes(v, blockStatement.Body)
 }
 
+func (blockStatement *BlockStatement) ContainerBaseData() *ContainerBase {
+	return &blockStatement.ContainerBase
+}
+
 type AssignmentExpression struct {
 	NodeBase
 	Operator string `json:"operator,omitempty"`
@@ -594,7 +645,7 @@ func (assignmentExpression *AssignmentExpression) ForEachChild(v Visitor) bool {
 type FunctionDeclaration struct {
 	NodeBase
 	ContainerBase
-	DeclarationBase
+	DeclarationBase `json:"-"`
 	ID              *Identifier      `json:"id,omitempty"`
 	Params          []*Node          `json:"params,omitempty"`
 	Body            *BlockStatement  `json:"body,omitempty"`
@@ -629,6 +680,10 @@ func (functionDeclaration *FunctionDeclaration) ForEachChild(v Visitor) bool {
 		visitNodes(v, functionDeclaration.Params) ||
 		visit(v, functionDeclaration.Body.AsNode()) ||
 		(functionDeclaration.TTypeAnnotation != nil && visit(v, functionDeclaration.TTypeAnnotation.AsNode()))
+}
+
+func (functionDeclaration *FunctionDeclaration) ContainerBaseData() *ContainerBase {
+	return &functionDeclaration.ContainerBase
 }
 
 type CallExpression struct {
@@ -1146,11 +1201,15 @@ func (sourceFile *SourceFile) ForEachChild(v Visitor) bool {
 	return visitNodes(v, directives) || visitNodes(v, sourceFile.Body) || visit(v, sourceFile.ExternalModuleIndicator)
 }
 
+func (sourceFile *SourceFile) ContainerBaseData() *ContainerBase {
+	return &sourceFile.ContainerBase
+}
+
 type TInterfaceDeclaration struct {
 	NodeBase
-	DeclarationBase
-	Id   *Identifier     `json:"id,omitempty"`
-	Body *TInterfaceBody `json:"body,omitempty"`
+	DeclarationBase `json:"-"`
+	Id              *Identifier     `json:"id,omitempty"`
+	Body            *TInterfaceBody `json:"body,omitempty"`
 }
 
 func NewTInterfaceDeclaration(id *Identifier, body *TInterfaceBody) *TInterfaceDeclaration {
@@ -1318,7 +1377,7 @@ func (tTypeAliasDeclaration *TTypeAliasDeclaration) MarshalJSON() ([]byte, error
 }
 
 func (tTypeAliasDeclaration *TTypeAliasDeclaration) NodeType() NodeType {
-	return NodeTypeTFunctionType
+	return NodeTypeTTypeAliasDeclaration
 }
 
 func (tTypeAliasDeclaration *TTypeAliasDeclaration) ForEachChild(v Visitor) bool {
@@ -1345,7 +1404,7 @@ func (tTypeLiteral *TTypeLiteral) MarshalJSON() ([]byte, error) {
 }
 
 func (tTypeLiteral *TTypeLiteral) NodeType() NodeType {
-	return NodeTypeTFunctionType
+	return NodeTypeTTypeLiteral
 }
 
 func (tTypeLiteral *TTypeLiteral) ForEachChild(v Visitor) bool {
@@ -1474,6 +1533,10 @@ func (forStatement *ForStatement) ForEachChild(v Visitor) bool {
 		visit(v, forStatement.Test) ||
 		visit(v, forStatement.Update) ||
 		visit(v, forStatement.Body)
+}
+
+func (forStatement *ForStatement) ContainerBaseData() *ContainerBase {
+	return &forStatement.ContainerBase
 }
 
 type UpdateExpression struct {

@@ -50,6 +50,7 @@ const (
 	NodeTypeTInterfaceBody
 	NodeTypeTPropertySignature
 	NodeTypeTFunctionType
+	NodeTypeTTypeLiteral
 	NodeTypeTTypeAliasDeclaration
 	NodeTypeTTypeReference
 	NodeTypeTArrayType
@@ -154,6 +155,8 @@ func (t NodeType) String() string {
 		return "TArrayType"
 	case NodeTypeRestElement:
 		return "RestElement"
+	case NodeTypeTTypeLiteral:
+		return "TTypeLiteral"
 	default:
 		return "Unknown"
 	}

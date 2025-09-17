@@ -69,7 +69,7 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 		return
 	}
 
-	identifierType := variableDeclaration.Symbol.Type
+	identifierType := c.getTypeFromTypeNode(variableDeclaration.TypeNode())
 
 	if variableDeclaration.Initializer == nil {
 		return
@@ -82,25 +82,24 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 	}
 }
 
-func (c *Checker) checkExpression(expression *ast.Node) *ast.Type {
+func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	switch expression.Type {
 	case ast.NodeTypeIdentifier:
 		identifier := expression.AsIdentifier()
-		symbol := c.NameResolver.Resolve(identifier.Name, c.currentSourceFile.Scope)
+		symbol := c.NameResolver.Resolve(identifier.Name, expression)
 		if symbol == nil {
 			c.errorf(identifier.Location, CANNOT_FIND_NAME_0, identifier.Name)
 			return nil
 		}
-
-		return symbol.Type
+		return c.getTypeFromSymbol(symbol)
 	case ast.NodeTypeStringLiteral:
-		return ast.InferTypeFromNode(expression.AsStringLiteral().AsNode())
+		return InferTypeFromNode(expression.AsStringLiteral().AsNode())
 	case ast.NodeTypeDecimalLiteral:
-		return ast.InferTypeFromNode(expression.AsDecimalLiteral().AsNode())
+		return InferTypeFromNode(expression.AsDecimalLiteral().AsNode())
 	case ast.NodeTypeBooleanLiteral:
-		return ast.InferTypeFromNode(expression.AsBooleanLiteral().AsNode())
+		return InferTypeFromNode(expression.AsBooleanLiteral().AsNode())
 	case ast.NodeTypeNullLiteral:
-		return ast.InferTypeFromNode(expression.AsNullLiteral().AsNode())
+		return InferTypeFromNode(expression.AsNullLiteral().AsNode())
 	case ast.NodeTypeAssignmentExpression:
 		assignmentExpression := expression.AsAssignmentExpression()
 		leftType := c.checkExpression(assignmentExpression.Left)
@@ -126,14 +125,20 @@ func (c *Checker) checkExpression(expression *ast.Node) *ast.Type {
 	return nil
 }
 
-func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *ast.Type {
+func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type {
 	_type := c.checkExpression(callExpression.Callee)
-	if _type.Flags&ast.TypeFlagsFunction != ast.TypeFlagsFunction {
+
+	if _type == nil {
+		return nil
+	}
+
+	if _type.Flags&TypeFlagsFunction != TypeFlagsFunction {
 		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.Data.Name())
 		return nil
 	}
 
 	functionType := _type.AsFunctionType()
+
 	if len(functionType.Params) != len(callExpression.Args) {
 		c.errorf(callExpression.Location, EXPECTED_0_ARGUMENTS_BUT_GOT_1, len(functionType.Params), len(callExpression.Args))
 		return nil
@@ -149,4 +154,58 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *ast.T
 	}
 
 	return functionType.ReturnType
+}
+
+func (c *Checker) getTypeFromSymbol(symbol *ast.Symbol) *Type {
+	switch symbol.Node.Type {
+	case ast.NodeTypeFunctionDeclaration:
+		functionDeclaration := symbol.Node.AsFunctionDeclaration()
+		functionType := NewType(NewFunctionType())
+		for _, param := range functionDeclaration.Params {
+			functionType.AddParamType(c.getTypeFromTypeNode(param.TypeNode()))
+		}
+		functionType.ReturnType = c.getTypeFromTypeNode(functionDeclaration.TypeNode())
+		return functionType.AsType()
+	default:
+		return c.getTypeFromTypeNode(symbol.Node.TypeNode())
+	}
+}
+
+func (c *Checker) getTypeFromTypeNode(typeNode *ast.Node) *Type {
+	if typeNode == nil {
+		return nil
+	}
+
+	switch typeNode.Type {
+	case ast.NodeTypeTStringKeyword:
+		return NewType(NewStringType()).AsType()
+	case ast.NodeTypeTBooleanKeyword:
+		return NewType(NewBooleanType()).AsType()
+	case ast.NodeTypeTNullKeyword:
+		return NewType(NewNullType()).AsType()
+	case ast.NodeTypeTNumberKeyword:
+		return NewType(NewNumberType()).AsType()
+	case ast.NodeTypeTTypeLiteral:
+		objectType := NewObjectType()
+		typeLiteral := typeNode.AsTTypeLiteral()
+		for _, member := range typeLiteral.Members {
+			propertySignature := member.AsTPropertySignature()
+			switch propertySignature.Key.Type {
+			case ast.NodeTypeIdentifier:
+				identifier := propertySignature.Key.AsIdentifier()
+				objectType.AddProperty(
+					identifier.Name,
+					&PropertyType{
+						Type:         c.getTypeFromTypeNode(propertySignature.TypeNode()),
+						Name:         identifier.Name,
+						OriginalName: identifier.OriginalName,
+					},
+				)
+			}
+		}
+
+		return NewType(objectType).AsType()
+	}
+
+	return nil
 }

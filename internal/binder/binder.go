@@ -51,14 +51,10 @@ func (b *Binder) bindStatement(node *ast.Node) {
 }
 
 func (b *Binder) bindVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
-	var _type *ast.Type = nil
-	if variableDeclaration.Identifier.TypeAnnotation != nil {
-		_type = b.GetTypeFromTypeAnnotationNode(variableDeclaration.Identifier.TypeAnnotation)
-	}
 	variableDeclaration.Symbol = b.container.Scope.AddVariable(
 		variableDeclaration.Identifier.Name,
 		variableDeclaration.Identifier.OriginalName,
-		_type,
+		variableDeclaration.AsNode(),
 	)
 }
 
@@ -82,74 +78,15 @@ func (b *Binder) bindTInterfaceDeclaration(tInterfaceDeclaration *ast.TInterface
 	tInterfaceDeclaration.Symbol = b.container.Scope.AddVariable(
 		tInterfaceDeclaration.Id.Name,
 		nil,
-		b.GetTypeFromTypeNode(tInterfaceDeclaration.Body.AsNode()),
+		tInterfaceDeclaration.AsNode(),
 	)
 }
 
-func (b *Binder) GetTypeFromTypeAnnotationNode(node *ast.TTypeAnnotation) *ast.Type {
-	return b.GetTypeFromTypeNode(node.TypeAnnotation)
-}
-
-func (b *Binder) GetTypeFromTypeNode(node *ast.Node) *ast.Type {
-	switch node.Type {
-	case ast.NodeTypeTStringKeyword:
-		return ast.NewType(ast.NewStringType()).AsType()
-	case ast.NodeTypeTBooleanKeyword:
-		return ast.NewType(ast.NewBooleanType()).AsType()
-	case ast.NodeTypeTNumberKeyword:
-		return ast.NewType(ast.NewNumberType()).AsType()
-	case ast.NodeTypeTNullKeyword:
-		return ast.NewType(ast.NewNullType()).AsType()
-	case ast.NodeTypeTTypeReference:
-		tTypeReference := node.AsTTypeReference()
-		symbol := b.container.Scope.GetVariableSymbol(tTypeReference.TypeName.Name)
-		if symbol == nil {
-			return nil
-		}
-		return symbol.Type
-	case ast.NodeTypeTInterfaceBody:
-		objectType := ast.NewType(ast.NewObjectType())
-		tInterfaceBody := node.AsTInterfaceBody()
-		for _, node := range tInterfaceBody.Body {
-			tPropertySignature := node.AsTPropertySignature()
-			objectType.AddProperty(tPropertySignature.Key.AsIdentifier().Name, &ast.PropertyType{
-				Name:         tPropertySignature.Key.AsIdentifier().Name,
-				OriginalName: tPropertySignature.Key.AsIdentifier().OriginalName,
-				Type:         b.GetTypeFromTypeAnnotationNode(tPropertySignature.TypeAnnotation),
-			})
-		}
-		return objectType.AsType()
-	}
-
-	return nil
-}
-
 func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
-	functionType := ast.NewType(ast.NewFunctionType())
-
-	for _, param := range functionDeclaration.Params {
-		switch param.Type {
-		case ast.NodeTypeIdentifier:
-			identifier := param.AsIdentifier()
-			if identifier.TypeAnnotation != nil {
-				functionType.AddParamType(b.GetTypeFromTypeAnnotationNode(identifier.TypeAnnotation))
-			}
-		case ast.NodeTypeRestElement:
-			restElement := param.AsRestElement()
-			if restElement.TypeAnnotation != nil {
-				functionType.AddParamType(b.GetTypeFromTypeAnnotationNode(restElement.TypeAnnotation))
-			}
-		}
-	}
-
-	if functionDeclaration.TTypeAnnotation != nil {
-		functionType.ReturnType = b.GetTypeFromTypeAnnotationNode(functionDeclaration.TTypeAnnotation)
-	}
-
 	functionDeclaration.Symbol = b.container.Scope.AddVariable(
 		functionDeclaration.ID.Name,
 		nil,
-		functionType.AsType(),
+		functionDeclaration.AsNode(),
 	)
 
 	saveContainer := b.container
@@ -173,14 +110,14 @@ func (b *Binder) bindParam(node *ast.Node) {
 		b.container.Scope.AddVariable(
 			restElement.Argument.Name,
 			nil,
-			b.GetTypeFromTypeAnnotationNode(restElement.TypeAnnotation),
+			restElement.AsNode(),
 		)
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
 		b.container.Scope.AddVariable(
 			identifier.Name,
 			nil,
-			b.GetTypeFromTypeAnnotationNode(identifier.TypeAnnotation),
+			identifier.AsNode(),
 		)
 	}
 }

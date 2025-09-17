@@ -12,8 +12,8 @@ func NewNameResolver(globals *ast.Scope) *NameResolver {
 	}
 }
 
-func (n *NameResolver) Resolve(name string, scope *ast.Scope) *ast.Symbol {
-	currentScope := scope
+func (n *NameResolver) Resolve(name string, location *ast.Node) *ast.Symbol {
+	currentScope := getCurrentScope(location)
 
 	for currentScope != nil {
 		if symbol := currentScope.GetVariableSymbol(name); symbol != nil {
@@ -27,4 +27,16 @@ func (n *NameResolver) Resolve(name string, scope *ast.Scope) *ast.Symbol {
 	}
 
 	return nil
+}
+
+func getCurrentScope(node *ast.Node) *ast.Scope {
+	scope := node.LocalScope()
+	for scope == nil {
+		node = node.Parent
+		if node == nil {
+			return nil
+		}
+		scope = node.LocalScope()
+	}
+	return scope
 }

@@ -2,6 +2,7 @@ package transformer
 
 import (
 	"arab_js/internal/binder"
+	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 )
@@ -56,7 +57,7 @@ func (t *Transformer) transformExpression(node *ast.Node) {
 		t.transformCallExpression(node.AsCallExpression())
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
-		symbol := t.NameResolver.Resolve(identifier.Name, t.currentScope)
+		symbol := t.NameResolver.Resolve(identifier.Name, node)
 		if symbol.OriginalName != nil {
 			identifier.Name = *symbol.OriginalName
 		}
@@ -73,24 +74,23 @@ func (t *Transformer) transformCallExpression(callExpression *ast.CallExpression
 func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpression) {
 	switch memberExpression.Object.Type {
 	case ast.NodeTypeMemberExpression:
-		objectType := t.currentScope.GetTypeOfNode(memberExpression.Object)
+		objectType := checker.GetTypeOfNode(t.currentScope, memberExpression.Object)
 		t.transformMemberExpression(memberExpression.Object.AsMemberExpression())
 		t.transformProperty(memberExpression.Property, objectType.AsObjectType())
 	case ast.NodeTypeIdentifier:
 		objectIdentfier := memberExpression.Object.AsIdentifier()
-		symbol := t.NameResolver.Resolve(objectIdentfier.Name, t.currentScope)
+		symbol := t.NameResolver.Resolve(objectIdentfier.Name, objectIdentfier.AsNode())
 		if symbol.OriginalName != nil {
 			objectIdentfier.Name = *symbol.OriginalName
 		}
-
-		if symbol.Type.Flags&ast.TypeFlagsObject == ast.TypeFlagsObject {
-			objectType := symbol.Type.AsObjectType()
-			t.transformProperty(memberExpression.Property, objectType)
+		objectType := checker.GetTypeOfNode(t.currentScope, symbol.Node)
+		if objectType.Flags&checker.TypeFlagsObject == checker.TypeFlagsObject {
+			t.transformProperty(memberExpression.Property, objectType.AsObjectType())
 		}
 	}
 }
 
-func (t *Transformer) transformProperty(property *ast.Node, objectType *ast.ObjectType) {
+func (t *Transformer) transformProperty(property *ast.Node, objectType *checker.ObjectType) {
 	switch property.Type {
 	case ast.NodeTypeIdentifier:
 		identifier := property.AsIdentifier()

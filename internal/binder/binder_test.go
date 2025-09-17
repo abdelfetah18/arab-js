@@ -12,15 +12,15 @@ func TestBindVariableDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("رقم", sourceFile.Scope)
+		symbol := nameResolver.Resolve("رقم", sourceFile.AsNode())
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in global scope, but got nil", "رقم")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsNumber {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "رقم", ast.TypeFlagsNumber, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeVariableDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "رقم", ast.NodeTypeVariableDeclaration, symbol.Node.Type)
 			return
 		}
 
@@ -31,15 +31,15 @@ func TestBindVariableDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsBlockStatement().Scope)
+		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsBlockStatement().Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in block scope, but got nil", "رقم")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsNumber {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "رقم", ast.TypeFlagsNumber, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeVariableDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "رقم", ast.NodeTypeVariableDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -49,15 +49,15 @@ func TestBindVariableDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsFunctionDeclaration().Scope)
+		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsFunctionDeclaration().Body.Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in function scope, but got nil", "رقم")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsNumber {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "رقم", ast.TypeFlagsNumber, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeVariableDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "رقم", ast.NodeTypeVariableDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -67,15 +67,15 @@ func TestBindVariableDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsForStatement().Scope)
+		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsForStatement().Update)
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist, but got nil", "رقم")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsNumber {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "رقم", ast.TypeFlagsNumber, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeVariableDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "رقم", ast.NodeTypeVariableDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -85,15 +85,15 @@ func TestBindVariableDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsForStatement().Scope)
+		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsForStatement().Update)
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist, but got nil", "رقم")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsNumber {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "رقم", ast.TypeFlagsNumber, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeVariableDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "رقم", ast.NodeTypeVariableDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -105,15 +105,15 @@ func TestBindFunctionDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("تجربة", sourceFile.Scope)
+		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in global scope, but got nil", "تجربة")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsFunction {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "تجربة", ast.TypeFlagsFunction, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeFunctionDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "تجربة", ast.NodeTypeFunctionDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -123,15 +123,15 @@ func TestBindFunctionDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsBlockStatement().Scope)
+		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsBlockStatement().Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in block scope, but got nil", "تجربة")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsFunction {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "تجربة", ast.TypeFlagsFunction, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeFunctionDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "تجربة", ast.NodeTypeFunctionDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -141,15 +141,15 @@ func TestBindFunctionDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsFunctionDeclaration().Scope)
+		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsFunctionDeclaration().Body.Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in function scope, but got nil", "تجربة")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsFunction {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "تجربة", ast.TypeFlagsFunction, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeFunctionDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "تجربة", ast.NodeTypeFunctionDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -159,15 +159,15 @@ func TestBindFunctionDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsForStatement().Scope)
+		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsForStatement().Body)
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in block scope, but got nil", "تجربة")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsFunction {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "تجربة", ast.TypeFlagsFunction, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeFunctionDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "تجربة", ast.NodeTypeFunctionDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -177,15 +177,15 @@ func TestBindFunctionDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("أ", sourceFile.Body[0].AsFunctionDeclaration().Scope)
+		symbol := nameResolver.Resolve("أ", sourceFile.Body[0].AsFunctionDeclaration().Body.Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in block scope, but got nil", "أ")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsNumber {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "أ", ast.TypeFlagsNumber, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeIdentifier {
+			t.Errorf("expected symbol %q to be %v, but got %v", "أ", ast.NodeTypeFunctionDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -197,15 +197,15 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("شخص", sourceFile.Scope)
+		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in global scope, but got nil", "شخص")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsObject {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "تجربة", ast.TypeFlagsObject, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeTInterfaceDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "تجربة", ast.NodeTypeTInterfaceDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -215,15 +215,15 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsBlockStatement().Scope)
+		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsBlockStatement().Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in block scope, but got nil", "شخص")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsObject {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "شخص", ast.TypeFlagsObject, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeTInterfaceDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeTInterfaceDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -233,15 +233,15 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsFunctionDeclaration().Scope)
+		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsFunctionDeclaration().Body.Body[0])
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in function scope, but got nil", "شخص")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsObject {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "شخص", ast.TypeFlagsObject, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeTInterfaceDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeTInterfaceDeclaration, symbol.Node.Type)
 			return
 		}
 	})
@@ -251,15 +251,15 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 		sourceFile := compiler.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
-		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsForStatement().Scope)
+		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsForStatement().Body)
 
 		if symbol == nil {
 			t.Errorf("expected symbol %q to exist in block scope, but got nil", "شخص")
 			return
 		}
 
-		if symbol.Type.Flags != ast.TypeFlagsObject {
-			t.Errorf("expected symbol %q to have type %v, but got %v", "شخص", ast.TypeFlagsObject, symbol.Type.Flags)
+		if symbol.Node.Type != ast.NodeTypeTInterfaceDeclaration {
+			t.Errorf("expected symbol %q to be %v, but got %v", "شخص", ast.NodeTypeTInterfaceDeclaration, symbol.Node.Type)
 			return
 		}
 	})
