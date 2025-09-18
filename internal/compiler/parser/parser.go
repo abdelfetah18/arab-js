@@ -4,15 +4,22 @@ import (
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/compiler/lexer"
 	"arab_js/internal/stack"
+	"fmt"
 )
 
 type Parser struct {
 	lexer          *lexer.Lexer
 	startPositions stack.Stack[uint]
+
+	Diagnostics []*ast.Diagnostic
 }
 
 func NewParser(lexer *lexer.Lexer) *Parser {
-	return &Parser{lexer: lexer, startPositions: stack.Stack[uint]{}}
+	return &Parser{
+		lexer:          lexer,
+		startPositions: stack.Stack[uint]{},
+		Diagnostics:    []*ast.Diagnostic{},
+	}
 }
 
 func ParseSourceFile(sourceText string) *ast.SourceFile {
@@ -26,12 +33,8 @@ func (p *Parser) Parse() *ast.SourceFile {
 
 	statements := []*ast.Node{}
 	for p.lexer.Peek().Type != lexer.EOF && p.lexer.Peek().Type != lexer.Invalid {
-		statements = append(statements, p.parseStatement())
-	}
-
-	token := p.lexer.Peek()
-	if token.Type == lexer.Invalid {
-		panic("Unexpected token: " + token.Value)
+		statement := p.parseStatement()
+		statements = append(statements, statement)
 	}
 
 	return ast.NewNode(ast.NewSourceFile(statements, directives), ast.Location{Pos: p.startPositions.Pop(), End: uint(p.lexer.Position())})
@@ -120,7 +123,13 @@ func (p *Parser) parseStatement() *ast.Node {
 				).AsNode()
 			}
 
-			panic("Expected a declaration but got '" + p.lexer.Peek().Value + "'")
+			p.errorf(
+				ast.Location{
+					Pos: p.startPositions.Pop(),
+					End: p.getEndPosition(),
+				},
+				"Expected a variable declaration but got '%s'\n", p.lexer.Peek().Value)
+			return nil
 		}
 	}
 
@@ -139,7 +148,13 @@ func (p *Parser) parseStatement() *ast.Node {
 		).AsNode()
 	}
 
-	panic("Expected Statement got " + p.lexer.Peek().Value)
+	p.errorf(
+		ast.Location{
+			Pos: p.startPositions.Peek(),
+			End: p.getEndPosition(),
+		},
+		"Expected Statement got %s\n", p.lexer.Peek().Value)
+	return nil
 }
 
 func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
@@ -180,7 +195,13 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 			).AsNode(),
 		)
 	default:
-		panic("unexpected token got '" + token.Value + "'")
+		p.errorf(
+			ast.Location{
+				Pos: p.startPositions.Pop(),
+				End: p.getEndPosition(),
+			},
+			"unexpected token got '%s'\n", token.Value)
+		return nil
 	}
 
 	p.expectedKeyword(lexer.KeywordFrom)
@@ -291,7 +312,13 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 		}
 	}
 
-	panic("Unexpected token in export declaration: " + token.Value)
+	p.errorf(
+		ast.Location{
+			Pos: p.startPositions.Peek(),
+			End: p.getEndPosition(),
+		},
+		"Unexpected token in export declaration: %s\n", token.Value)
+	return nil
 }
 
 func (p *Parser) parseFunctionDeclarationOrExpression() *ast.Node {
@@ -380,7 +407,13 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 		return p.parseObjectExpression().AsNode()
 	}
 
-	panic("Expected PrimaryExpression but got " + p.lexer.Peek().Value)
+	p.errorf(
+		ast.Location{
+			Pos: p.startPositions.Peek(),
+			End: p.getEndPosition(),
+		},
+		"Expected PrimaryExpression but got %s\n", p.lexer.Peek().Value)
+	return nil
 }
 
 func (p *Parser) parseTypeNode() *ast.Node {
@@ -496,7 +529,12 @@ func (p *Parser) parseLeftHandSideExpression() *ast.Node {
 		token := p.lexer.Peek()
 		for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightParenthesis {
 			if !p.isExpression() {
-				panic("Expecting *ast.Nodegot " + token.Value)
+				p.errorf(
+					ast.Location{
+						Pos: p.startPositions.Peek(),
+						End: p.getEndPosition(),
+					},
+					"Expecting expression but got %s\n", token.Value)
 			}
 			argumentList = append(argumentList, p.parseExpression())
 			token = p.lexer.Peek()
@@ -536,7 +574,13 @@ func (p *Parser) parseMemberExpression() *ast.Node {
 		return memberExpression
 	}
 
-	panic("Expected MemberExpression but got " + p.lexer.Peek().Value)
+	p.errorf(
+		ast.Location{
+			Pos: p.startPositions.Peek(),
+			End: p.getEndPosition(),
+		},
+		"Expected MemberExpression but got %s\n", p.lexer.Peek().Value)
+	return nil
 }
 
 func (p *Parser) parseUpdateExpression() *ast.Node {
@@ -767,6 +811,10 @@ func (p *Parser) parseConditionalExpression() *ast.Node {
 
 func (p *Parser) parseAssignmentExpression() *ast.Node {
 	node := p.parseConditionalExpression()
+	if node == nil {
+		return nil
+	}
+
 	switch node.Type {
 	case
 		ast.NodeTypeIdentifier,
@@ -860,7 +908,13 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 		case lexer.Decimal:
 			key = p.parseDecimalLiteral().AsNode()
 		default:
-			panic("Expected a valid key but got " + token.Value)
+			p.errorf(
+				ast.Location{
+					Pos: p.startPositions.Pop(),
+					End: p.getEndPosition(),
+				},
+				"Expected a valid key but got %s\n", token.Value)
+			return nil
 		}
 
 		if p.optional(lexer.Colon) {
@@ -878,7 +932,13 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 			token = p.lexer.Peek()
 		} else {
 			if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
-				panic("A Expected '{' but got " + token.Value)
+				p.errorf(
+					ast.Location{
+						Pos: p.startPositions.Pop(),
+						End: p.getEndPosition(),
+					},
+					"Expected '{' but got %s\n", token.Value)
+				return nil
 			}
 
 			p.optional(lexer.Comma)
@@ -893,7 +953,13 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 					).AsNode(),
 				)
 			} else {
-				panic("Expected Identifier but got " + token.Value)
+				p.errorf(
+					ast.Location{
+						Pos: p.startPositions.Pop(),
+						End: p.getEndPosition(),
+					},
+					"Expected Identifier but got %s\n", token.Value)
+				return nil
 			}
 		}
 
@@ -1067,7 +1133,13 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 		case lexer.Decimal:
 			key = p.parseDecimalLiteral().AsNode()
 		default:
-			panic("Expected a valid key but got " + token.Value)
+			p.errorf(
+				ast.Location{
+					Pos: p.startPositions.Pop(),
+					End: p.getEndPosition(),
+				},
+				"Expected a valid key but got %s\n", token.Value)
+			return nil
 		}
 
 		if p.optional(lexer.Colon) {
@@ -1085,7 +1157,13 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 			token = p.lexer.Peek()
 		} else {
 			if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
-				panic("A Expected '{' but got " + token.Value)
+				p.errorf(
+					ast.Location{
+						Pos: p.startPositions.Pop(),
+						End: p.getEndPosition(),
+					},
+					"A Expected '{' but got %s\n", token.Value)
+				return nil
 			}
 			p.optional(lexer.Comma)
 			if key.Type == ast.NodeTypeIdentifier {
@@ -1099,7 +1177,13 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 					).AsNode(),
 				)
 			} else {
-				panic("Expected Identifier but got " + token.Value)
+				p.errorf(
+					ast.Location{
+						Pos: p.startPositions.Pop(),
+						End: p.getEndPosition(),
+					},
+					"Expected Identifier but got %s\n", token.Value)
+				return nil
 			}
 		}
 
@@ -1194,7 +1278,13 @@ func (p *Parser) parseStringLiteral() *ast.StringLiteral {
 	stringLiteralValue := p.lexer.Peek().Value
 
 	if !p.optional(lexer.DoubleQuoteString) && !p.optional(lexer.SingleQuoteString) {
-		panic("Expected string but got '" + p.lexer.Peek().Value + "'")
+		p.errorf(
+			ast.Location{
+				Pos: p.startPositions.Pop(),
+				End: p.getEndPosition(),
+			},
+			"Expected string but got '%s'\n", p.lexer.Peek().Value)
+		return nil
 	}
 
 	return ast.NewNode(
@@ -1240,7 +1330,13 @@ func (p *Parser) parseBooleanLiteral() *ast.BooleanLiteral {
 
 	value := p.lexer.Peek().Value
 	if !p.optionalKeyword(lexer.KeywordTrue) && !p.optionalKeyword(lexer.KeywordFalse) {
-		panic("Expected boolean but got '" + p.lexer.Peek().Value + "'")
+		p.errorf(
+			ast.Location{
+				Pos: p.startPositions.Pop(),
+				End: p.getEndPosition(),
+			},
+			"Expected boolean but got '%s'\n", p.lexer.Peek().Value)
+		return nil
 	}
 
 	return ast.NewNode(
@@ -1270,7 +1366,13 @@ func (p *Parser) parseDirective() *ast.Directive {
 	stringLiteralValue := p.lexer.Peek().Value
 
 	if !p.optional(lexer.DoubleQuoteString) && !p.optional(lexer.SingleQuoteString) {
-		panic("Expected string but got '" + p.lexer.Peek().Value + "'")
+		p.errorf(
+			ast.Location{
+				Pos: p.startPositions.Pop(),
+				End: p.getEndPosition(),
+			},
+			"Expected string but got '%s'\n", p.lexer.Peek().Value)
+		return nil
 	}
 
 	directiveLiteral := ast.NewNode(
@@ -1364,7 +1466,13 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 
 			token = p.lexer.Peek()
 			if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
-				panic("Expected '{' but got " + token.Value)
+				p.errorf(
+					ast.Location{
+						Pos: p.startPositions.Pop(),
+						End: p.getEndPosition(),
+					},
+					"Expected '{' but got %s\n", token.Value)
+				return nil
 			}
 
 			p.optional(lexer.Comma)
@@ -1379,7 +1487,13 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 			case lexer.Decimal:
 				key = p.parseDecimalLiteral().AsNode()
 			default:
-				panic("Expected a valid key but got " + token.Value)
+				p.errorf(
+					ast.Location{
+						Pos: p.startPositions.Pop(),
+						End: p.getEndPosition(),
+					},
+					"Expected a valid key but got %s\n", token.Value)
+				return nil
 			}
 
 			if p.optional(lexer.Colon) {
@@ -1397,7 +1511,13 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 				token = p.lexer.Peek()
 			} else {
 				if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
-					panic("A Expected '{' but got " + token.Value)
+					p.errorf(
+						ast.Location{
+							Pos: p.startPositions.Pop(),
+							End: p.getEndPosition(),
+						},
+						"A Expected '{' but got %s\n", token.Value)
+					return nil
 				}
 
 				p.optional(lexer.Comma)
@@ -1412,7 +1532,13 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 						).AsNode(),
 					)
 				} else {
-					panic("Expected Identifier but got " + token.Value)
+					p.errorf(
+						ast.Location{
+							Pos: p.startPositions.Pop(),
+							End: p.getEndPosition(),
+						},
+						"Expected Identifier but got %s\n", token.Value)
+					return nil
 				}
 			}
 		}
@@ -1502,7 +1628,12 @@ func (p *Parser) parseTypeReference() *ast.TypeReference {
 func (p *Parser) expected(tokenType lexer.TokenType) {
 	token := p.lexer.Peek()
 	if token.Type != tokenType {
-		panic("expected '" + tokenType.String() + "' but got '" + token.Type.String() + "'")
+		p.errorf(
+			ast.Location{
+				Pos: p.startPositions.Peek(),
+				End: p.getEndPosition(),
+			},
+			"expected '%s' but got '%s'\n", tokenType.String(), token.Type.String())
 	}
 	p.lexer.Next()
 }
@@ -1510,7 +1641,12 @@ func (p *Parser) expected(tokenType lexer.TokenType) {
 func (p *Parser) expectedKeyword(keyword lexer.Keyword) {
 	token := p.lexer.Peek()
 	if token.Type != lexer.KeywordToken && token.Value != keyword {
-		panic("expected '" + keyword + "' keyword but got '" + token.Value + "'")
+		p.errorf(
+			ast.Location{
+				Pos: p.startPositions.Peek(),
+				End: p.getEndPosition(),
+			},
+			"expected '%s' keyword but got '%s'\n", keyword, token.Value)
 	}
 	p.lexer.Next()
 }
@@ -1518,7 +1654,12 @@ func (p *Parser) expectedKeyword(keyword lexer.Keyword) {
 func (p *Parser) expectedTypeKeyword(typeKeyword lexer.TypeKeyword) {
 	token := p.lexer.Peek()
 	if token.Type != lexer.Identifier && token.Value != typeKeyword {
-		panic("expected '" + typeKeyword + "' type keyword but got '" + token.Value + "'")
+		p.errorf(
+			ast.Location{
+				Pos: p.startPositions.Peek(),
+				End: p.getEndPosition(),
+			},
+			"expected '%s' type keyword but got '%s'\n", typeKeyword, token.Value)
 	}
 	p.lexer.Next()
 }
@@ -1551,4 +1692,18 @@ func (p *Parser) getStartPosition() uint {
 
 func (p *Parser) getEndPosition() uint {
 	return uint(p.lexer.BeforeWhitespacePosition())
+}
+
+func (p *Parser) error(location ast.Location, message string) {
+	p.Diagnostics = append(p.Diagnostics,
+		ast.NewDiagnostic(
+			nil,
+			location,
+			message,
+		),
+	)
+}
+
+func (p *Parser) errorf(location ast.Location, format string, a ...any) {
+	p.error(location, fmt.Sprintf(format, a...))
 }

@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"arab_js/internal/compiler/lexer"
 	"arab_js/internal/compiler/parser"
 	"testing"
 )
@@ -31,27 +32,25 @@ func TestVariableDeclaration(t *testing.T) {
 	t.Run("should throw on VariableDeclaration missing semicolon", func(t *testing.T) {
 		input := "متغير عدد = 100"
 
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("\nExpected panic for missing semicolon, but no panic occurred")
-			}
-		}()
-
-		sourceFile := parser.ParseSourceFile(input)
+		parser := parser.NewParser(lexer.NewLexer(input))
+		sourceFile := parser.Parse()
 		WriteSourceFile(sourceFile)
+
+		if len(parser.Diagnostics) == 0 {
+			t.Errorf("\nExpected errors for missing semicolon")
+		}
 	})
 
 	t.Run("should throw on VariableDeclaration with invalid identifier", func(t *testing.T) {
 		input := "متغير عد1د = 100؛"
 
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("\nExpected panic for invalid identifier, but no panic occurred")
-			}
-		}()
-
-		sourceFile := parser.ParseSourceFile(input)
+		parser := parser.NewParser(lexer.NewLexer(input))
+		sourceFile := parser.Parse()
 		WriteSourceFile(sourceFile)
+
+		if len(parser.Diagnostics) == 0 {
+			t.Errorf("\nExpected errors for invalid identifier")
+		}
 	})
 }
 
@@ -149,14 +148,13 @@ func TestBlockStatement(t *testing.T) {
 	t.Run("should throw on BlockStatement with missing closing brace", func(t *testing.T) {
 		input := "{ متغير عدد = 100؛ "
 
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("Expected panic for missing closing brace, but no panic occurred")
-			}
-		}()
-
-		sourceFile := parser.ParseSourceFile(input)
+		parser := parser.NewParser(lexer.NewLexer(input))
+		sourceFile := parser.Parse()
 		WriteSourceFile(sourceFile)
+
+		if len(parser.Diagnostics) == 0 {
+			t.Errorf("\nExpected errors for missing closing brace")
+		}
 	})
 }
 
