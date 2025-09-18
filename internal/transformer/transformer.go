@@ -14,14 +14,17 @@ type Program interface {
 type Transformer struct {
 	program      Program
 	NameResolver *binder.NameResolver
+	TypeResolver *checker.TypeResolver
 
 	currentScope *ast.Scope
 }
 
 func NewTransformer(program Program) *Transformer {
+	nameResolver := program.CheckSourceFiles()
 	return &Transformer{
 		program:      program,
-		NameResolver: program.CheckSourceFiles(),
+		NameResolver: nameResolver,
+		TypeResolver: checker.NewTypeResolver(nameResolver),
 	}
 }
 
@@ -78,16 +81,11 @@ func (t *Transformer) transformCallExpression(callExpression *ast.CallExpression
 func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpression) {
 	switch memberExpression.Object.Type {
 	case ast.NodeTypeMemberExpression:
-		objectType := checker.GetTypeOfNode(t.currentScope, memberExpression.Object)
+		objectType := t.TypeResolver.ResolveTypeFromNode(memberExpression.Object)
 		t.transformMemberExpression(memberExpression.Object.AsMemberExpression())
 		t.transformProperty(memberExpression.Property, objectType.AsObjectType())
 	case ast.NodeTypeIdentifier:
-		objectIdentfier := memberExpression.Object.AsIdentifier()
-		symbol := t.NameResolver.Resolve(objectIdentfier.Name, objectIdentfier.AsNode())
-		if symbol.OriginalName != nil {
-			objectIdentfier.Name = *symbol.OriginalName
-		}
-		objectType := checker.GetTypeOfNode(t.currentScope, symbol.Node)
+		objectType := t.TypeResolver.ResolveTypeFromNode(memberExpression.Object)
 		if objectType.Flags&checker.TypeFlagsObject == checker.TypeFlagsObject {
 			t.transformProperty(memberExpression.Property, objectType.AsObjectType())
 		}

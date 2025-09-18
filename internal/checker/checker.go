@@ -14,6 +14,7 @@ type Program interface {
 type Checker struct {
 	program      Program
 	NameResolver *binder.NameResolver
+	TypeResolver *TypeResolver
 	Diagnostics  []*ast.Diagnostic
 
 	currentSourceFile *ast.SourceFile
@@ -30,10 +31,13 @@ func NewChecker(program Program) *Checker {
 		}
 	}
 
+	nameResolver := binder.NewNameResolver(globalScope)
+
 	return &Checker{
 		program:      program,
 		Diagnostics:  []*ast.Diagnostic{},
-		NameResolver: binder.NewNameResolver(globalScope),
+		NameResolver: nameResolver,
+		TypeResolver: NewTypeResolver(nameResolver),
 	}
 }
 
@@ -75,7 +79,7 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 		return
 	}
 
-	identifierType := c.getTypeFromTypeNode(variableDeclaration.TypeNode())
+	identifierType := c.TypeResolver.ResolveTypeNode(variableDeclaration.TypeNode())
 
 	if variableDeclaration.Initializer == nil {
 		return
@@ -93,22 +97,12 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 
 func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	switch expression.Type {
-	case ast.NodeTypeIdentifier:
-		identifier := expression.AsIdentifier()
-		symbol := c.NameResolver.Resolve(identifier.Name, expression)
-		if symbol == nil {
-			c.errorf(identifier.Location, CANNOT_FIND_NAME_0, identifier.Name)
-			return nil
-		}
-		return c.getTypeFromSymbol(symbol)
-	case ast.NodeTypeStringLiteral:
-		return InferTypeFromNode(expression.AsStringLiteral().AsNode())
-	case ast.NodeTypeDecimalLiteral:
-		return InferTypeFromNode(expression.AsDecimalLiteral().AsNode())
-	case ast.NodeTypeBooleanLiteral:
-		return InferTypeFromNode(expression.AsBooleanLiteral().AsNode())
-	case ast.NodeTypeNullLiteral:
-		return InferTypeFromNode(expression.AsNullLiteral().AsNode())
+	case ast.NodeTypeIdentifier,
+		ast.NodeTypeStringLiteral,
+		ast.NodeTypeDecimalLiteral,
+		ast.NodeTypeBooleanLiteral,
+		ast.NodeTypeNullLiteral:
+		return c.TypeResolver.ResolveTypeFromNode(expression)
 	case ast.NodeTypeAssignmentExpression:
 		assignmentExpression := expression.AsAssignmentExpression()
 		leftType := c.checkExpression(assignmentExpression.Left)
@@ -142,7 +136,6 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 
 func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type {
 	_type := c.checkExpression(callExpression.Callee)
-
 	if _type == nil {
 		return nil
 	}
@@ -177,7 +170,7 @@ func (c *Checker) checkObjectExpression(objectExpression *ast.ObjectExpression) 
 		switch property.Type {
 		case ast.NodeTypeObjectProperty:
 			objectProperty := property.AsObjectProperty()
-			propertyName := c.getPropertyName(objectProperty.Key)
+			propertyName := objectProperty.Name()
 			objectType.AddProperty(propertyName, &PropertyType{
 				Name:         propertyName,
 				OriginalName: nil,
@@ -191,7 +184,11 @@ func (c *Checker) checkObjectExpression(objectExpression *ast.ObjectExpression) 
 
 func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) *Type {
 	objectType := c.checkExpression(memberExpression.Object)
-	propertyName := c.getPropertyName(memberExpression.Property)
+	if objectType == nil {
+		return nil
+	}
+
+	propertyName := memberExpression.PropertyName()
 
 	if objectType.Flags&TypeFlagsObject != TypeFlagsObject {
 		// FIXME: in JavaScript everything is object
@@ -205,70 +202,4 @@ func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) 
 	}
 
 	return propertyType.Type
-}
-
-func (c *Checker) getTypeFromSymbol(symbol *ast.Symbol) *Type {
-	switch symbol.Node.Type {
-	case ast.NodeTypeFunctionDeclaration:
-		functionDeclaration := symbol.Node.AsFunctionDeclaration()
-		functionType := NewType(NewFunctionType())
-		for _, param := range functionDeclaration.Params {
-			functionType.AddParamType(c.getTypeFromTypeNode(param.TypeNode()))
-		}
-		functionType.ReturnType = c.getTypeFromTypeNode(functionDeclaration.TypeNode())
-		return functionType.AsType()
-	default:
-		return c.getTypeFromTypeNode(symbol.Node.TypeNode())
-	}
-}
-
-func (c *Checker) getTypeFromTypeNode(typeNode *ast.Node) *Type {
-	if typeNode == nil {
-		return nil
-	}
-
-	switch typeNode.Type {
-	case ast.NodeTypeStringKeyword:
-		return NewType(NewStringType()).AsType()
-	case ast.NodeTypeBooleanKeyword:
-		return NewType(NewBooleanType()).AsType()
-	case ast.NodeTypeNullKeyword:
-		return NewType(NewNullType()).AsType()
-	case ast.NodeTypeNumberKeyword:
-		return NewType(NewNumberType()).AsType()
-	case ast.NodeTypeTypeLiteral:
-		objectType := NewObjectType()
-		typeLiteral := typeNode.AsTypeLiteral()
-		for _, member := range typeLiteral.Members {
-			propertySignature := member.AsPropertySignature()
-			switch propertySignature.Key.Type {
-			case ast.NodeTypeIdentifier:
-				identifier := propertySignature.Key.AsIdentifier()
-				objectType.AddProperty(
-					identifier.Name,
-					&PropertyType{
-						Type:         c.getTypeFromTypeNode(propertySignature.TypeNode()),
-						Name:         identifier.Name,
-						OriginalName: identifier.OriginalName,
-					},
-				)
-			}
-		}
-
-		return NewType(objectType).AsType()
-	}
-
-	return nil
-}
-
-func (c *Checker) getPropertyName(node *ast.Node) string {
-	switch node.Type {
-	case ast.NodeTypeStringLiteral:
-		return node.AsStringLiteral().Value
-	case ast.NodeTypeIdentifier:
-		return node.AsIdentifier().Name
-	case ast.NodeTypeDecimalLiteral:
-		return node.AsDecimalLiteral().Value
-	}
-	return ""
 }

@@ -122,7 +122,6 @@ func TestCheckCallExpression(t *testing.T) {
 		input := "دالة مرحبا(رسالة: نص) { } مرحبا()؛"
 
 		sourceFile := parser.ParseSourceFile(input)
-		binder.BindSourceFile(sourceFile)
 		_checker := NewChecker(&ProgramStub{sourceFiles: []*ast.SourceFile{sourceFile}})
 		_checker.Check()
 

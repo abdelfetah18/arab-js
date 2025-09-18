@@ -742,6 +742,15 @@ func (memberExpression *MemberExpression) ForEachChild(v Visitor) bool {
 	return visit(v, memberExpression.Object) || visit(v, memberExpression.Property)
 }
 
+func (memberExpression *MemberExpression) PropertyName() string {
+	switch memberExpression.Property.Type {
+	case NodeTypeIdentifier:
+		return memberExpression.Property.AsIdentifier().Name
+	default:
+		return ""
+	}
+}
+
 type ImportSpecifier struct {
 	NodeBase
 	Local    *Identifier `json:"local,omitempty"`
@@ -1050,6 +1059,21 @@ func (objectProperty *ObjectProperty) NodeType() NodeType {
 
 func (objectProperty *ObjectProperty) ForEachChild(v Visitor) bool {
 	return visit(v, objectProperty.Key) || visit(v, objectProperty.Value)
+}
+
+func (objectProperty *ObjectProperty) Name() string {
+	node := objectProperty.Key
+
+	switch node.Type {
+	case NodeTypeStringLiteral:
+		return node.AsStringLiteral().Value
+	case NodeTypeIdentifier:
+		return node.AsIdentifier().Name
+	case NodeTypeDecimalLiteral:
+		return node.AsDecimalLiteral().Value
+	}
+
+	return ""
 }
 
 type ObjectMethod struct {

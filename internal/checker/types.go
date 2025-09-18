@@ -151,28 +151,6 @@ func InferTypeFromNode(node *ast.Node) *Type {
 	return nil
 }
 
-func GetTypeOfNode(scope *ast.Scope, node *ast.Node) *Type {
-	switch node.Type {
-	case ast.NodeTypeMemberExpression:
-		memberExpression := node.AsMemberExpression()
-		parent := GetTypeOfNode(scope, memberExpression.Object)
-		return GetTypeOfChildNode(scope, memberExpression.Property, parent.AsObjectType())
-	case ast.NodeTypeIdentifier:
-		return GetTypeOfNode(scope, scope.GetVariableSymbol(node.AsIdentifier().Name).Node)
-	}
-
-	return nil
-}
-
-func GetTypeOfChildNode(scope *ast.Scope, child *ast.Node, objectType *ObjectType) *Type {
-	switch child.Type {
-	case ast.NodeTypeIdentifier:
-		return objectType.Properties[child.AsIdentifier().Name].Type
-	}
-
-	return nil
-}
-
 func AreTypesCompatible(leftType *Type, rightType *Type) bool {
 	if leftType == nil || rightType == nil {
 		return false

@@ -26,6 +26,7 @@ func StartLSP() {
 	})
 
 	server.OnDidOpenTextDocument(handlers.OnDidOpenTextDocumentHandler)
+	server.OnDidChangeTextDocument(handlers.OnDidChangeTextDocument)
 	server.OnCompletion(handlers.OnCompletionHandler)
 
 	for _, m := range server.GetMethods() {

@@ -1,9 +1,8 @@
 package lsp
 
 import (
-	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
-	"arab_js/internal/compiler/fileloader"
+	"arab_js/internal/project"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,33 +13,90 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/TobiasYin/go-lsp/logs"
 	"github.com/TobiasYin/go-lsp/lsp"
 	"github.com/TobiasYin/go-lsp/lsp/defines"
 )
 
 type Handlers struct {
-	FileLoader *fileloader.FileLoader
-	Server     *lsp.Server
+	Project *project.Project
+	Server  *lsp.Server
 }
 
 func NewHandlers(server *lsp.Server) *Handlers {
 	return &Handlers{
-		FileLoader: nil,
-		Server:     server,
+		Project: nil,
+		Server:  server,
+	}
+}
+
+func (h *Handlers) openProjectIfNotAlreadyOpen(uri defines.DocumentUri) {
+	if h.Project != nil {
+		return
+	}
+
+	h.Project = project.NewProject()
+	program := h.Project.Program
+
+	projectPath, _ := findProjectPath(getPath(uri))
+	projectFiles, _ := listFilesWithExt(projectPath, ".كود")
+
+	program.ParseSourceFiles(projectFiles)
+	program.CheckSourceFiles()
+
+	// TODO: Report type checking errors
+	if len(program.Diagnostics) > 0 {
+		type Diagnostic struct {
+			Range   defines.Range `json:"range"`
+			Message string        `json:"message"`
+		}
+
+		type PublishDiagnosticsParams struct {
+			Uri         defines.DocumentUri `json:"uri"`
+			Version     int                 `json:"version"`
+			Diagnostics []Diagnostic        `json:"diagnostics"`
+		}
+
+		diagnostics := make([]Diagnostic, 0, len(program.Diagnostics))
+		for _, diagnostic := range program.Diagnostics {
+			start, err := indexToPosition(getPath(uri), diagnostic.Location.Pos)
+			if err != nil {
+				start = defines.Position{Line: 0, Character: 0}
+			}
+
+			end, err := indexToPosition(getPath(uri), diagnostic.Location.End)
+			if err != nil {
+				end = defines.Position{Line: 0, Character: 0}
+			}
+
+			diagnostics = append(diagnostics, Diagnostic{
+				Range: defines.Range{
+					Start: start,
+					End:   end,
+				},
+				Message: diagnostic.Message,
+			})
+			println(diagnostic.Message)
+		}
+
+		params := PublishDiagnosticsParams{
+			Uri:         uri,
+			Diagnostics: diagnostics,
+		}
+
+		payload, err := json.Marshal(params)
+		if err != nil {
+			return
+		}
+
+		h.Server.SendNotification("textDocument/publishDiagnostics", payload)
 	}
 }
 
 func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.CompletionParams) (result *[]defines.CompletionItem, err error) {
-	logs.Println("completion: ", req)
-	if h.FileLoader == nil {
-		return &[]defines.CompletionItem{}, errors.New("no file is open")
-	}
+	h.openProjectIfNotAlreadyOpen(req.TextDocument.Uri)
 
 	filePath := getPath(req.TextDocument.Uri)
-	fileName := filepath.Base(filePath)
-	logs.Printf("fileName=%s\n", fileName)
-	sourceFile := h.FileLoader.GetSourceFile(fileName)
+	sourceFile := h.Project.Program.GetSourceFile(filePath)
 
 	if sourceFile == nil {
 		return nil, errors.New("sourceFile not found")
@@ -50,6 +106,7 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 	if err != nil {
 		return nil, err
 	}
+
 	// 1. Locate Node By Position Line and Character
 	var findNode *ast.Node = nil
 	var current *ast.Node = sourceFile.AsNode()
@@ -75,94 +132,83 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 		next = nil
 	}
 
-	logs.Printf("findNode=%s\n", findNode.Type)
-
 	// 2. Fetch Symbols From That Location
 	keys := getAllEntires(findNode)
-
-	logs.Printf("keys=%v\n", keys)
 
 	return &keys, nil
 }
 
 func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *defines.DidOpenTextDocumentParams) (err error) {
-	if h.FileLoader == nil {
-		projectPath, result := findProjectPath(getPath(req.TextDocument.Uri))
-		logs.Printf("projectPath=%s\n", projectPath)
-		if !result {
-			return errors.New("the current file does not belong to any project")
+	h.openProjectIfNotAlreadyOpen(req.TextDocument.Uri)
+	return nil
+}
+
+func (h *Handlers) OnDidChangeTextDocument(ctx context.Context, req *defines.DidChangeTextDocumentParams) (err error) {
+	h.openProjectIfNotAlreadyOpen(req.TextDocument.Uri)
+	if len(req.ContentChanges) == 0 {
+		return errors.New("document didnt change")
+	}
+	str := req.ContentChanges[len(req.ContentChanges)-1].Text.(string)
+	h.Project.UpdateProgram(getPath(req.TextDocument.Uri), str)
+
+	program := h.Project.Program
+	program.CheckSourceFiles()
+
+	uri := req.TextDocument.Uri
+
+	// TODO: Report type checking errors
+	if len(program.Diagnostics) > 0 {
+		type Diagnostic struct {
+			Range   defines.Range `json:"range"`
+			Message string        `json:"message"`
 		}
 
-		projectFiles, err := listFilesWithExt(projectPath, ".كود")
+		type PublishDiagnosticsParams struct {
+			Uri         defines.DocumentUri `json:"uri"`
+			Version     int                 `json:"version"`
+			Diagnostics []Diagnostic        `json:"diagnostics"`
+		}
+
+		diagnostics := make([]Diagnostic, 0, len(program.Diagnostics))
+		for _, diagnostic := range program.Diagnostics {
+			start, err := indexToPosition(getPath(uri), diagnostic.Location.Pos)
+			if err != nil {
+				start = defines.Position{Line: 0, Character: 0}
+			}
+
+			end, err := indexToPosition(getPath(uri), diagnostic.Location.End)
+			if err != nil {
+				end = defines.Position{Line: 0, Character: 0}
+			}
+
+			diagnostics = append(diagnostics, Diagnostic{
+				Range: defines.Range{
+					Start: start,
+					End:   end,
+				},
+				Message: diagnostic.Message,
+			})
+			println(diagnostic.Message)
+		}
+
+		params := PublishDiagnosticsParams{
+			Uri:         uri,
+			Diagnostics: diagnostics,
+		}
+
+		payload, err := json.Marshal(params)
 		if err != nil {
-			logs.Println(err)
 			return err
 		}
 
-		logs.Printf("projectFiles=%v\n", projectFiles)
-
-		h.FileLoader = fileloader.NewFileLoader(projectFiles)
-		h.FileLoader.LoadSourceFiles()
-		program := compiler.NewProgram()
-		program.CheckSourceFiles()
-
-		if len(program.Diagnostics) > 0 {
-			type Diagnostic struct {
-				Range   defines.Range `json:"range"`
-				Message string        `json:"message"`
-			}
-
-			type PublishDiagnosticsParams struct {
-				Uri         defines.DocumentUri `json:"uri"`
-				Version     int                 `json:"version"`
-				Diagnostics []Diagnostic        `json:"diagnostics"`
-			}
-
-			diagnostics := make([]Diagnostic, 0, len(program.Diagnostics))
-			for _, diagnostic := range program.Diagnostics {
-				start, err := indexToPosition(getPath(req.TextDocument.Uri), diagnostic.Location.Pos)
-				if err != nil {
-					start = defines.Position{Line: 0, Character: 0}
-				}
-
-				end, err := indexToPosition(getPath(req.TextDocument.Uri), diagnostic.Location.End)
-				if err != nil {
-					end = defines.Position{Line: 0, Character: 0}
-				}
-
-				diagnostics = append(diagnostics, Diagnostic{
-					Range: defines.Range{
-						Start: start,
-						End:   end,
-					},
-					Message: diagnostic.Message,
-				})
-				println(diagnostic.Message)
-			}
-
-			params := PublishDiagnosticsParams{
-				Uri:         req.TextDocument.Uri,
-				Version:     req.TextDocument.Version,
-				Diagnostics: diagnostics,
-			}
-
-			payload, err := json.Marshal(params)
-			if err != nil {
-				logs.Println(err) // or handle gracefully
-				return err
-			}
-
-			h.Server.SendNotification("textDocument/publishDiagnostics", payload)
-			logs.Println("type checking errors")
-		}
+		h.Server.SendNotification("textDocument/publishDiagnostics", payload)
 	}
-
 	return nil
 }
 
 func getPath(uri defines.DocumentUri) string {
 	enEscapeUrl, _ := url.QueryUnescape(string(uri))
-	return enEscapeUrl[6:]
+	return filepath.Join(enEscapeUrl[6:])
 }
 
 func findProjectPath(startPath string) (string, bool) {
@@ -256,10 +302,18 @@ func getAllEntires(node *ast.Node) []defines.CompletionItem {
 	keys := []defines.CompletionItem{}
 
 	for currentScope != nil {
-		d := defines.CompletionItemKindText
-		for k := range currentScope.Locals {
+		for k, symbol := range currentScope.Locals {
+			label := "code"
+			d := defines.CompletionItemKindText
+			switch symbol.Node.Type {
+			case ast.NodeTypeFunctionDeclaration:
+				label = "function"
+				d = defines.CompletionItemKindFunction
+			case ast.NodeTypeVariableDeclaration:
+				d = defines.CompletionItemKindVariable
+			}
 			keys = append(keys, defines.CompletionItem{
-				Label:      "code",
+				Label:      label,
 				Kind:       &d,
 				InsertText: &k,
 			})

@@ -2,12 +2,14 @@ package compiler
 
 import (
 	"arab_js/internal/binder"
+	"arab_js/internal/bundled"
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/compiler/parser"
 	"arab_js/internal/compiler/printer"
 	"arab_js/internal/transformer"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -19,6 +21,7 @@ type ProgramOptions struct {
 type Program struct {
 	ProgramOptions ProgramOptions
 	sourceFiles    []*ast.SourceFile
+	filesByPath    map[string]*ast.SourceFile
 
 	Diagnostics []*ast.Diagnostic
 }
@@ -30,19 +33,25 @@ func NewProgram() *Program {
 		},
 		sourceFiles: []*ast.SourceFile{},
 		Diagnostics: []*ast.Diagnostic{},
+		filesByPath: map[string]*ast.SourceFile{},
 	}
 }
 
 func (p *Program) SourceFiles() []*ast.SourceFile { return p.sourceFiles }
 
 func (p *Program) ParseSourceFiles(sourceFilesPaths []string) error {
+	libFileContent := bundled.ReadLibFile(bundled.LibNameDom)
+	p.sourceFiles = append(p.sourceFiles, parser.ParseSourceFile(libFileContent))
+
 	for _, filePath := range sourceFilesPaths {
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return err
 		}
 
-		p.sourceFiles = append(p.sourceFiles, parser.ParseSourceFile(string(data)))
+		sourceFile := parser.ParseSourceFile(string(data))
+		p.filesByPath[filePath] = sourceFile
+		p.sourceFiles = append(p.sourceFiles, sourceFile)
 	}
 	return nil
 }
@@ -81,4 +90,20 @@ func (p *Program) WriteSourceFiles(outputDir string) error {
 		}
 	}
 	return nil
+}
+
+func (p *Program) GetSourceFile(filePath string) *ast.SourceFile {
+	log.Printf("p.filesByPath=%v\n", p.filesByPath)
+	return p.filesByPath[filePath]
+}
+
+func (p *Program) UpdateSourceFile(filePath string, content string) {
+	_, ok := p.filesByPath[filePath]
+	if !ok {
+		return
+	}
+
+	sourceFile := parser.ParseSourceFile(content)
+	p.filesByPath[filePath] = sourceFile
+	binder.BindSourceFile(sourceFile)
 }
