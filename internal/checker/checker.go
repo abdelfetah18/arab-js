@@ -2,23 +2,29 @@ package checker
 
 import (
 	"arab_js/internal/binder"
-	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"fmt"
 )
 
+type Program interface {
+	SourceFiles() []*ast.SourceFile
+	BindSourceFiles()
+}
+
 type Checker struct {
-	program      *compiler.Program
+	program      Program
 	NameResolver *binder.NameResolver
 	Diagnostics  []*ast.Diagnostic
 
 	currentSourceFile *ast.SourceFile
 }
 
-func NewChecker(program *compiler.Program) *Checker {
+func NewChecker(program Program) *Checker {
+	program.BindSourceFiles()
+
 	globalScope := &ast.Scope{}
 
-	for _, sourceFile := range program.SourceFiles {
+	for _, sourceFile := range program.SourceFiles() {
 		if !ast.IsExternalModule(sourceFile) {
 			globalScope.MergeScopeLocals(sourceFile.Scope)
 		}
@@ -46,7 +52,7 @@ func (c *Checker) errorf(location ast.Location, format string, a ...any) {
 }
 
 func (c *Checker) Check() {
-	for _, sourceFile := range c.program.SourceFiles {
+	for _, sourceFile := range c.program.SourceFiles() {
 		c.currentSourceFile = sourceFile
 		for _, node := range sourceFile.Body {
 			c.checkStatement(node)

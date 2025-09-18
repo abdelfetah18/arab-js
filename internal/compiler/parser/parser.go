@@ -1,21 +1,22 @@
-package compiler
+package parser
 
 import (
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/lexer"
 	"arab_js/internal/stack"
 )
 
 type Parser struct {
-	lexer          *Lexer
+	lexer          *lexer.Lexer
 	startPositions stack.Stack[uint]
 }
 
-func NewParser(lexer *Lexer) *Parser {
+func NewParser(lexer *lexer.Lexer) *Parser {
 	return &Parser{lexer: lexer, startPositions: stack.Stack[uint]{}}
 }
 
 func ParseSourceFile(sourceText string) *ast.SourceFile {
-	return NewParser(NewLexer(sourceText)).Parse()
+	return NewParser(lexer.NewLexer(sourceText)).Parse()
 }
 
 func (p *Parser) Parse() *ast.SourceFile {
@@ -24,28 +25,28 @@ func (p *Parser) Parse() *ast.SourceFile {
 	directives := p.parseDirectives()
 
 	statements := []*ast.Node{}
-	for p.lexer.Peek().Type != EOF && p.lexer.Peek().Type != Invalid {
+	for p.lexer.Peek().Type != lexer.EOF && p.lexer.Peek().Type != lexer.Invalid {
 		statements = append(statements, p.parseStatement())
 	}
 
 	token := p.lexer.Peek()
-	if token.Type == Invalid {
+	if token.Type == lexer.Invalid {
 		panic("Unexpected token: " + token.Value)
 	}
 
-	return ast.NewNode(ast.NewSourceFile(statements, directives), ast.Location{Pos: p.startPositions.Pop(), End: uint(p.lexer.position)})
+	return ast.NewNode(ast.NewSourceFile(statements, directives), ast.Location{Pos: p.startPositions.Pop(), End: uint(p.lexer.Position())})
 }
 
 func (p *Parser) parseIfStatement() *ast.IfStatement {
 	p.markStartPosition()
 
-	p.expectedKeyword(KeywordIf)
-	p.expected(LeftParenthesis)
+	p.expectedKeyword(lexer.KeywordIf)
+	p.expected(lexer.LeftParenthesis)
 	testExpression := p.parseExpression()
-	p.expected(RightParenthesis)
+	p.expected(lexer.RightParenthesis)
 	consequentStatement := p.parseStatement()
 
-	if p.optionalKeyword(KeywordElse) {
+	if p.optionalKeyword(lexer.KeywordElse) {
 		alternateStatement := p.parseStatement()
 		return ast.NewNode(
 			ast.NewIfStatement(testExpression, consequentStatement, alternateStatement),
@@ -69,46 +70,46 @@ func (p *Parser) parseStatement() *ast.Node {
 	token := p.lexer.Peek()
 
 	switch token.Type {
-	case KeywordToken:
+	case lexer.KeywordToken:
 		switch token.Value {
-		case KeywordIf:
+		case lexer.KeywordIf:
 			return p.parseIfStatement().AsNode()
-		case KeywordLet:
+		case lexer.KeywordLet:
 			return p.parseVariableDeclaration().AsNode()
-		case KeywordFunction:
+		case lexer.KeywordFunction:
 			return p.parseFunctionDeclaration().AsNode()
-		case KeywordImport:
+		case lexer.KeywordImport:
 			return p.parseImportDeclaration().AsNode()
-		case KeywordExport:
+		case lexer.KeywordExport:
 			return p.parseExportDeclaration()
-		case KeywordReturn:
+		case lexer.KeywordReturn:
 			return p.parseReturnStatement().AsNode()
-		case KeywordFor:
+		case lexer.KeywordFor:
 			return p.parseBreakableStatement()
 		}
-	case LeftCurlyBrace:
+	case lexer.LeftCurlyBrace:
 		return p.parseBlockStatement().AsNode()
-	case Identifier:
+	case lexer.Identifier:
 		switch token.Value {
-		case TypeKeywordInterface:
+		case lexer.TypeKeywordInterface:
 			return p.parseInterfaceDeclaration().AsNode()
-		case TypeKeywordType:
+		case lexer.TypeKeywordType:
 			return p.parseTypeAliasDeclaration().AsNode()
-		case TypeKeywordDeclare:
+		case lexer.TypeKeywordDeclare:
 			p.markStartPosition()
 
 			hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
 			originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
 
-			p.expectedTypeKeyword(TypeKeywordDeclare)
+			p.expectedTypeKeyword(lexer.TypeKeywordDeclare)
 
-			if p.optionalKeyword(KeywordLet) {
+			if p.optionalKeyword(lexer.KeywordLet) {
 				identifier := p.parseIdentifier(true)
 				if hasPrecedingOriginalNameDirective {
 					identifier.OriginalName = &originalNameDirectiveValue
 				}
 
-				p.expected(Semicolon)
+				p.expected(lexer.Semicolon)
 
 				return ast.NewNode(
 					ast.NewVariableDeclaration(identifier, nil, true),
@@ -127,7 +128,7 @@ func (p *Parser) parseStatement() *ast.Node {
 		p.markStartPosition()
 
 		expression := p.parseExpression()
-		p.expected(Semicolon)
+		p.expected(lexer.Semicolon)
 
 		return ast.NewNode(
 			ast.NewExpressionStatement(expression),
@@ -144,15 +145,15 @@ func (p *Parser) parseStatement() *ast.Node {
 func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 	p.markStartPosition()
 
-	p.expectedKeyword(KeywordImport)
+	p.expectedKeyword(lexer.KeywordImport)
 
 	importSpecifiers := []*ast.Node{}
 
 	token := p.lexer.Peek()
 	switch token.Type {
-	case LeftCurlyBrace:
+	case lexer.LeftCurlyBrace:
 		p.parseImportSpecifiers(importSpecifiers)
-	case Identifier:
+	case lexer.Identifier:
 		identifier := p.parseIdentifier(false)
 		importSpecifiers = append(importSpecifiers,
 			ast.NewNode(
@@ -161,15 +162,15 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 			).AsNode(),
 		)
 
-		if p.optional(Comma) {
+		if p.optional(lexer.Comma) {
 			token = p.lexer.Peek()
-			if token.Type == LeftCurlyBrace {
+			if token.Type == lexer.LeftCurlyBrace {
 				p.parseImportSpecifiers(importSpecifiers)
 			}
 		}
-	case Star:
-		p.expected(Star)
-		p.expectedKeyword(KeywordAs)
+	case lexer.Star:
+		p.expected(lexer.Star)
+		p.expectedKeyword(lexer.KeywordAs)
 		identifier := p.parseIdentifier(false)
 
 		importSpecifiers = append(importSpecifiers,
@@ -182,9 +183,9 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 		panic("unexpected token got '" + token.Value + "'")
 	}
 
-	p.expectedKeyword(KeywordFrom)
+	p.expectedKeyword(lexer.KeywordFrom)
 	stringLiteral := p.parseStringLiteral()
-	p.expected(Semicolon)
+	p.expected(lexer.Semicolon)
 
 	return ast.NewNode(
 		ast.NewImportDeclaration(importSpecifiers, stringLiteral),
@@ -196,9 +197,9 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 }
 
 func (p *Parser) parseImportSpecifiers(importSpecifiers []*ast.Node) []*ast.Node {
-	p.expected(LeftCurlyBrace)
+	p.expected(lexer.LeftCurlyBrace)
 	token := p.lexer.Peek()
-	for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
+	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
 		identifier := p.parseIdentifier(false)
 		importSpecifiers = append(
 			importSpecifiers,
@@ -212,14 +213,14 @@ func (p *Parser) parseImportSpecifiers(importSpecifiers []*ast.Node) []*ast.Node
 		)
 
 		token = p.lexer.Peek()
-		if token.Type != RightCurlyBrace {
-			p.expected(Comma)
+		if token.Type != lexer.RightCurlyBrace {
+			p.expected(lexer.Comma)
 		}
 
 		token = p.lexer.Peek()
 	}
 
-	p.expected(RightCurlyBrace)
+	p.expected(lexer.RightCurlyBrace)
 
 	return importSpecifiers
 }
@@ -228,9 +229,9 @@ func (p *Parser) parseExportNamedDeclaration() *ast.ExportNamedDeclaration {
 	var declaration *ast.Node = nil
 	specifiers := []*ast.ExportSpecifier{}
 	var source *ast.StringLiteral = nil
-	if p.optional(LeftCurlyBrace) {
+	if p.optional(lexer.LeftCurlyBrace) {
 		token := p.lexer.Peek()
-		for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
+		for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
 			identifier := p.parseIdentifier(false)
 			specifiers = append(specifiers,
 				ast.NewNode(
@@ -239,19 +240,19 @@ func (p *Parser) parseExportNamedDeclaration() *ast.ExportNamedDeclaration {
 				),
 			)
 
-			if p.optional(Comma) {
+			if p.optional(lexer.Comma) {
 				token = p.lexer.Peek()
 			} else {
-				p.expected(RightCurlyBrace)
+				p.expected(lexer.RightCurlyBrace)
 			}
 		}
 
-		p.expected(RightCurlyBrace)
+		p.expected(lexer.RightCurlyBrace)
 
-		if p.optionalKeyword(KeywordFrom) {
+		if p.optionalKeyword(lexer.KeywordFrom) {
 			source = p.parseStringLiteral()
 		}
-		p.expected(Semicolon)
+		p.expected(lexer.Semicolon)
 	} else {
 		declaration = p.parseDeclarationOnly()
 	}
@@ -267,7 +268,7 @@ func (p *Parser) parseExportNamedDeclaration() *ast.ExportNamedDeclaration {
 
 func (p *Parser) parseExportDefaultDeclaration() *ast.ExportDefaultDeclaration {
 	declOrExpr := p.parseFunctionDeclarationOrExpression()
-	p.expected(Semicolon)
+	p.expected(lexer.Semicolon)
 	return ast.NewNode(
 		ast.NewExportDefaultDeclaration(declOrExpr),
 		ast.Location{
@@ -281,11 +282,11 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 	token := p.lexer.Peek()
 
 	switch token.Type {
-	case KeywordToken:
+	case lexer.KeywordToken:
 		switch token.Value {
-		case KeywordFunction:
+		case lexer.KeywordFunction:
 			return p.parseFunctionDeclaration().AsNode()
-		case KeywordLet, KeywordConst:
+		case lexer.KeywordLet, lexer.KeywordConst:
 			return p.parseVariableDeclaration().AsNode()
 		}
 	}
@@ -295,7 +296,7 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 
 func (p *Parser) parseFunctionDeclarationOrExpression() *ast.Node {
 	token := p.lexer.Peek()
-	if token.Type == KeywordToken && token.Value == KeywordFunction {
+	if token.Type == lexer.KeywordToken && token.Value == lexer.KeywordFunction {
 		return p.parseFunctionDeclaration().AsNode()
 	}
 
@@ -305,14 +306,14 @@ func (p *Parser) parseFunctionDeclarationOrExpression() *ast.Node {
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	p.markStartPosition()
 
-	p.expected(LeftCurlyBrace)
+	p.expected(lexer.LeftCurlyBrace)
 
 	statements := []*ast.Node{}
-	for p.lexer.Peek().Type != EOF && p.lexer.Peek().Type != Invalid && p.lexer.Peek().Type != RightCurlyBrace {
+	for p.lexer.Peek().Type != lexer.EOF && p.lexer.Peek().Type != lexer.Invalid && p.lexer.Peek().Type != lexer.RightCurlyBrace {
 		statements = append(statements, p.parseStatement())
 	}
 
-	p.expected(RightCurlyBrace)
+	p.expected(lexer.RightCurlyBrace)
 
 	return ast.NewNode(
 		ast.NewBlockStatement(statements),
@@ -326,11 +327,11 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 func (p *Parser) isExpression() bool {
 	token := p.lexer.Peek()
 	switch token.Type {
-	case LeftCurlyBrace:
+	case lexer.LeftCurlyBrace:
 		return false
-	case KeywordToken:
+	case lexer.KeywordToken:
 		switch token.Value {
-		case KeywordFunction, KeywordLet, KeywordConst:
+		case lexer.KeywordFunction, lexer.KeywordLet, lexer.KeywordConst:
 			return false
 		default:
 			return true
@@ -343,11 +344,11 @@ func (p *Parser) isExpression() bool {
 func (p *Parser) isPrimaryExpression() bool {
 	token := p.lexer.Peek()
 	switch token.Type {
-	case Identifier, SingleQuoteString, DoubleQuoteString, Decimal, LeftSquareBracket, LeftCurlyBrace:
+	case lexer.Identifier, lexer.SingleQuoteString, lexer.DoubleQuoteString, lexer.Decimal, lexer.LeftSquareBracket, lexer.LeftCurlyBrace:
 		return true
-	case KeywordToken:
+	case lexer.KeywordToken:
 		switch token.Value {
-		case KeywordNull, KeywordTrue, KeywordFalse:
+		case lexer.KeywordNull, lexer.KeywordTrue, lexer.KeywordFalse:
 			return true
 		default:
 			return false
@@ -360,22 +361,22 @@ func (p *Parser) isPrimaryExpression() bool {
 func (p *Parser) parsePrimaryExpression() *ast.Node {
 	token := p.lexer.Peek()
 	switch token.Type {
-	case Identifier:
+	case lexer.Identifier:
 		return p.parseIdentifier(false).AsNode()
-	case KeywordToken:
+	case lexer.KeywordToken:
 		switch token.Value {
-		case KeywordNull:
+		case lexer.KeywordNull:
 			return p.parseNullLiteral().AsNode()
-		case KeywordTrue, KeywordFalse:
+		case lexer.KeywordTrue, lexer.KeywordFalse:
 			return p.parseBooleanLiteral().AsNode()
 		}
-	case Decimal:
+	case lexer.Decimal:
 		return p.parseDecimalLiteral().AsNode()
-	case SingleQuoteString, DoubleQuoteString:
+	case lexer.SingleQuoteString, lexer.DoubleQuoteString:
 		return p.parseStringLiteral().AsNode()
-	case LeftSquareBracket:
+	case lexer.LeftSquareBracket:
 		return p.parseArrayExpression().AsNode()
-	case LeftCurlyBrace:
+	case lexer.LeftCurlyBrace:
 		return p.parseObjectExpression().AsNode()
 	}
 
@@ -386,13 +387,13 @@ func (p *Parser) parseTypeNode() *ast.Node {
 	token := p.lexer.Peek()
 
 	switch token.Value {
-	case TypeKeywordString:
+	case lexer.TypeKeywordString:
 		return p.parseStringKeyword().AsNode()
-	case TypeKeywordNumber:
+	case lexer.TypeKeywordNumber:
 		return p.parseNumberKeyword().AsNode()
-	case TypeKeywordBoolean:
+	case lexer.TypeKeywordBoolean:
 		return p.parseBooleanKeyword().AsNode()
-	case TypeKeywordAny:
+	case lexer.TypeKeywordAny:
 		return p.parseAnyKeyword().AsNode()
 
 	default:
@@ -403,15 +404,15 @@ func (p *Parser) parseTypeNode() *ast.Node {
 func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 	p.markStartPosition()
 
-	p.expectedKeyword(KeywordLet)
+	p.expectedKeyword(lexer.KeywordLet)
 	identifier := p.parseIdentifier(true)
-	p.expected(Equal)
+	p.expected(lexer.Equal)
 	assignmentExpression := p.parseAssignmentExpression()
 	initializer := ast.NewNode(
 		ast.NewInitializer(assignmentExpression),
 		assignmentExpression.Location,
 	)
-	p.expected(Semicolon)
+	p.expected(lexer.Semicolon)
 
 	return ast.NewNode(
 		ast.NewVariableDeclaration(identifier, initializer, false),
@@ -425,27 +426,27 @@ func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 	p.markStartPosition()
 
-	p.expectedKeyword(KeywordFunction)
+	p.expectedKeyword(lexer.KeywordFunction)
 	identifier := p.parseIdentifier(false)
-	p.expected(LeftParenthesis)
+	p.expected(lexer.LeftParenthesis)
 
 	token := p.lexer.Peek()
 	params := []*ast.Node{}
 
 	isInLoop := func() bool {
 		token := p.lexer.Peek()
-		return token.Type != EOF &&
-			token.Type != Invalid &&
-			token.Type != RightParenthesis &&
-			(token.Type == Identifier || token.Type == TripleDots)
+		return token.Type != lexer.EOF &&
+			token.Type != lexer.Invalid &&
+			token.Type != lexer.RightParenthesis &&
+			(token.Type == lexer.Identifier || token.Type == lexer.TripleDots)
 	}
 
 	for isInLoop() {
-		pos := uint(p.lexer.position)
-		if p.optional(TripleDots) {
+		pos := uint(p.lexer.Position())
+		if p.optional(lexer.TripleDots) {
 			identifier := p.parseIdentifier(false)
 			var typeAnnotation *ast.TypeAnnotation = nil
-			if p.optional(Colon) {
+			if p.optional(lexer.Colon) {
 				typeAnnotation = p.parseTypeAnnotation()
 			}
 
@@ -463,15 +464,15 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 		}
 
 		token = p.lexer.Peek()
-		if token.Type != RightParenthesis && token.Type != TripleDots {
-			p.expected(Comma)
+		if token.Type != lexer.RightParenthesis && token.Type != lexer.TripleDots {
+			p.expected(lexer.Comma)
 		}
 	}
 
-	p.expected(RightParenthesis)
+	p.expected(lexer.RightParenthesis)
 
 	var typeAnnotation *ast.TypeAnnotation = nil
-	if p.optional(Colon) {
+	if p.optional(lexer.Colon) {
 		typeAnnotation = p.parseTypeAnnotation()
 	}
 
@@ -489,22 +490,22 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 func (p *Parser) parseLeftHandSideExpression() *ast.Node {
 	expression := p.parseMemberExpression()
 
-	for p.optional(LeftParenthesis) {
+	for p.optional(lexer.LeftParenthesis) {
 		argumentList := []*ast.Node{}
 
 		token := p.lexer.Peek()
-		for token.Type != EOF && token.Type != Invalid && token.Type != RightParenthesis {
+		for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightParenthesis {
 			if !p.isExpression() {
 				panic("Expecting *ast.Nodegot " + token.Value)
 			}
 			argumentList = append(argumentList, p.parseExpression())
 			token = p.lexer.Peek()
-			if token.Type == Comma {
+			if token.Type == lexer.Comma {
 				token = p.lexer.Next()
 			}
 		}
 
-		p.expected(RightParenthesis)
+		p.expected(lexer.RightParenthesis)
 		expression = ast.NewNode(
 			ast.NewCallExpression(expression, argumentList),
 			ast.Location{
@@ -521,7 +522,7 @@ func (p *Parser) parseMemberExpression() *ast.Node {
 	if p.isPrimaryExpression() {
 		memberExpression := p.parsePrimaryExpression()
 
-		for p.optional(Dot) {
+		for p.optional(lexer.Dot) {
 			identifier := p.parseIdentifier(false)
 			memberExpression = ast.NewNode(
 				ast.NewMemberExpression(memberExpression, identifier.AsNode()),
@@ -542,7 +543,7 @@ func (p *Parser) parseUpdateExpression() *ast.Node {
 	p.markStartPosition()
 
 	isUpdateExpression := func() (string, bool) {
-		return p.lexer.Peek().Value, (p.optional(DoublePlus) || p.optional(DoubleMinus))
+		return p.lexer.Peek().Value, (p.optional(lexer.DoublePlus) || p.optional(lexer.DoubleMinus))
 	}
 
 	if operator, ok := isUpdateExpression(); ok {
@@ -578,8 +579,8 @@ func (p *Parser) parseUnaryExpression() *ast.Node {
 }
 
 func (p *Parser) parseExponentiationExpression() *ast.Node {
-	isUpdateExpression := func(tokenType TokenType) bool {
-		return tokenType != Plus && tokenType != Minus
+	isUpdateExpression := func(tokenType lexer.TokenType) bool {
+		return tokenType != lexer.Plus && tokenType != lexer.Minus
 	}
 	token := p.lexer.Peek()
 	left := p.parseUnaryExpression()
@@ -587,7 +588,7 @@ func (p *Parser) parseExponentiationExpression() *ast.Node {
 		return left
 	}
 
-	if p.optional(DoubleStar) {
+	if p.optional(lexer.DoubleStar) {
 		right := p.parseExponentiationExpression()
 		left = ast.NewNode(
 			ast.NewBinaryExpression("**", left, right),
@@ -602,7 +603,7 @@ func (p *Parser) parseExponentiationExpression() *ast.Node {
 
 func (p *Parser) parseMultiplicativeExpression() *ast.Node {
 	isMultiplicativeToken := func() (string, bool) {
-		return p.lexer.Peek().Value, (p.optional(Slash) || p.optional(Percent) || p.optional(Star))
+		return p.lexer.Peek().Value, (p.optional(lexer.Slash) || p.optional(lexer.Percent) || p.optional(lexer.Star))
 	}
 	left := p.parseExponentiationExpression()
 	for operator, ok := isMultiplicativeToken(); ok; operator, ok = isMultiplicativeToken() {
@@ -620,7 +621,7 @@ func (p *Parser) parseMultiplicativeExpression() *ast.Node {
 
 func (p *Parser) parseAdditiveExpression() *ast.Node {
 	isAdditiveToken := func() (string, bool) {
-		return p.lexer.Peek().Value, (p.optional(Plus) || p.optional(Minus))
+		return p.lexer.Peek().Value, (p.optional(lexer.Plus) || p.optional(lexer.Minus))
 	}
 
 	left := p.parseMultiplicativeExpression()
@@ -639,9 +640,9 @@ func (p *Parser) parseAdditiveExpression() *ast.Node {
 
 func (p *Parser) parseShiftExpression() *ast.Node {
 	isShiftToken := func() (string, bool) {
-		return p.lexer.Peek().Value, (p.optional(DoubleLeftArrow) ||
-			p.optional(DoubleRightArrow) ||
-			p.optional(TripleRightArrow))
+		return p.lexer.Peek().Value, (p.optional(lexer.DoubleLeftArrow) ||
+			p.optional(lexer.DoubleRightArrow) ||
+			p.optional(lexer.TripleRightArrow))
 	}
 
 	left := p.parseAdditiveExpression()
@@ -660,10 +661,10 @@ func (p *Parser) parseShiftExpression() *ast.Node {
 
 func (p *Parser) parseRelationalExpression() *ast.Node {
 	isRelationalToken := func() (string, bool) {
-		return p.lexer.Peek().Value, (p.optional(LeftArrow) ||
-			p.optional(RightArrow) ||
-			p.optional(LeftArrowEqual) ||
-			p.optional(RightArrowEqual))
+		return p.lexer.Peek().Value, (p.optional(lexer.LeftArrow) ||
+			p.optional(lexer.RightArrow) ||
+			p.optional(lexer.LeftArrowEqual) ||
+			p.optional(lexer.RightArrowEqual))
 	}
 
 	left := p.parseShiftExpression()
@@ -683,10 +684,10 @@ func (p *Parser) parseRelationalExpression() *ast.Node {
 
 func (p *Parser) parseEqualityExpression() *ast.Node {
 	isEqualityToken := func() (string, bool) {
-		return p.lexer.Peek().Value, (p.optional(EqualEqual) ||
-			p.optional(EqualEqualEqual) ||
-			p.optional(NotEqual) ||
-			p.optional(NotEqualEqual))
+		return p.lexer.Peek().Value, (p.optional(lexer.EqualEqual) ||
+			p.optional(lexer.EqualEqualEqual) ||
+			p.optional(lexer.NotEqual) ||
+			p.optional(lexer.NotEqualEqual))
 	}
 
 	left := p.parseRelationalExpression()
@@ -705,7 +706,7 @@ func (p *Parser) parseEqualityExpression() *ast.Node {
 
 func (p *Parser) parseBitwiseANDExpression() *ast.Node {
 	left := p.parseEqualityExpression()
-	for p.optional(BitwiseAnd) {
+	for p.optional(lexer.BitwiseAnd) {
 		right := p.parseEqualityExpression()
 		left = ast.NewNode(
 			ast.NewBinaryExpression("&", left, right),
@@ -720,7 +721,7 @@ func (p *Parser) parseBitwiseANDExpression() *ast.Node {
 
 func (p *Parser) parseBitwiseXORExpression() *ast.Node {
 	left := p.parseBitwiseANDExpression()
-	for p.optional(BitwiseXor) {
+	for p.optional(lexer.BitwiseXor) {
 		right := p.parseBitwiseANDExpression()
 		left = ast.NewNode(
 			ast.NewBinaryExpression("^", left, right),
@@ -735,7 +736,7 @@ func (p *Parser) parseBitwiseXORExpression() *ast.Node {
 
 func (p *Parser) parseBitwiseORExpression() *ast.Node {
 	left := p.parseBitwiseXORExpression()
-	for p.optional(BitwiseOr) {
+	for p.optional(lexer.BitwiseOr) {
 		right := p.parseBitwiseXORExpression()
 		left = ast.NewNode(
 			ast.NewBinaryExpression("|", left, right),
@@ -781,18 +782,18 @@ func (p *Parser) parseAssignmentExpression() *ast.Node {
 			token := p.lexer.Peek()
 			switch token.Type {
 			case
-				Equal,
-				StarEqual,
-				SlashEqual,
-				PercentEqual,
-				PlusEqual,
-				MinusEqual,
-				BitwiseAndEqual,
-				BitwiseXorEqual,
-				BitwiseOrEqual,
-				DoubleLeftArrowEqual,
-				DoubleRightArrowEqual,
-				DoubleStarEqual:
+				lexer.Equal,
+				lexer.StarEqual,
+				lexer.SlashEqual,
+				lexer.PercentEqual,
+				lexer.PlusEqual,
+				lexer.MinusEqual,
+				lexer.BitwiseAndEqual,
+				lexer.BitwiseXorEqual,
+				lexer.BitwiseOrEqual,
+				lexer.DoubleLeftArrowEqual,
+				lexer.DoubleRightArrowEqual,
+				lexer.DoubleStarEqual:
 				{
 					p.lexer.Next()
 					return ast.NewNode(
@@ -817,12 +818,12 @@ func (p *Parser) parseExpression() *ast.Node {
 func (p *Parser) parseInterfaceDeclaration() *ast.InterfaceDeclaration {
 	p.markStartPosition()
 
-	p.expectedTypeKeyword(TypeKeywordInterface)
+	p.expectedTypeKeyword(lexer.TypeKeywordInterface)
 
 	identifier := p.parseIdentifier(false)
 	body := p.parseInterfaceBody()
 
-	p.optional(Semicolon)
+	p.optional(lexer.Semicolon)
 
 	return ast.NewNode(
 		ast.NewInterfaceDeclaration(identifier, body),
@@ -836,33 +837,33 @@ func (p *Parser) parseInterfaceDeclaration() *ast.InterfaceDeclaration {
 func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 	p.markStartPosition()
 
-	p.expected(LeftCurlyBrace)
+	p.expected(lexer.LeftCurlyBrace)
 
 	body := []*ast.Node{}
 
 	token := p.lexer.Peek()
-	for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
+	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
 		hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
 		originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
 
 		var key *ast.Node
 		switch token.Type {
-		case Identifier:
+		case lexer.Identifier:
 			identifier := p.parseIdentifier(false)
 			if hasPrecedingOriginalNameDirective {
 				identifier.OriginalName = &originalNameDirectiveValue
 			}
 
 			key = identifier.AsNode()
-		case DoubleQuoteString, SingleQuoteString:
+		case lexer.DoubleQuoteString, lexer.SingleQuoteString:
 			key = p.parseStringLiteral().AsNode()
-		case Decimal:
+		case lexer.Decimal:
 			key = p.parseDecimalLiteral().AsNode()
 		default:
 			panic("Expected a valid key but got " + token.Value)
 		}
 
-		if p.optional(Colon) {
+		if p.optional(lexer.Colon) {
 			body = append(body,
 				ast.NewNode(
 					ast.NewPropertySignature(key, p.parseTypeAnnotation()),
@@ -873,14 +874,14 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 				).AsNode(),
 			)
 
-			p.optional(Comma)
+			p.optional(lexer.Comma)
 			token = p.lexer.Peek()
 		} else {
-			if token.Type != Comma && token.Type != RightCurlyBrace {
+			if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
 				panic("A Expected '{' but got " + token.Value)
 			}
 
-			p.optional(Comma)
+			p.optional(lexer.Comma)
 			if key.Type == ast.NodeTypeIdentifier {
 				body = append(body,
 					ast.NewNode(
@@ -899,7 +900,7 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 		token = p.lexer.Peek()
 	}
 
-	p.expected(RightCurlyBrace)
+	p.expected(lexer.RightCurlyBrace)
 
 	return ast.NewNode(
 		ast.NewInterfaceBody(body),
@@ -914,7 +915,7 @@ func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	p.markStartPosition()
 
 	switch p.lexer.Peek().Type {
-	case LeftParenthesis:
+	case lexer.LeftParenthesis:
 		return ast.NewNode(
 			ast.NewTypeAnnotation(
 				p.parseFunctionType().AsNode(),
@@ -924,7 +925,7 @@ func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 				End: p.getEndPosition(),
 			},
 		)
-	case LeftCurlyBrace:
+	case lexer.LeftCurlyBrace:
 		return ast.NewNode(
 			ast.NewTypeAnnotation(
 				p.parseTypeLiteral().AsNode(),
@@ -938,7 +939,7 @@ func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 
 	typeNode := p.parseTypeNode()
 
-	if p.optional(LeftSquareBracket) && p.optional(RightSquareBracket) {
+	if p.optional(lexer.LeftSquareBracket) && p.optional(lexer.RightSquareBracket) {
 		pos := p.startPositions.Pop()
 		arrayType := ast.NewNode(
 			ast.NewArrayType(typeNode),
@@ -969,9 +970,9 @@ func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	p.markStartPosition()
 
-	p.expectedKeyword(KeywordReturn)
+	p.expectedKeyword(lexer.KeywordReturn)
 	argument := p.parseExpression()
-	p.expected(Semicolon)
+	p.expected(lexer.Semicolon)
 
 	return ast.NewNode(
 		ast.NewReturnStatement(argument),
@@ -985,16 +986,16 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 func (p *Parser) parseFunctionType() *ast.FunctionType {
 	p.markStartPosition()
 
-	p.expected(LeftParenthesis)
+	p.expected(lexer.LeftParenthesis)
 
 	params := []*ast.Node{}
 
 	token := p.lexer.Peek()
-	for token.Type != EOF && token.Type != Invalid && token.Type != RightParenthesis && (token.Type == Identifier || token.Type == TripleDots) {
-		pos := uint(p.lexer.position)
-		if p.optional(TripleDots) {
+	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightParenthesis && (token.Type == lexer.Identifier || token.Type == lexer.TripleDots) {
+		pos := uint(p.lexer.Position())
+		if p.optional(lexer.TripleDots) {
 			identifier := p.parseIdentifier(false)
-			p.expected(Colon)
+			p.expected(lexer.Colon)
 			typeAnnotation := p.parseTypeAnnotation()
 			params = append(params,
 				ast.NewNode(
@@ -1010,15 +1011,15 @@ func (p *Parser) parseFunctionType() *ast.FunctionType {
 		}
 
 		token = p.lexer.Peek()
-		if token.Type != RightParenthesis {
-			p.expected(Comma)
+		if token.Type != lexer.RightParenthesis {
+			p.expected(lexer.Comma)
 		}
 
 		token = p.lexer.Peek()
 	}
 
-	p.expected(RightParenthesis)
-	p.expected(EqualRightArrow)
+	p.expected(lexer.RightParenthesis)
+	p.expected(lexer.EqualRightArrow)
 
 	typeAnnotation := p.parseTypeAnnotation()
 
@@ -1034,9 +1035,9 @@ func (p *Parser) parseFunctionType() *ast.FunctionType {
 func (p *Parser) parseTypeAliasDeclaration() *ast.TypeAliasDeclaration {
 	p.markStartPosition()
 
-	p.expectedTypeKeyword(TypeKeywordType)
+	p.expectedTypeKeyword(lexer.TypeKeywordType)
 	identifier := p.parseIdentifier(false)
-	p.expected(Equal)
+	p.expected(lexer.Equal)
 	typeAnnotation := p.parseTypeAnnotation()
 
 	return ast.NewNode(
@@ -1051,25 +1052,25 @@ func (p *Parser) parseTypeAliasDeclaration() *ast.TypeAliasDeclaration {
 func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 	p.markStartPosition()
 
-	p.expected(LeftCurlyBrace)
+	p.expected(lexer.LeftCurlyBrace)
 
 	members := []*ast.Node{}
 
 	token := p.lexer.Peek()
-	for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
+	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
 		var key *ast.Node
 		switch token.Type {
-		case Identifier:
+		case lexer.Identifier:
 			key = p.parseIdentifier(false).AsNode()
-		case DoubleQuoteString, SingleQuoteString:
+		case lexer.DoubleQuoteString, lexer.SingleQuoteString:
 			key = p.parseStringLiteral().AsNode()
-		case Decimal:
+		case lexer.Decimal:
 			key = p.parseDecimalLiteral().AsNode()
 		default:
 			panic("Expected a valid key but got " + token.Value)
 		}
 
-		if p.optional(Colon) {
+		if p.optional(lexer.Colon) {
 			members = append(members,
 				ast.NewNode(
 					ast.NewPropertySignature(key, p.parseTypeAnnotation()),
@@ -1080,13 +1081,13 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 				).AsNode(),
 			)
 
-			p.optional(Comma)
+			p.optional(lexer.Comma)
 			token = p.lexer.Peek()
 		} else {
-			if token.Type != Comma && token.Type != RightCurlyBrace {
+			if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
 				panic("A Expected '{' but got " + token.Value)
 			}
-			p.optional(Comma)
+			p.optional(lexer.Comma)
 			if key.Type == ast.NodeTypeIdentifier {
 				members = append(members,
 					ast.NewNode(
@@ -1105,7 +1106,7 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 		token = p.lexer.Peek()
 	}
 
-	p.expected(RightCurlyBrace)
+	p.expected(lexer.RightCurlyBrace)
 
 	return ast.NewNode(
 		ast.NewTypeLiteral(members),
@@ -1119,7 +1120,7 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 func (p *Parser) parseBreakableStatement() *ast.Node {
 	token := p.lexer.Peek()
 	switch token.Value {
-	case KeywordFor:
+	case lexer.KeywordFor:
 		return p.parseIterationStatement()
 	}
 
@@ -1129,7 +1130,7 @@ func (p *Parser) parseBreakableStatement() *ast.Node {
 func (p *Parser) parseIterationStatement() *ast.Node {
 	token := p.lexer.Peek()
 	switch token.Value {
-	case KeywordFor:
+	case lexer.KeywordFor:
 		return p.parseForStatement().AsNode()
 	}
 
@@ -1139,22 +1140,22 @@ func (p *Parser) parseIterationStatement() *ast.Node {
 func (p *Parser) parseForStatement() *ast.ForStatement {
 	p.markStartPosition()
 
-	p.expectedKeyword(KeywordFor)
-	p.expected(LeftParenthesis)
+	p.expectedKeyword(lexer.KeywordFor)
+	p.expected(lexer.LeftParenthesis)
 
 	var init *ast.Node = nil
 	token := p.lexer.Peek()
-	if token.Type == KeywordToken && token.Value == KeywordLet {
+	if token.Type == lexer.KeywordToken && token.Value == lexer.KeywordLet {
 		init = p.parseVariableDeclaration().AsNode()
 	} else {
 		init = p.parseExpression()
-		p.expected(Semicolon)
+		p.expected(lexer.Semicolon)
 	}
 
 	test := p.parseExpression()
-	p.expected(Semicolon)
+	p.expected(lexer.Semicolon)
 	update := p.parseExpression()
-	p.expected(RightParenthesis)
+	p.expected(lexer.RightParenthesis)
 
 	body := p.parseStatement()
 
@@ -1171,10 +1172,10 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 	p.markStartPosition()
 
 	identifierName := p.lexer.Peek().Value
-	p.expected(Identifier)
+	p.expected(lexer.Identifier)
 
 	var typeAnnotation *ast.TypeAnnotation = nil
-	if doParseTypeAnnotation && p.optional(Colon) {
+	if doParseTypeAnnotation && p.optional(lexer.Colon) {
 		typeAnnotation = p.parseTypeAnnotation()
 	}
 
@@ -1192,7 +1193,7 @@ func (p *Parser) parseStringLiteral() *ast.StringLiteral {
 
 	stringLiteralValue := p.lexer.Peek().Value
 
-	if !p.optional(DoubleQuoteString) && !p.optional(SingleQuoteString) {
+	if !p.optional(lexer.DoubleQuoteString) && !p.optional(lexer.SingleQuoteString) {
 		panic("Expected string but got '" + p.lexer.Peek().Value + "'")
 	}
 
@@ -1208,7 +1209,7 @@ func (p *Parser) parseStringLiteral() *ast.StringLiteral {
 func (p *Parser) parseNullLiteral() *ast.NullLiteral {
 	p.markStartPosition()
 
-	p.expectedKeyword(KeywordNull)
+	p.expectedKeyword(lexer.KeywordNull)
 
 	return ast.NewNode(
 		ast.NewNullLiteral(),
@@ -1223,7 +1224,7 @@ func (p *Parser) parseDecimalLiteral() *ast.DecimalLiteral {
 	p.markStartPosition()
 
 	value := p.lexer.Peek().Value
-	p.expected(Decimal)
+	p.expected(lexer.Decimal)
 
 	return ast.NewNode(
 		ast.NewDecimalLiteral(value),
@@ -1238,12 +1239,12 @@ func (p *Parser) parseBooleanLiteral() *ast.BooleanLiteral {
 	p.markStartPosition()
 
 	value := p.lexer.Peek().Value
-	if !p.optionalKeyword(KeywordTrue) && !p.optionalKeyword(KeywordFalse) {
+	if !p.optionalKeyword(lexer.KeywordTrue) && !p.optionalKeyword(lexer.KeywordFalse) {
 		panic("Expected boolean but got '" + p.lexer.Peek().Value + "'")
 	}
 
 	return ast.NewNode(
-		ast.NewBooleanLiteral(value == KeywordTrue),
+		ast.NewBooleanLiteral(value == lexer.KeywordTrue),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1254,9 +1255,9 @@ func (p *Parser) parseBooleanLiteral() *ast.BooleanLiteral {
 func (p *Parser) parseExportDeclaration() *ast.Node {
 	p.markStartPosition()
 
-	p.expectedKeyword(KeywordExport)
+	p.expectedKeyword(lexer.KeywordExport)
 
-	if p.optionalKeyword(KeywordDefault) {
+	if p.optionalKeyword(lexer.KeywordDefault) {
 		return p.parseExportDefaultDeclaration().AsNode()
 	}
 
@@ -1268,7 +1269,7 @@ func (p *Parser) parseDirective() *ast.Directive {
 
 	stringLiteralValue := p.lexer.Peek().Value
 
-	if !p.optional(DoubleQuoteString) && !p.optional(SingleQuoteString) {
+	if !p.optional(lexer.DoubleQuoteString) && !p.optional(lexer.SingleQuoteString) {
 		panic("Expected string but got '" + p.lexer.Peek().Value + "'")
 	}
 
@@ -1290,9 +1291,9 @@ func (p *Parser) parseDirectives() []*ast.Directive {
 	directives := []*ast.Directive{}
 
 	token := p.lexer.Peek()
-	for token.Type == SingleQuoteString || token.Type == DoubleQuoteString {
+	for token.Type == lexer.SingleQuoteString || token.Type == lexer.DoubleQuoteString {
 		directives = append(directives, p.parseDirective())
-		p.expected(Semicolon)
+		p.expected(lexer.Semicolon)
 		token = p.lexer.Peek()
 	}
 
@@ -1302,17 +1303,17 @@ func (p *Parser) parseDirectives() []*ast.Directive {
 func (p *Parser) parseArrayExpression() *ast.ArrayExpression {
 	p.markStartPosition()
 
-	p.expected(LeftSquareBracket)
+	p.expected(lexer.LeftSquareBracket)
 
 	elements := []*ast.Node{}
 	token := p.lexer.Peek()
 
-	for token.Type != EOF && token.Type != Invalid && token.Type != RightSquareBracket {
-		for p.optional(Comma) {
+	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightSquareBracket {
+		for p.optional(lexer.Comma) {
 		}
 
-		pos := uint(p.lexer.position)
-		if p.optional(TripleDots) {
+		pos := uint(p.lexer.Position())
+		if p.optional(lexer.TripleDots) {
 			elements = append(elements,
 				ast.NewNode(
 					ast.NewSpreadElement(p.parseAssignmentExpression()),
@@ -1329,7 +1330,7 @@ func (p *Parser) parseArrayExpression() *ast.ArrayExpression {
 		token = p.lexer.Peek()
 	}
 
-	p.expected(RightSquareBracket)
+	p.expected(lexer.RightSquareBracket)
 
 	return ast.NewNode(
 		ast.NewArrayExpression(elements),
@@ -1343,14 +1344,14 @@ func (p *Parser) parseArrayExpression() *ast.ArrayExpression {
 func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 	p.markStartPosition()
 
-	p.expected(LeftCurlyBrace)
+	p.expected(lexer.LeftCurlyBrace)
 
 	properties := []*ast.Node{}
 
 	token := p.lexer.Peek()
-	for token.Type != EOF && token.Type != Invalid && token.Type != RightCurlyBrace {
-		if p.optional(TripleDots) {
-			pos := uint(p.lexer.position)
+	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
+		if p.optional(lexer.TripleDots) {
+			pos := uint(p.lexer.Position())
 			properties = append(properties,
 				ast.NewNode(
 					ast.NewSpreadElement(p.parseAssignmentExpression()),
@@ -1362,26 +1363,26 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 			)
 
 			token = p.lexer.Peek()
-			if token.Type != Comma && token.Type != RightCurlyBrace {
+			if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
 				panic("Expected '{' but got " + token.Value)
 			}
 
-			p.optional(Comma)
+			p.optional(lexer.Comma)
 			token = p.lexer.Peek()
 		} else {
 			var key *ast.Node
 			switch token.Type {
-			case Identifier:
+			case lexer.Identifier:
 				key = p.parseIdentifier(false).AsNode()
-			case DoubleQuoteString, SingleQuoteString:
+			case lexer.DoubleQuoteString, lexer.SingleQuoteString:
 				key = p.parseStringLiteral().AsNode()
-			case Decimal:
+			case lexer.Decimal:
 				key = p.parseDecimalLiteral().AsNode()
 			default:
 				panic("Expected a valid key but got " + token.Value)
 			}
 
-			if p.optional(Colon) {
+			if p.optional(lexer.Colon) {
 				properties = append(properties,
 					ast.NewNode(
 						ast.NewObjectProperty(key, p.parseAssignmentExpression()),
@@ -1392,14 +1393,14 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 					).AsNode(),
 				)
 
-				p.optional(Comma)
+				p.optional(lexer.Comma)
 				token = p.lexer.Peek()
 			} else {
-				if token.Type != Comma && token.Type != RightCurlyBrace {
+				if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
 					panic("A Expected '{' but got " + token.Value)
 				}
 
-				p.optional(Comma)
+				p.optional(lexer.Comma)
 				if key.Type == ast.NodeTypeIdentifier {
 					properties = append(properties,
 						ast.NewNode(
@@ -1417,7 +1418,7 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 		}
 		token = p.lexer.Peek()
 	}
-	p.expected(RightCurlyBrace)
+	p.expected(lexer.RightCurlyBrace)
 
 	return ast.NewNode(
 		ast.NewObjectExpression(properties),
@@ -1431,7 +1432,7 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 func (p *Parser) parseStringKeyword() *ast.StringKeyword {
 	p.markStartPosition()
 
-	p.expectedTypeKeyword(TypeKeywordString)
+	p.expectedTypeKeyword(lexer.TypeKeywordString)
 
 	return ast.NewNode(
 		ast.NewStringKeyword(),
@@ -1445,7 +1446,7 @@ func (p *Parser) parseStringKeyword() *ast.StringKeyword {
 func (p *Parser) parseNumberKeyword() *ast.NumberKeyword {
 	p.markStartPosition()
 
-	p.expectedTypeKeyword(TypeKeywordNumber)
+	p.expectedTypeKeyword(lexer.TypeKeywordNumber)
 
 	return ast.NewNode(
 		ast.NewNumberKeyword(),
@@ -1459,7 +1460,7 @@ func (p *Parser) parseNumberKeyword() *ast.NumberKeyword {
 func (p *Parser) parseBooleanKeyword() *ast.BooleanKeyword {
 	p.markStartPosition()
 
-	p.expectedTypeKeyword(TypeKeywordBoolean)
+	p.expectedTypeKeyword(lexer.TypeKeywordBoolean)
 
 	return ast.NewNode(
 		ast.NewBooleanKeyword(),
@@ -1473,7 +1474,7 @@ func (p *Parser) parseBooleanKeyword() *ast.BooleanKeyword {
 func (p *Parser) parseAnyKeyword() *ast.AnyKeyword {
 	p.markStartPosition()
 
-	p.expectedTypeKeyword(TypeKeywordAny)
+	p.expectedTypeKeyword(lexer.TypeKeywordAny)
 
 	return ast.NewNode(
 		ast.NewAnyKeyword(),
@@ -1498,7 +1499,7 @@ func (p *Parser) parseTypeReference() *ast.TypeReference {
 	)
 }
 
-func (p *Parser) expected(tokenType TokenType) {
+func (p *Parser) expected(tokenType lexer.TokenType) {
 	token := p.lexer.Peek()
 	if token.Type != tokenType {
 		panic("expected '" + tokenType.String() + "' but got '" + token.Type.String() + "'")
@@ -1506,23 +1507,23 @@ func (p *Parser) expected(tokenType TokenType) {
 	p.lexer.Next()
 }
 
-func (p *Parser) expectedKeyword(keyword Keyword) {
+func (p *Parser) expectedKeyword(keyword lexer.Keyword) {
 	token := p.lexer.Peek()
-	if token.Type != KeywordToken && token.Value != keyword {
+	if token.Type != lexer.KeywordToken && token.Value != keyword {
 		panic("expected '" + keyword + "' keyword but got '" + token.Value + "'")
 	}
 	p.lexer.Next()
 }
 
-func (p *Parser) expectedTypeKeyword(typeKeyword TypeKeyword) {
+func (p *Parser) expectedTypeKeyword(typeKeyword lexer.TypeKeyword) {
 	token := p.lexer.Peek()
-	if token.Type != Identifier && token.Value != typeKeyword {
+	if token.Type != lexer.Identifier && token.Value != typeKeyword {
 		panic("expected '" + typeKeyword + "' type keyword but got '" + token.Value + "'")
 	}
 	p.lexer.Next()
 }
 
-func (p *Parser) optional(tokenType TokenType) bool {
+func (p *Parser) optional(tokenType lexer.TokenType) bool {
 	token := p.lexer.Peek()
 	if token.Type == tokenType {
 		p.lexer.Next()
@@ -1531,9 +1532,9 @@ func (p *Parser) optional(tokenType TokenType) bool {
 	return false
 }
 
-func (p *Parser) optionalKeyword(keyword Keyword) bool {
+func (p *Parser) optionalKeyword(keyword lexer.Keyword) bool {
 	token := p.lexer.Peek()
-	if token.Type == KeywordToken && token.Value == keyword {
+	if token.Type == lexer.KeywordToken && token.Value == keyword {
 		p.lexer.Next()
 		return true
 	}
@@ -1545,9 +1546,9 @@ func (p *Parser) markStartPosition() {
 }
 
 func (p *Parser) getStartPosition() uint {
-	return uint(p.lexer.startPosition)
+	return uint(p.lexer.StartPosition())
 }
 
 func (p *Parser) getEndPosition() uint {
-	return uint(p.lexer.beforeWhitespacePosition)
+	return uint(p.lexer.BeforeWhitespacePosition())
 }

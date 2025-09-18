@@ -1,7 +1,6 @@
 package lsp
 
 import (
-	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/compiler/fileloader"
@@ -104,11 +103,10 @@ func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *define
 
 		h.FileLoader = fileloader.NewFileLoader(projectFiles)
 		h.FileLoader.LoadSourceFiles()
-		program := compiler.NewProgram(h.FileLoader.SourceFiles)
-		_checker := checker.NewChecker(program)
-		_checker.Check()
+		program := compiler.NewProgram()
+		program.CheckSourceFiles()
 
-		if len(_checker.Diagnostics) > 0 {
+		if len(program.Diagnostics) > 0 {
 			type Diagnostic struct {
 				Range   defines.Range `json:"range"`
 				Message string        `json:"message"`
@@ -120,8 +118,8 @@ func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *define
 				Diagnostics []Diagnostic        `json:"diagnostics"`
 			}
 
-			diagnostics := make([]Diagnostic, 0, len(_checker.Diagnostics))
-			for _, diagnostic := range _checker.Diagnostics {
+			diagnostics := make([]Diagnostic, 0, len(program.Diagnostics))
+			for _, diagnostic := range program.Diagnostics {
 				start, err := indexToPosition(getPath(req.TextDocument.Uri), diagnostic.Location.Pos)
 				if err != nil {
 					start = defines.Position{Line: 0, Character: 0}

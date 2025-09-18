@@ -1,12 +1,8 @@
 package cmd
 
 import (
-	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
-	"arab_js/internal/compiler/fileloader"
-	"arab_js/internal/compiler/printer"
 	"arab_js/internal/package_definition"
-	"arab_js/internal/transformer"
 	"fmt"
 	"io/fs"
 	"os"
@@ -58,42 +54,26 @@ var buildCmd = &cobra.Command{
 			panic(err)
 		}
 
-		fileLoader := fileloader.NewFileLoader(files)
-		fileLoader.LoadSourceFiles()
+		program := compiler.NewProgram()
+		program.ProgramOptions.Main = packageDefinition.Main
+		program.ParseSourceFiles(files)
+		program.TransformSourceFiles()
 
-		program := compiler.NewProgram(fileLoader.SourceFiles)
-
-		_checker := checker.NewChecker(program)
-		_checker.Check()
-
-		if len(_checker.Diagnostics) > 0 {
-			for _, diagnostic := range _checker.Diagnostics {
+		if len(program.Diagnostics) > 0 {
+			for _, diagnostic := range program.Diagnostics {
 				println(diagnostic.Message)
 			}
 			panic("Checker Errors")
 		}
-
-		transformer.NewTransformer(program, _checker.NameResolver).Transform()
 
 		outputDir := filepath.Join(projectPath, "البناء")
 		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 			return fmt.Errorf("failed to create build directory: %w", err)
 		}
 
-		for _, sourceFile := range program.SourceFiles {
-			outputFileName := fmt.Sprintf("%s.js", sourceFile.Name)
-			if packageDefinition.Main == sourceFile.Name {
-				outputFileName = "index.js"
-			}
-
-			p := printer.NewPrinter()
-			p.Write(sourceFile)
-			output := p.Writer.Output
-
-			outputFile := filepath.Join(outputDir, outputFileName)
-			if err := os.WriteFile(outputFile, []byte(output), 0644); err != nil {
-				return fmt.Errorf("failed to write output file: %w", err)
-			}
+		err = program.WriteSourceFiles(outputDir)
+		if err != nil {
+			panic(err)
 		}
 
 		fmt.Println("Build successful!")

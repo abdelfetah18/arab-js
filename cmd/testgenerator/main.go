@@ -1,11 +1,8 @@
 package main
 
 import (
-	"arab_js/internal/binder"
-	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
-	"arab_js/internal/compiler/ast"
-	"arab_js/internal/transformer"
+	"arab_js/internal/compiler/parser"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -102,7 +99,7 @@ func generateParserOutputFile(inputFilePath, outputFilePath string) {
 		return
 	}
 
-	sourceFile := compiler.ParseSourceFile(string(data))
+	sourceFile := parser.ParseSourceFile(string(data))
 
 	output, err := json.Marshal(sourceFile)
 	if err != nil {
@@ -119,21 +116,12 @@ func generateParserOutputFile(inputFilePath, outputFilePath string) {
 }
 
 func generateTransformerOutputFile(inputFilePath, outputFilePath string) {
-	data, err := os.ReadFile(inputFilePath)
-	if err != nil {
-		fmt.Println("failed to read input file:", err)
-		return
-	}
+	program := compiler.NewProgram()
 
-	sourceFile := compiler.ParseSourceFile(string(data))
-	binder.NewBinder(sourceFile).Bind()
-	_checker := checker.NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
-	_checker.Check()
+	program.ParseSourceFiles([]string{inputFilePath})
+	program.TransformSourceFiles()
 
-	transformer := transformer.NewTransformer(compiler.NewProgram([]*ast.SourceFile{sourceFile}), _checker.NameResolver)
-	transformer.Transform()
-
-	output, err := json.Marshal(sourceFile)
+	output, err := json.Marshal(program.SourceFiles()[0])
 	if err != nil {
 		fmt.Println("failed to marshal AST to JSON:", err)
 		return

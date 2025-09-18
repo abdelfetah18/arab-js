@@ -5,6 +5,7 @@ import (
 	"arab_js/internal/bundled"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/parser"
 
 	"github.com/TobiasYin/go-lsp/logs"
 )
@@ -24,7 +25,7 @@ func NewFileLoader(files []string) *FileLoader {
 func (l *FileLoader) LoadSourceFiles() {
 	// Load Dom Library
 	libFileContent := bundled.ReadLibFile(bundled.LibNameDom)
-	sourceFile := compiler.ParseSourceFile(libFileContent)
+	sourceFile := parser.ParseSourceFile(libFileContent)
 	binder.BindSourceFile(sourceFile)
 	l.SourceFiles = append(l.SourceFiles, sourceFile)
 

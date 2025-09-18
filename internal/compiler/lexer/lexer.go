@@ -1,4 +1,4 @@
-package compiler
+package lexer
 
 import (
 	"regexp"
@@ -304,6 +304,10 @@ func NewLexer(input string) *Lexer {
 	lexer.currentToken = lexer.nextToken()
 	return lexer
 }
+
+func (l *Lexer) Position() int                 { return l.position }
+func (l *Lexer) StartPosition() int            { return l.startPosition }
+func (l *Lexer) BeforeWhitespacePosition() int { return l.beforeWhitespacePosition }
 
 func (l *Lexer) charAndSize() (rune, int) {
 	return utf8.DecodeRuneInString(l.input[l.position:])

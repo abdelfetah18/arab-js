@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/parser"
 	"os"
 	"path/filepath"
 )
@@ -12,7 +13,7 @@ func GetSourceFile(path string) *ast.SourceFile {
 		panic(err)
 	}
 
-	sourceFile := ParseSourceFile(string(data))
+	sourceFile := parser.ParseSourceFile(string(data))
 	sourceFile.Name = filepath.Base(path)
 
 	return sourceFile

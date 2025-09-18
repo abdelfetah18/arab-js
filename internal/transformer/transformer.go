@@ -3,26 +3,30 @@ package transformer
 import (
 	"arab_js/internal/binder"
 	"arab_js/internal/checker"
-	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 )
 
+type Program interface {
+	SourceFiles() []*ast.SourceFile
+	CheckSourceFiles() *binder.NameResolver
+}
+
 type Transformer struct {
-	program      *compiler.Program
+	program      Program
 	NameResolver *binder.NameResolver
 
 	currentScope *ast.Scope
 }
 
-func NewTransformer(program *compiler.Program, nameResolver *binder.NameResolver) *Transformer {
+func NewTransformer(program Program) *Transformer {
 	return &Transformer{
 		program:      program,
-		NameResolver: nameResolver,
+		NameResolver: program.CheckSourceFiles(),
 	}
 }
 
 func (t *Transformer) Transform() {
-	for _, sourceFile := range t.program.SourceFiles {
+	for _, sourceFile := range t.program.SourceFiles() {
 		t.currentScope = sourceFile.Scope
 		for _, node := range sourceFile.Body {
 			switch node.Type {

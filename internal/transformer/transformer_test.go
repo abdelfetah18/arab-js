@@ -3,8 +3,8 @@ package transformer
 import (
 	"arab_js/internal/binder"
 	"arab_js/internal/checker"
-	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/parser"
 	"bytes"
 	"encoding/json"
 	"os"
@@ -12,6 +12,22 @@ import (
 	"runtime"
 	"testing"
 )
+
+type ProgramStub struct {
+	sourceFiles []*ast.SourceFile
+}
+
+func (p ProgramStub) SourceFiles() []*ast.SourceFile { return p.sourceFiles }
+func (p *ProgramStub) BindSourceFiles() {
+	for _, sourceFile := range p.sourceFiles {
+		binder.BindSourceFile(sourceFile)
+	}
+}
+func (p *ProgramStub) CheckSourceFiles() *binder.NameResolver {
+	c := checker.NewChecker(p)
+	c.Check()
+	return c.NameResolver
+}
 
 func TestTransformer(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
@@ -45,13 +61,8 @@ func TestTransformer(t *testing.T) {
 				t.Fatalf("failed to read output file %s: %v", outputFilePath, err)
 			}
 
-			sourceFile := compiler.ParseSourceFile(string(inputBytes))
-			binder.NewBinder(sourceFile).Bind()
-			_checker := checker.NewChecker(compiler.NewProgram([]*ast.SourceFile{sourceFile}))
-			_checker.Check()
-
-			transformer := NewTransformer(compiler.NewProgram([]*ast.SourceFile{sourceFile}), _checker.NameResolver)
-			transformer.Transform()
+			sourceFile := parser.ParseSourceFile(string(inputBytes))
+			NewTransformer(&ProgramStub{sourceFiles: []*ast.SourceFile{sourceFile}}).Transform()
 
 			data, err := json.Marshal(sourceFile)
 			if err != nil {

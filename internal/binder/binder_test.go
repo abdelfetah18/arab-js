@@ -1,15 +1,15 @@
 package binder
 
 import (
-	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/parser"
 	"testing"
 )
 
 func TestBindVariableDeclaration(t *testing.T) {
 	t.Run("should bind variable declaration at global scope", func(t *testing.T) {
 		input := "متغير رقم : عدد = 100؛"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("رقم", sourceFile.AsNode())
@@ -28,7 +28,7 @@ func TestBindVariableDeclaration(t *testing.T) {
 
 	t.Run("should bind variable declaration at block scope", func(t *testing.T) {
 		input := "{ متغير رقم : عدد = 100؛ }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsBlockStatement().Body[0])
@@ -46,7 +46,7 @@ func TestBindVariableDeclaration(t *testing.T) {
 
 	t.Run("should bind variable declaration at function scope", func(t *testing.T) {
 		input := "دالة تجربة() { متغير رقم : عدد = 100؛ }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsFunctionDeclaration().Body.Body[0])
@@ -64,7 +64,7 @@ func TestBindVariableDeclaration(t *testing.T) {
 
 	t.Run("should bind variable declaration at for statement init", func(t *testing.T) {
 		input := "من_أجل (متغير رقم : عدد = 0؛ رقم <= 10؛ رقم++) {}"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsForStatement().Update)
@@ -82,7 +82,7 @@ func TestBindVariableDeclaration(t *testing.T) {
 
 	t.Run("should bind variable declaration at for statement scope", func(t *testing.T) {
 		input := "من_أجل (متغير أ : عدد = 0؛ أ <= 10؛ أ++) { متغير رقم: عدد = 100؛ }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("رقم", sourceFile.Body[0].AsForStatement().Update)
@@ -102,7 +102,7 @@ func TestBindVariableDeclaration(t *testing.T) {
 func TestBindFunctionDeclaration(t *testing.T) {
 	t.Run("should bind function declaration at global scope", func(t *testing.T) {
 		input := "دالة تجربة() { متغير رقم : عدد = 100؛ }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0])
@@ -120,7 +120,7 @@ func TestBindFunctionDeclaration(t *testing.T) {
 
 	t.Run("should bind function declaration at block scope", func(t *testing.T) {
 		input := "{ دالة تجربة() { متغير رقم : عدد = 100؛ } }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsBlockStatement().Body[0])
@@ -138,7 +138,7 @@ func TestBindFunctionDeclaration(t *testing.T) {
 
 	t.Run("should bind function declaration at function scope", func(t *testing.T) {
 		input := "دالة خارجية() { دالة تجربة() { متغير رقم : عدد = 100؛ } }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsFunctionDeclaration().Body.Body[0])
@@ -156,7 +156,7 @@ func TestBindFunctionDeclaration(t *testing.T) {
 
 	t.Run("should bind function declaration at for statement scope", func(t *testing.T) {
 		input := "من_أجل (متغير أ : عدد = 0؛ أ <= 10؛ أ++) { دالة تجربة() { متغير رقم : عدد = 100؛ } }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("تجربة", sourceFile.Body[0].AsForStatement().Body)
@@ -174,7 +174,7 @@ func TestBindFunctionDeclaration(t *testing.T) {
 
 	t.Run("should bind function declaration params at function scope", func(t *testing.T) {
 		input := "دالة جمع (أ: عدد, ب: عدد) { إرجاع أ + ب؛ }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("أ", sourceFile.Body[0].AsFunctionDeclaration().Body.Body[0])
@@ -194,7 +194,7 @@ func TestBindFunctionDeclaration(t *testing.T) {
 func TestBindInterfaceDeclaration(t *testing.T) {
 	t.Run("should bind interface declaration at global scope", func(t *testing.T) {
 		input := "واجهة شخص { اسم: نص }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0])
@@ -212,7 +212,7 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 
 	t.Run("should bind interface declaration at block scope", func(t *testing.T) {
 		input := "{ واجهة شخص { اسم: نص } }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsBlockStatement().Body[0])
@@ -230,7 +230,7 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 
 	t.Run("should bind interface declaration at function scope", func(t *testing.T) {
 		input := "دالة خارجية() { واجهة شخص { اسم: نص } }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsFunctionDeclaration().Body.Body[0])
@@ -248,7 +248,7 @@ func TestBindInterfaceDeclaration(t *testing.T) {
 
 	t.Run("should bind interface declaration at for statement scope", func(t *testing.T) {
 		input := "من_أجل (متغير أ : عدد = 0؛ أ <= 10؛ أ++) { واجهة شخص { اسم: نص } }"
-		sourceFile := compiler.ParseSourceFile(input)
+		sourceFile := parser.ParseSourceFile(input)
 		BindSourceFile(sourceFile)
 		nameResolver := NewNameResolver(sourceFile.Scope)
 		symbol := nameResolver.Resolve("شخص", sourceFile.Body[0].AsForStatement().Body)

@@ -1,4 +1,4 @@
-package compiler
+package parser
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 
 func TestParser(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..")
+	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..", "..")
 
 	parserDir := filepath.Join(repoRoot, "testdata", "parser")
 	inputDir := filepath.Join(parserDir, "input")
