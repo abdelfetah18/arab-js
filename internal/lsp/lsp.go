@@ -25,6 +25,9 @@ func StartLSP() {
 		return nil
 	})
 
+	// FIXME: Find a better way to handle Diagnostics
+	handlers.ScheduleFlushChanges()
+
 	server.OnDidOpenTextDocument(handlers.OnDidOpenTextDocumentHandler)
 	server.OnDidChangeTextDocument(handlers.OnDidChangeTextDocument)
 	server.OnCompletion(handlers.OnCompletionHandler)

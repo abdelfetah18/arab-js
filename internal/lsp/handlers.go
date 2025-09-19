@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/TobiasYin/go-lsp/lsp"
@@ -22,41 +24,88 @@ type Handlers struct {
 	Project *project.Project
 	Server  *lsp.Server
 
-	version int
+	pendingFileChangesMu sync.Mutex
+	pendingFileChanges   []*FileChange
+
+	snapshotsMu sync.Mutex
+	snapshots   map[defines.DocumentUri]*Snapshot
 }
 
 func NewHandlers(server *lsp.Server) *Handlers {
 	return &Handlers{
-		Project: nil,
-		Server:  server,
-		version: 0,
+		Project:            nil,
+		Server:             server,
+		pendingFileChanges: []*FileChange{},
+		snapshots:          map[defines.DocumentUri]*Snapshot{},
 	}
 }
 
-func (h *Handlers) openProjectIfNotAlreadyOpen(uri defines.DocumentUri) {
-	if h.Project != nil {
-		return
+func (h *Handlers) flushChanges() {
+	h.pendingFileChangesMu.Lock()
+	h.snapshotsMu.Lock()
+	defer h.pendingFileChangesMu.Unlock()
+	defer h.snapshotsMu.Unlock()
+
+	for _, fileChange := range h.pendingFileChanges {
+		log.Printf("fileChange.uri=%s\nfileChange.content=\n%s\nfileChange.version=%d\n", fileChange.uri, fileChange.content, fileChange.version)
+		h.snapshots[fileChange.uri] = NewSnapshot(fileChange.uri, fileChange.content, fileChange.version)
+
+		switch fileChange.Kind {
+		case FileChangeKindChange:
+			program := h.Project.Program
+			program.Diagnostics = []*ast.Diagnostic{}
+			h.Project.UpdateProgram(getPath(fileChange.uri), fileChange.content)
+			if h.reportDiagnosticErrors(program, fileChange.uri) {
+				break
+			}
+
+			program.Diagnostics = []*ast.Diagnostic{}
+			program.CheckSourceFiles()
+			h.reportDiagnosticErrors(program, fileChange.uri)
+		case FileChangeKindOpen:
+			if h.Project != nil {
+				break
+			}
+
+			h.Project = project.NewProject()
+			program := h.Project.Program
+
+			projectPath, _ := findProjectPath(getPath(fileChange.uri))
+			projectFiles, _ := listFilesWithExt(projectPath, ".كود")
+
+			program.Diagnostics = []*ast.Diagnostic{}
+			program.ParseSourceFiles(projectFiles)
+			if h.reportDiagnosticErrors(program, fileChange.uri) {
+				break
+			}
+
+			program.Diagnostics = []*ast.Diagnostic{}
+			program.CheckSourceFiles()
+			h.reportDiagnosticErrors(program, fileChange.uri)
+		}
 	}
 
-	h.Project = project.NewProject()
-	program := h.Project.Program
+	h.pendingFileChanges = []*FileChange{}
+}
 
-	projectPath, _ := findProjectPath(getPath(uri))
-	projectFiles, _ := listFilesWithExt(projectPath, ".كود")
-
-	program.Diagnostics = []*ast.Diagnostic{}
-	program.ParseSourceFiles(projectFiles)
-	if h.reportDiagnosticErrors(program, uri) {
-		return
-	}
-
-	program.Diagnostics = []*ast.Diagnostic{}
-	program.CheckSourceFiles()
-	h.reportDiagnosticErrors(program, uri)
+func (h *Handlers) ScheduleFlushChanges() {
+	ticker := time.NewTicker(5 * time.Second)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				h.flushChanges()
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
 }
 
 func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.CompletionParams) (result *[]defines.CompletionItem, err error) {
-	h.openProjectIfNotAlreadyOpen(req.TextDocument.Uri)
+	h.flushChanges()
 
 	filePath := getPath(req.TextDocument.Uri)
 	sourceFile := h.Project.Program.GetSourceFile(filePath)
@@ -65,7 +114,7 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 		return nil, errors.New("sourceFile not found")
 	}
 
-	position, err := positionToIndex(filePath, req.Position) // Get Position from (Line, Character)
+	position, err := h.snapshots[req.TextDocument.Uri].PositionToIndex(req.Position)
 	if err != nil {
 		return nil, err
 	}
@@ -102,30 +151,43 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 }
 
 func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *defines.DidOpenTextDocumentParams) (err error) {
-	h.openProjectIfNotAlreadyOpen(req.TextDocument.Uri)
-	h.version = req.TextDocument.Version
+	h.flushChanges()
+
+	h.pendingFileChangesMu.Lock()
+	defer h.pendingFileChangesMu.Unlock()
+
+	data, _ := os.ReadFile(getPath(req.TextDocument.Uri))
+	content := string(data)
+
+	h.pendingFileChanges = append(
+		h.pendingFileChanges,
+		NewFileChange(
+			req.TextDocument.Uri,
+			content,
+			req.TextDocument.Version,
+			FileChangeKindOpen,
+		),
+	)
+
 	return nil
 }
 
 func (h *Handlers) OnDidChangeTextDocument(ctx context.Context, req *defines.DidChangeTextDocumentParams) (err error) {
-	h.version = req.TextDocument.Version
+	h.flushChanges()
 
-	h.openProjectIfNotAlreadyOpen(req.TextDocument.Uri)
-	if len(req.ContentChanges) == 0 {
-		return errors.New("document didnt change")
-	}
-	str := req.ContentChanges[len(req.ContentChanges)-1].Text.(string)
-	program := h.Project.Program
-	program.Diagnostics = []*ast.Diagnostic{}
-	h.Project.UpdateProgram(getPath(req.TextDocument.Uri), str)
-	if h.reportDiagnosticErrors(program, req.TextDocument.Uri) {
-		return nil
-	}
+	h.pendingFileChangesMu.Lock()
+	defer h.pendingFileChangesMu.Unlock()
 
-	program.Diagnostics = []*ast.Diagnostic{}
-	program.CheckSourceFiles()
-	h.reportDiagnosticErrors(program, req.TextDocument.Uri)
-	log.Printf("CheckSourceFiles: reportDiagnosticErrors=%d\n", len(program.Diagnostics))
+	h.pendingFileChanges = append(
+		h.pendingFileChanges,
+		NewFileChange(
+			req.TextDocument.Uri,
+			req.ContentChanges[len(req.ContentChanges)-1].Text.(string),
+			req.TextDocument.Version,
+			FileChangeKindChange,
+		),
+	)
+
 	return nil
 }
 
@@ -167,7 +229,7 @@ func (h *Handlers) reportDiagnosticErrors(program *compiler.Program, uri defines
 	params := PublishDiagnosticsParams{
 		Uri:         uri,
 		Diagnostics: diagnostics,
-		Version:     h.version,
+		Version:     h.snapshots[uri].version,
 	}
 
 	payload, err := json.Marshal(params)
@@ -229,31 +291,6 @@ func listFilesWithExt(root, ext string) ([]string, error) {
 	})
 
 	return files, err
-}
-
-func positionToIndex(filePath string, pos defines.Position) (uint, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return 0, err
-	}
-
-	line := 0
-	character := 0
-	for i := 0; i < len(data); {
-		ch, size := utf8.DecodeRune(data[i:])
-		i += size
-		character += size
-		if ch == '\n' {
-			line += 1
-			character = 0
-		}
-
-		if line == int(pos.Line) && character == int(pos.Character) {
-			return uint(i), nil
-		}
-	}
-
-	return 0, errors.New("position out of range")
 }
 
 func getAllEntires(node *ast.Node) []defines.CompletionItem {
