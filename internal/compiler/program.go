@@ -5,11 +5,11 @@ import (
 	"arab_js/internal/bundled"
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/lexer"
 	"arab_js/internal/compiler/parser"
 	"arab_js/internal/compiler/printer"
 	"arab_js/internal/transformer"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -49,9 +49,14 @@ func (p *Program) ParseSourceFiles(sourceFilesPaths []string) error {
 			return err
 		}
 
-		sourceFile := parser.ParseSourceFile(string(data))
+		parser := parser.NewParser(lexer.NewLexer(string(data)))
+		sourceFile := parser.Parse()
 		p.filesByPath[filePath] = sourceFile
 		p.sourceFiles = append(p.sourceFiles, sourceFile)
+
+		if len(parser.Diagnostics) > 0 {
+			p.Diagnostics = append(p.Diagnostics, parser.Diagnostics...)
+		}
 	}
 	return nil
 }
@@ -93,7 +98,6 @@ func (p *Program) WriteSourceFiles(outputDir string) error {
 }
 
 func (p *Program) GetSourceFile(filePath string) *ast.SourceFile {
-	log.Printf("p.filesByPath=%v\n", p.filesByPath)
 	return p.filesByPath[filePath]
 }
 
@@ -103,7 +107,23 @@ func (p *Program) UpdateSourceFile(filePath string, content string) {
 		return
 	}
 
-	sourceFile := parser.ParseSourceFile(content)
+	parser := parser.NewParser(lexer.NewLexer(string(content)))
+	sourceFile := parser.Parse()
+
 	p.filesByPath[filePath] = sourceFile
-	binder.BindSourceFile(sourceFile)
+	resultIndex := -1
+	for index, s := range p.sourceFiles {
+		if s.Name == sourceFile.Name {
+			resultIndex = index
+			break
+		}
+	}
+
+	if resultIndex >= 0 {
+		p.sourceFiles[resultIndex] = sourceFile
+	}
+
+	if len(parser.Diagnostics) > 0 {
+		p.Diagnostics = parser.Diagnostics
+	}
 }

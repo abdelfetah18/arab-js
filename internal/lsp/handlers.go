@@ -1,16 +1,17 @@
 package lsp
 
 import (
+	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/project"
 	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/TobiasYin/go-lsp/lsp"
@@ -20,12 +21,15 @@ import (
 type Handlers struct {
 	Project *project.Project
 	Server  *lsp.Server
+
+	version int
 }
 
 func NewHandlers(server *lsp.Server) *Handlers {
 	return &Handlers{
 		Project: nil,
 		Server:  server,
+		version: 0,
 	}
 }
 
@@ -40,56 +44,15 @@ func (h *Handlers) openProjectIfNotAlreadyOpen(uri defines.DocumentUri) {
 	projectPath, _ := findProjectPath(getPath(uri))
 	projectFiles, _ := listFilesWithExt(projectPath, ".كود")
 
+	program.Diagnostics = []*ast.Diagnostic{}
 	program.ParseSourceFiles(projectFiles)
-	program.CheckSourceFiles()
-
-	// TODO: Report type checking errors
-	if len(program.Diagnostics) > 0 {
-		type Diagnostic struct {
-			Range   defines.Range `json:"range"`
-			Message string        `json:"message"`
-		}
-
-		type PublishDiagnosticsParams struct {
-			Uri         defines.DocumentUri `json:"uri"`
-			Version     int                 `json:"version"`
-			Diagnostics []Diagnostic        `json:"diagnostics"`
-		}
-
-		diagnostics := make([]Diagnostic, 0, len(program.Diagnostics))
-		for _, diagnostic := range program.Diagnostics {
-			start, err := indexToPosition(getPath(uri), diagnostic.Location.Pos)
-			if err != nil {
-				start = defines.Position{Line: 0, Character: 0}
-			}
-
-			end, err := indexToPosition(getPath(uri), diagnostic.Location.End)
-			if err != nil {
-				end = defines.Position{Line: 0, Character: 0}
-			}
-
-			diagnostics = append(diagnostics, Diagnostic{
-				Range: defines.Range{
-					Start: start,
-					End:   end,
-				},
-				Message: diagnostic.Message,
-			})
-			println(diagnostic.Message)
-		}
-
-		params := PublishDiagnosticsParams{
-			Uri:         uri,
-			Diagnostics: diagnostics,
-		}
-
-		payload, err := json.Marshal(params)
-		if err != nil {
-			return
-		}
-
-		h.Server.SendNotification("textDocument/publishDiagnostics", payload)
+	if h.reportDiagnosticErrors(program, uri) {
+		return
 	}
+
+	program.Diagnostics = []*ast.Diagnostic{}
+	program.CheckSourceFiles()
+	h.reportDiagnosticErrors(program, uri)
 }
 
 func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.CompletionParams) (result *[]defines.CompletionItem, err error) {
@@ -140,70 +103,81 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 
 func (h *Handlers) OnDidOpenTextDocumentHandler(ctx context.Context, req *defines.DidOpenTextDocumentParams) (err error) {
 	h.openProjectIfNotAlreadyOpen(req.TextDocument.Uri)
+	h.version = req.TextDocument.Version
 	return nil
 }
 
 func (h *Handlers) OnDidChangeTextDocument(ctx context.Context, req *defines.DidChangeTextDocumentParams) (err error) {
+	h.version = req.TextDocument.Version
+
 	h.openProjectIfNotAlreadyOpen(req.TextDocument.Uri)
 	if len(req.ContentChanges) == 0 {
 		return errors.New("document didnt change")
 	}
 	str := req.ContentChanges[len(req.ContentChanges)-1].Text.(string)
-	h.Project.UpdateProgram(getPath(req.TextDocument.Uri), str)
-
 	program := h.Project.Program
-	program.CheckSourceFiles()
-
-	uri := req.TextDocument.Uri
-
-	// TODO: Report type checking errors
-	if len(program.Diagnostics) > 0 {
-		type Diagnostic struct {
-			Range   defines.Range `json:"range"`
-			Message string        `json:"message"`
-		}
-
-		type PublishDiagnosticsParams struct {
-			Uri         defines.DocumentUri `json:"uri"`
-			Version     int                 `json:"version"`
-			Diagnostics []Diagnostic        `json:"diagnostics"`
-		}
-
-		diagnostics := make([]Diagnostic, 0, len(program.Diagnostics))
-		for _, diagnostic := range program.Diagnostics {
-			start, err := indexToPosition(getPath(uri), diagnostic.Location.Pos)
-			if err != nil {
-				start = defines.Position{Line: 0, Character: 0}
-			}
-
-			end, err := indexToPosition(getPath(uri), diagnostic.Location.End)
-			if err != nil {
-				end = defines.Position{Line: 0, Character: 0}
-			}
-
-			diagnostics = append(diagnostics, Diagnostic{
-				Range: defines.Range{
-					Start: start,
-					End:   end,
-				},
-				Message: diagnostic.Message,
-			})
-			println(diagnostic.Message)
-		}
-
-		params := PublishDiagnosticsParams{
-			Uri:         uri,
-			Diagnostics: diagnostics,
-		}
-
-		payload, err := json.Marshal(params)
-		if err != nil {
-			return err
-		}
-
-		h.Server.SendNotification("textDocument/publishDiagnostics", payload)
+	program.Diagnostics = []*ast.Diagnostic{}
+	h.Project.UpdateProgram(getPath(req.TextDocument.Uri), str)
+	if h.reportDiagnosticErrors(program, req.TextDocument.Uri) {
+		return nil
 	}
+
+	program.Diagnostics = []*ast.Diagnostic{}
+	program.CheckSourceFiles()
+	h.reportDiagnosticErrors(program, req.TextDocument.Uri)
+	log.Printf("CheckSourceFiles: reportDiagnosticErrors=%d\n", len(program.Diagnostics))
 	return nil
+}
+
+func (h *Handlers) reportDiagnosticErrors(program *compiler.Program, uri defines.DocumentUri) bool {
+	type Diagnostic struct {
+		Range   defines.Range `json:"range"`
+		Message string        `json:"message"`
+	}
+
+	type PublishDiagnosticsParams struct {
+		Uri         defines.DocumentUri `json:"uri"`
+		Version     int                 `json:"version"`
+		Diagnostics []Diagnostic        `json:"diagnostics"`
+	}
+
+	diagnostics := []Diagnostic{}
+	for _, diagnostic := range program.Diagnostics {
+		start, err := indexToPosition(getPath(uri), diagnostic.Location.Pos)
+		if err != nil {
+			start = defines.Position{Line: 0, Character: 0}
+		}
+
+		end, err := indexToPosition(getPath(uri), diagnostic.Location.End)
+		if err != nil {
+			end = defines.Position{Line: 0, Character: 0}
+		}
+
+		diagnostics = append(diagnostics, Diagnostic{
+			Range: defines.Range{
+				Start: start,
+				End:   end,
+			},
+			Message: diagnostic.Message,
+		})
+
+		log.Printf("message=%s\n", diagnostic.Message)
+	}
+
+	params := PublishDiagnosticsParams{
+		Uri:         uri,
+		Diagnostics: diagnostics,
+		Version:     h.version,
+	}
+
+	payload, err := json.Marshal(params)
+	if err != nil {
+		return false
+	}
+
+	h.Server.SendNotification("textDocument/publishDiagnostics", payload)
+
+	return len(program.Diagnostics) > 0
 }
 
 func getPath(uri defines.DocumentUri) string {
@@ -263,34 +237,19 @@ func positionToIndex(filePath string, pos defines.Position) (uint, error) {
 		return 0, err
 	}
 
-	var lineNum, runeCount uint
-	var offset uint
-
+	line := 0
+	character := 0
 	for i := 0; i < len(data); {
-		if lineNum == pos.Line {
-			// Count runes until reaching the desired character
-			for j := i; j < len(data); {
-				if runeCount == pos.Character {
-					return uint(j), nil
-				}
-				r, size := utf8.DecodeRune(data[j:])
-				if r == '\n' || r == utf8.RuneError && size == 1 {
-					break // end of line or invalid rune
-				}
-				runeCount++
-				j += size
-			}
-			// Clamp to end of line
-			return uint(len(data[:i]) + len(string(data[i:strings.IndexByte(string(data[i:]), '\n')]))), nil
+		ch, size := utf8.DecodeRune(data[i:])
+		i += size
+		character += size
+		if ch == '\n' {
+			line += 1
+			character = 0
 		}
 
-		// Consume a line
-		r, size := utf8.DecodeRune(data[i:])
-		i += size
-		offset += uint(size)
-		if r == '\n' {
-			lineNum++
-			runeCount = 0
+		if line == int(pos.Line) && character == int(pos.Character) {
+			return uint(i), nil
 		}
 	}
 
