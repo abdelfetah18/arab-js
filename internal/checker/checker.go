@@ -97,7 +97,9 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 
 func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	switch expression.Type {
-	case ast.NodeTypeIdentifier,
+	case ast.NodeTypeIdentifier:
+		return c.checkIdentifier(expression.AsIdentifier())
+	case
 		ast.NodeTypeStringLiteral,
 		ast.NodeTypeDecimalLiteral,
 		ast.NodeTypeBooleanLiteral,
@@ -215,4 +217,14 @@ func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) 
 	}
 
 	return propertyType.Type
+}
+
+func (c *Checker) checkIdentifier(identifier *ast.Identifier) *Type {
+	symbol := c.NameResolver.Resolve(identifier.Name, identifier.AsNode())
+	if symbol == nil {
+		c.errorf(identifier.Location, CANNOT_FIND_NAME_0, identifier.Name)
+		return nil
+	}
+
+	return c.TypeResolver.ResolveTypeFromNode(symbol.Node)
 }
