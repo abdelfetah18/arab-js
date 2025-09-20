@@ -147,17 +147,30 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 
 	functionType := _type.AsFunctionType()
 
-	if len(functionType.Params) != len(callExpression.Args) {
-		c.errorf(callExpression.Location, EXPECTED_0_ARGUMENTS_BUT_GOT_1, len(functionType.Params), len(callExpression.Args))
-		return nil
+	if functionType.RestType == nil {
+		if len(functionType.Params) != len(callExpression.Args) {
+			c.errorf(callExpression.Location, EXPECTED_0_ARGUMENTS_BUT_GOT_1, len(functionType.Params), len(callExpression.Args))
+			return nil
+		}
 	}
 
-	for index, expression := range callExpression.Args {
-		paramType := functionType.Params[index]
-		_type := c.checkExpression(expression)
-		if !AreTypesCompatible(paramType, _type) {
-			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), paramType.Data.Name())
+	for index, param := range functionType.Params {
+		arg := callExpression.Args[index]
+		_type := c.checkExpression(arg)
+		if !AreTypesCompatible(param, _type) {
+			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Data.Name())
 			return nil
+		}
+	}
+
+	if functionType.RestType != nil {
+		for index := len(functionType.Params); index < len(callExpression.Args); index++ {
+			arg := callExpression.Args[index]
+			_type := c.checkExpression(arg)
+			if !AreTypesCompatible(functionType.RestType.AsArrayType().ElementsType, _type) {
+				c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), functionType.RestType.Data.Name())
+				return nil
+			}
 		}
 	}
 

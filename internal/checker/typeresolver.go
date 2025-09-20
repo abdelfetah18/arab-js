@@ -39,7 +39,11 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 		functionDeclaration := node.AsFunctionDeclaration()
 		functionType := NewType(NewFunctionType())
 		for _, param := range functionDeclaration.Params {
-			functionType.AddParamType(t.ResolveTypeFromNode(param))
+			if param.Type == ast.NodeTypeRestElement {
+				functionType.RestType = t.ResolveTypeAnnotation(param.AsRestElement().TypeAnnotation)
+			} else {
+				functionType.AddParamType(t.ResolveTypeFromNode(param))
+			}
 		}
 		functionType.ReturnType = t.ResolveTypeAnnotation(functionDeclaration.TypeAnnotation)
 		return functionType.AsType()
@@ -78,6 +82,8 @@ func (t *TypeResolver) ResolveTypeNode(typeNode *ast.Node) *Type {
 		return NewType(NewNullType()).AsType()
 	case ast.NodeTypeNumberKeyword:
 		return NewType(NewNumberType()).AsType()
+	case ast.NodeTypeAnyKeyword:
+		return NewType(NewAnyType()).AsType()
 	case ast.NodeTypeTypeLiteral:
 		objectType := NewObjectType()
 		typeLiteral := typeNode.AsTypeLiteral()
@@ -104,10 +110,18 @@ func (t *TypeResolver) ResolveTypeNode(typeNode *ast.Node) *Type {
 		functionTypeNode := typeNode.AsFunctionType()
 		functionType := NewFunctionType()
 		for _, param := range functionTypeNode.Params {
-			functionType.AddParamType(t.ResolveTypeFromNode(param))
+			if param.Type == ast.NodeTypeRestElement {
+				functionType.RestType = t.ResolveTypeAnnotation(param.AsRestElement().TypeAnnotation)
+			} else {
+				functionType.AddParamType(t.ResolveTypeFromNode(param))
+			}
 		}
 		functionType.ReturnType = t.ResolveTypeAnnotation(functionTypeNode.TypeAnnotation)
 		return NewType(functionType).AsType()
+
+	case ast.NodeTypeArrayType:
+		arrayTypeNode := typeNode.AsArrayType()
+		return NewType(NewArrayType(t.ResolveTypeNode(arrayTypeNode.ElementType))).AsType()
 	}
 
 	return nil

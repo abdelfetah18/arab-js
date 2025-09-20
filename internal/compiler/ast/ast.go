@@ -154,6 +154,10 @@ func (node *Node) AsFunctionType() *FunctionType {
 	return node.Data.(*FunctionType)
 }
 
+func (node *Node) AsArrayType() *ArrayType {
+	return node.Data.(*ArrayType)
+}
+
 func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }
 func (node *NodeBase) ForEachChild(v Visitor) bool { return false }
 

@@ -14,6 +14,7 @@ const (
 	TypeFlagsBoolean  TypeFlags = 1 << 4
 	TypeFlagsNull     TypeFlags = 1 << 5
 	TypeFlagsFunction TypeFlags = 1 << 6
+	TypeFlagsArray    TypeFlags = 1 << 7
 )
 
 func (t TypeFlags) String() string {
@@ -64,6 +65,7 @@ func (t *Type) AsBooleanType() *BooleanType   { return t.Data.(*BooleanType) }
 func (t *Type) AsNullType() *NullType         { return t.Data.(*NullType) }
 func (t *Type) AsObjectType() *ObjectType     { return t.Data.(*ObjectType) }
 func (t *Type) AsFunctionType() *FunctionType { return t.Data.(*FunctionType) }
+func (t *Type) AsArrayType() *ArrayType       { return t.Data.(*ArrayType) }
 
 type StringType struct {
 	Type
@@ -97,6 +99,14 @@ func NewNullType() *NullType         { return &NullType{} }
 func (t *NullType) Flags() TypeFlags { return TypeFlagsNull }
 func (t *NullType) Name() string     { return "null" }
 
+type AnyType struct {
+	Type
+}
+
+func NewAnyType() *AnyType          { return &AnyType{} }
+func (t *AnyType) Flags() TypeFlags { return TypeFlagsAny }
+func (t *AnyType) Name() string     { return "boolean" }
+
 type ObjectType struct {
 	Type
 	Properties map[string]*PropertyType
@@ -129,12 +139,22 @@ type FunctionType struct {
 	Type
 	Params     []*Type
 	ReturnType *Type
+	RestType   *Type
 }
 
-func NewFunctionType() *FunctionType             { return &FunctionType{Params: []*Type{}, ReturnType: &Type{}} }
+func NewFunctionType() *FunctionType             { return &FunctionType{Params: []*Type{}} }
 func (t *FunctionType) Flags() TypeFlags         { return TypeFlagsFunction }
 func (t *FunctionType) Name() string             { return "function" }
 func (t *FunctionType) AddParamType(_type *Type) { t.Params = append(t.Params, _type) }
+
+type ArrayType struct {
+	Type
+	ElementsType *Type
+}
+
+func NewArrayType(elementsType *Type) *ArrayType { return &ArrayType{ElementsType: elementsType} }
+func (t *ArrayType) Flags() TypeFlags            { return TypeFlagsArray }
+func (t *ArrayType) Name() string                { return "array" }
 
 func InferTypeFromNode(node *ast.Node) *Type {
 	switch node.Type {
