@@ -89,7 +89,7 @@ func (h *Handlers) flushChanges() {
 }
 
 func (h *Handlers) ScheduleFlushChanges() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	quit := make(chan struct{})
 	go func() {
 		for {
