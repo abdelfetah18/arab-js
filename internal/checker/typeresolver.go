@@ -100,6 +100,14 @@ func (t *TypeResolver) ResolveTypeNode(typeNode *ast.Node) *Type {
 		return NewType(objectType).AsType()
 	case ast.NodeTypeTypeReference:
 		return t.ResolveTypeFromTypeReference(typeNode.AsTypeReference())
+	case ast.NodeTypeFunctionType:
+		functionTypeNode := typeNode.AsFunctionType()
+		functionType := NewFunctionType()
+		for _, param := range functionTypeNode.Params {
+			functionType.AddParamType(t.ResolveTypeFromNode(param))
+		}
+		functionType.ReturnType = t.ResolveTypeAnnotation(functionTypeNode.TypeAnnotation)
+		return NewType(functionType).AsType()
 	}
 
 	return nil

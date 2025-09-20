@@ -150,6 +150,10 @@ func (node *Node) AsTypeAliasDeclaration() *TypeAliasDeclaration {
 	return node.Data.(*TypeAliasDeclaration)
 }
 
+func (node *Node) AsFunctionType() *FunctionType {
+	return node.Data.(*FunctionType)
+}
+
 func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }
 func (node *NodeBase) ForEachChild(v Visitor) bool { return false }
 
@@ -189,6 +193,23 @@ func (node *Node) LocalScope() *Scope {
 		return data.Scope
 	}
 	return nil
+}
+
+func (node *Node) GetPrentContainer() *Scope {
+	if node.Type == NodeTypeBlockStatement && node.Parent.Type == NodeTypeFunctionDeclaration {
+		return node.Parent.AsFunctionDeclaration().Scope
+	}
+
+	switch node.Type {
+	case NodeTypeSourceFile:
+		return node.AsSourceFile().Scope
+	case NodeTypeBlockStatement:
+		return node.AsBlockStatement().Scope
+	case NodeTypeFunctionDeclaration:
+		return node.AsFunctionDeclaration().Scope
+	default:
+		return node.Parent.GetPrentContainer()
+	}
 }
 
 func wrapNode[T any](n Node, data *T) interface{} {

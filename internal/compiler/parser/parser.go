@@ -1634,6 +1634,7 @@ func (p *Parser) expected(tokenType lexer.TokenType) {
 				End: p.getEndPosition(),
 			},
 			"expected '%s' but got '%s'\n", tokenType.String(), token.Type.String())
+		return
 	}
 	p.lexer.Next()
 }

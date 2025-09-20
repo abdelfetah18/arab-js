@@ -28,7 +28,7 @@ func (s *Snapshot) PositionToIndex(pos defines.Position) (uint, error) {
 	for i := 0; i < len(data); {
 		ch, size := utf8.DecodeRune(data[i:])
 		i += size
-		character += size
+		character += 1 // count characters (not bytes), even in Unicode
 		if ch == '\n' {
 			line += 1
 			character = 0
@@ -38,5 +38,6 @@ func (s *Snapshot) PositionToIndex(pos defines.Position) (uint, error) {
 			return uint(i), nil
 		}
 	}
+
 	return 0, errors.New("position out of range")
 }

@@ -55,10 +55,7 @@ func (h *Handlers) flushChanges() {
 			program := h.Project.Program
 			program.Diagnostics = []*ast.Diagnostic{}
 			h.Project.UpdateProgram(getPath(fileChange.uri), fileChange.content)
-			if h.reportDiagnosticErrors(program, fileChange.uri) {
-				break
-			}
-
+			h.reportDiagnosticErrors(program, fileChange.uri)
 			program.Diagnostics = []*ast.Diagnostic{}
 			program.CheckSourceFiles()
 			h.reportDiagnosticErrors(program, fileChange.uri)
@@ -75,10 +72,7 @@ func (h *Handlers) flushChanges() {
 
 			program.Diagnostics = []*ast.Diagnostic{}
 			program.ParseSourceFiles(projectFiles)
-			if h.reportDiagnosticErrors(program, fileChange.uri) {
-				break
-			}
-
+			h.reportDiagnosticErrors(program, fileChange.uri)
 			program.Diagnostics = []*ast.Diagnostic{}
 			program.CheckSourceFiles()
 			h.reportDiagnosticErrors(program, fileChange.uri)
@@ -119,33 +113,13 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 		return nil, err
 	}
 
-	// 1. Locate Node By Position Line and Character
-	var findNode *ast.Node = nil
-	var current *ast.Node = sourceFile.AsNode()
-	var next *ast.Node = nil
+	node := getNodeAtPosition(sourceFile, position)
 
-	visitAll := func(n *ast.Node) bool {
-		if position >= n.Location.Pos && position <= n.Location.End {
-			next = n
-			return true
-		}
-
-		return false
+	if node == nil {
+		return nil, errors.New("could not locate the node")
 	}
 
-	for {
-		found := current.ForEachChild(visitAll)
-		if next == nil && !found {
-			findNode = current
-			break
-		}
-
-		current = next
-		next = nil
-	}
-
-	// 2. Fetch Symbols From That Location
-	keys := getAllEntires(findNode, h.Project.Program.Checker.NameResolver.Globals)
+	keys := getCompletionData(node, h.Project.Program.Checker)
 
 	return &keys, nil
 }
@@ -291,67 +265,6 @@ func listFilesWithExt(root, ext string) ([]string, error) {
 	})
 
 	return files, err
-}
-
-func getAllEntires(node *ast.Node, globals *ast.Scope) []defines.CompletionItem {
-	var currentScope *ast.Scope = getPrentContainer(node)
-	keys := []defines.CompletionItem{}
-
-	for currentScope != nil {
-		for k, symbol := range currentScope.Locals {
-			label := "code"
-			d := defines.CompletionItemKindText
-			switch symbol.Node.Type {
-			case ast.NodeTypeFunctionDeclaration:
-				label = "function"
-				d = defines.CompletionItemKindFunction
-			case ast.NodeTypeVariableDeclaration:
-				d = defines.CompletionItemKindVariable
-			}
-			keys = append(keys, defines.CompletionItem{
-				Label:      label,
-				Kind:       &d,
-				InsertText: &k,
-			})
-		}
-		currentScope = currentScope.Parent
-	}
-
-	for k, symbol := range globals.Locals {
-		label := "code"
-		d := defines.CompletionItemKindText
-		switch symbol.Node.Type {
-		case ast.NodeTypeFunctionDeclaration:
-			label = "function"
-			d = defines.CompletionItemKindFunction
-		case ast.NodeTypeVariableDeclaration:
-			d = defines.CompletionItemKindVariable
-		}
-		keys = append(keys, defines.CompletionItem{
-			Label:      label,
-			Kind:       &d,
-			InsertText: &k,
-		})
-	}
-
-	return keys
-}
-
-func getPrentContainer(node *ast.Node) *ast.Scope {
-	if node.Type == ast.NodeTypeBlockStatement && node.Parent.Type == ast.NodeTypeFunctionDeclaration {
-		return node.Parent.AsFunctionDeclaration().Scope
-	}
-
-	switch node.Type {
-	case ast.NodeTypeSourceFile:
-		return node.AsSourceFile().Scope
-	case ast.NodeTypeBlockStatement:
-		return node.AsBlockStatement().Scope
-	case ast.NodeTypeFunctionDeclaration:
-		return node.AsFunctionDeclaration().Scope
-	default:
-		return getPrentContainer(node.Parent)
-	}
 }
 
 func indexToPosition(filePath string, idx uint) (defines.Position, error) {
