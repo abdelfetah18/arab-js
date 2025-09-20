@@ -20,6 +20,7 @@ type ProgramOptions struct {
 
 type Program struct {
 	ProgramOptions ProgramOptions
+	Checker        *checker.Checker
 	sourceFiles    []*ast.SourceFile
 	filesByPath    map[string]*ast.SourceFile
 
@@ -68,10 +69,10 @@ func (p *Program) BindSourceFiles() {
 }
 
 func (p *Program) CheckSourceFiles() *binder.NameResolver {
-	c := checker.NewChecker(p)
-	c.Check()
-	p.Diagnostics = c.Diagnostics
-	return c.NameResolver
+	p.Checker = checker.NewChecker(p)
+	p.Checker.Check()
+	p.Diagnostics = p.Checker.Diagnostics
+	return p.Checker.NameResolver
 }
 
 func (p *Program) TransformSourceFiles() {

@@ -145,7 +145,7 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 	}
 
 	// 2. Fetch Symbols From That Location
-	keys := getAllEntires(findNode)
+	keys := getAllEntires(findNode, h.Project.Program.Checker.NameResolver.Globals)
 
 	return &keys, nil
 }
@@ -293,7 +293,7 @@ func listFilesWithExt(root, ext string) ([]string, error) {
 	return files, err
 }
 
-func getAllEntires(node *ast.Node) []defines.CompletionItem {
+func getAllEntires(node *ast.Node, globals *ast.Scope) []defines.CompletionItem {
 	var currentScope *ast.Scope = getPrentContainer(node)
 	keys := []defines.CompletionItem{}
 
@@ -315,6 +315,23 @@ func getAllEntires(node *ast.Node) []defines.CompletionItem {
 			})
 		}
 		currentScope = currentScope.Parent
+	}
+
+	for k, symbol := range globals.Locals {
+		label := "code"
+		d := defines.CompletionItemKindText
+		switch symbol.Node.Type {
+		case ast.NodeTypeFunctionDeclaration:
+			label = "function"
+			d = defines.CompletionItemKindFunction
+		case ast.NodeTypeVariableDeclaration:
+			d = defines.CompletionItemKindVariable
+		}
+		keys = append(keys, defines.CompletionItem{
+			Label:      label,
+			Kind:       &d,
+			InsertText: &k,
+		})
 	}
 
 	return keys
