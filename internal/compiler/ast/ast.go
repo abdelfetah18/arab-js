@@ -1220,7 +1220,8 @@ type SourceFile struct {
 	Body          []*Node      `json:"body,omitempty"`
 	Directives    []*Directive `json:"directives,omitempty"`
 
-	ExternalModuleIndicator *Node `json:"-"`
+	ExternalModuleIndicator *Node  `json:"-"`
+	Path                    string `json:"-"`
 }
 
 func NewSourceFile(body []*Node, directives []*Directive) *SourceFile {

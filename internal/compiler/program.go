@@ -52,6 +52,7 @@ func (p *Program) ParseSourceFiles(sourceFilesPaths []string) error {
 
 		parser := parser.NewParser(lexer.NewLexer(string(data)))
 		sourceFile := parser.Parse()
+		sourceFile.Path = filePath
 		p.filesByPath[filePath] = sourceFile
 		p.sourceFiles = append(p.sourceFiles, sourceFile)
 
@@ -110,11 +111,12 @@ func (p *Program) UpdateSourceFile(filePath string, content string) {
 
 	parser := parser.NewParser(lexer.NewLexer(string(content)))
 	sourceFile := parser.Parse()
+	sourceFile.Path = filePath
 
 	p.filesByPath[filePath] = sourceFile
 	resultIndex := -1
 	for index, s := range p.sourceFiles {
-		if s.Name == sourceFile.Name {
+		if s.Path == sourceFile.Path {
 			resultIndex = index
 			break
 		}
