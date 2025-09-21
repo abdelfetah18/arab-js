@@ -1256,7 +1256,16 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 	p.markStartPosition()
 
 	identifierName := p.lexer.Peek().Value
-	p.expected(lexer.Identifier)
+	if !p.expected(lexer.Identifier) {
+		pos := p.startPositions.Pop()
+		return ast.NewNode(
+			ast.NewIdentifier(identifierName, nil),
+			ast.Location{
+				Pos: pos,
+				End: pos,
+			},
+		)
+	}
 
 	var typeAnnotation *ast.TypeAnnotation = nil
 	if doParseTypeAnnotation && p.optional(lexer.Colon) {
@@ -1625,7 +1634,7 @@ func (p *Parser) parseTypeReference() *ast.TypeReference {
 	)
 }
 
-func (p *Parser) expected(tokenType lexer.TokenType) {
+func (p *Parser) expected(tokenType lexer.TokenType) bool {
 	token := p.lexer.Peek()
 	if token.Type != tokenType {
 		p.errorf(
@@ -1634,9 +1643,10 @@ func (p *Parser) expected(tokenType lexer.TokenType) {
 				End: p.getEndPosition(),
 			},
 			"expected '%s' but got '%s'\n", tokenType.String(), token.Type.String())
-		return
+		return false
 	}
 	p.lexer.Next()
+	return true
 }
 
 func (p *Parser) expectedKeyword(keyword lexer.Keyword) {

@@ -32,13 +32,21 @@ func getNodeAtPosition(sourceFile *ast.SourceFile, position uint) *ast.Node {
 		next = nil
 	}
 
+	if findNode != nil && findNode.Type == ast.NodeTypeMemberExpression {
+		memberExpression := findNode.AsMemberExpression()
+		propertyNode := memberExpression.Property
+		if position >= propertyNode.Location.Pos && position <= propertyNode.Location.End {
+			return propertyNode
+		}
+	}
+
 	return findNode
 }
 
 func getCompletionData(node *ast.Node, checker *checker.Checker) []defines.CompletionItem {
 	completions := []defines.CompletionItem{}
 
-	isPropertyAccess := node.Type == ast.NodeTypeIdentifier && node.Parent != nil && node.Parent.Type == ast.NodeTypeMemberExpression
+	isPropertyAccess := node.Parent != nil && node.Parent.Type == ast.NodeTypeMemberExpression
 	if isPropertyAccess {
 		_type := checker.TypeResolver.ResolveTypeFromNode(node.Parent.AsMemberExpression().Object)
 		objectType := _type.AsObjectType()

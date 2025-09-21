@@ -55,6 +55,23 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 		return NewType(NewBooleanType()).AsType()
 	case ast.NodeTypeNullLiteral:
 		return NewType(NewNullType()).AsType()
+	case ast.NodeTypeMemberExpression:
+		memberExpression := node.AsMemberExpression()
+		objectType := t.ResolveTypeFromNode(memberExpression.Object)
+		if objectType == nil {
+			return nil
+		}
+
+		if objectType.Flags&TypeFlagsObject == 0 {
+			return nil
+		}
+
+		propertyType := objectType.AsObjectType().Properties[memberExpression.PropertyName()]
+		if propertyType == nil {
+			return nil
+		}
+
+		return propertyType.Type
 	default:
 		return nil
 	}
