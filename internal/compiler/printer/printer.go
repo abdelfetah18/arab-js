@@ -236,8 +236,15 @@ func (printer *Printer) writeIndent() {
 
 func (printer *Printer) writeMemberExpression(memberExpression *ast.MemberExpression) {
 	printer.writeExpression(memberExpression.Object)
-	printer.Writer.Write(".")
+	if memberExpression.Computed {
+		printer.Writer.Write("[")
+	} else {
+		printer.Writer.Write(".")
+	}
 	printer.writeExpression(memberExpression.Property)
+	if memberExpression.Computed {
+		printer.Writer.Write("]")
+	}
 }
 
 func (printer *Printer) writeFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {

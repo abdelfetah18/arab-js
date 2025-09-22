@@ -374,26 +374,26 @@ func TestMemberExpression(t *testing.T) {
 			input:    "متغير س = شخص.تفاصيل.عمر؛",
 			expected: "let س = شخص.تفاصيل.عمر;",
 		},
-		// {
-		// 	name:     "computed property access",
-		// 	input:    "متغير س = شخص['اسم']؛",
-		// 	expected: `let س = شخص["اسم"];`,
-		// },
-		// {
-		// 	name:     "nested computed and dot access",
-		// 	input:    "متغير س = شخص.تفاصيل['عمر']؛",
-		// 	expected: `let س = شخص.تفاصيل["عمر"];`,
-		// },
-		// {
-		// 	name:     "array access",
-		// 	input:    "متغير س = ارقام[0]؛",
-		// 	expected: "let س = ارقام[0];",
-		// },
-		// {
-		// 	name:     "nested array and object access",
-		// 	input:    "متغير س = اشخاص[0].اسم؛",
-		// 	expected: "let س = اشخاص[0].اسم;",
-		// },
+		{
+			name:     "computed property access",
+			input:    "متغير س = شخص['اسم']؛",
+			expected: `let س = شخص["اسم"];`,
+		},
+		{
+			name:     "nested computed and dot access",
+			input:    "متغير س = شخص.تفاصيل['عمر']؛",
+			expected: `let س = شخص.تفاصيل["عمر"];`,
+		},
+		{
+			name:     "array access",
+			input:    "متغير س = ارقام[0]؛",
+			expected: "let س = ارقام[0];",
+		},
+		{
+			name:     "nested array and object access",
+			input:    "متغير س = اشخاص[0].اسم؛",
+			expected: "let س = اشخاص[0].اسم;",
+		},
 	}
 
 	for _, tt := range tests {
