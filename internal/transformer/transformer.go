@@ -85,8 +85,14 @@ func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpr
 		t.transformMemberExpression(memberExpression.Object.AsMemberExpression())
 		t.transformProperty(memberExpression.Property, objectType.AsObjectType())
 	case ast.NodeTypeIdentifier:
-		objectType := t.TypeResolver.ResolveTypeFromNode(memberExpression.Object)
-		if objectType.Flags&checker.TypeFlagsObject == checker.TypeFlagsObject {
+		identifier := memberExpression.Object.AsIdentifier()
+		symbol := t.NameResolver.Resolve(identifier.Name, identifier.AsNode())
+		if symbol != nil && symbol.OriginalName != nil {
+			identifier.Name = *symbol.OriginalName
+		}
+
+		objectType := t.TypeResolver.ResolveTypeFromNode(symbol.Node)
+		if objectType != nil && objectType.Flags&checker.TypeFlagsObject == checker.TypeFlagsObject {
 			t.transformProperty(memberExpression.Property, objectType.AsObjectType())
 		}
 	}
