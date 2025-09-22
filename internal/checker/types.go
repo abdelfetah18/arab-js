@@ -35,6 +35,8 @@ func (t TypeFlags) String() string {
 		return "null"
 	case TypeFlagsFunction:
 		return "function"
+	case TypeFlagsArray:
+		return "array"
 	default:
 		return "unknown"
 	}
