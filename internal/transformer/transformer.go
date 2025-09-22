@@ -55,6 +55,16 @@ func (t *Transformer) transformStatement(node *ast.Node) {
 		t.transformStatement(ifStatement.AlternateStatement)
 	case ast.NodeTypeBlockStatement:
 		t.transformBlockStatement(node.AsBlockStatement())
+	case ast.NodeTypeForStatement:
+		forStatement := node.AsForStatement()
+		if forStatement.Init.Type == ast.NodeTypeVariableDeclaration {
+			t.transformExpression(forStatement.Init.AsVariableDeclaration().Initializer.Expression)
+		} else {
+			t.transformExpression(forStatement.Init)
+		}
+		t.transformExpression(forStatement.Test)
+		t.transformExpression(forStatement.Update)
+		t.transformStatement(forStatement.Body)
 	}
 }
 
@@ -68,6 +78,15 @@ func (t *Transformer) transformExpression(node *ast.Node) {
 		if symbol.OriginalName != nil {
 			identifier.Name = *symbol.OriginalName
 		}
+	case ast.NodeTypeBinaryExpression:
+		binaryExpression := node.AsBinaryExpression()
+		t.transformExpression(binaryExpression.Left)
+		t.transformExpression(binaryExpression.Right)
+	case ast.NodeTypeAssignmentExpression:
+		assignmentExpression := node.AsAssignmentExpression()
+		t.transformExpression(assignmentExpression.Right)
+	case ast.NodeTypeMemberExpression:
+		t.transformMemberExpression(node.AsMemberExpression())
 	}
 }
 
@@ -83,7 +102,7 @@ func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpr
 	case ast.NodeTypeMemberExpression:
 		objectType := t.TypeResolver.ResolveTypeFromNode(memberExpression.Object)
 		t.transformMemberExpression(memberExpression.Object.AsMemberExpression())
-		t.transformProperty(memberExpression.Property, objectType.AsObjectType())
+		t.transformProperty(memberExpression.Property, objectType.AsObjectType(), memberExpression.Computed)
 	case ast.NodeTypeIdentifier:
 		identifier := memberExpression.Object.AsIdentifier()
 		symbol := t.NameResolver.Resolve(identifier.Name, identifier.AsNode())
@@ -92,19 +111,26 @@ func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpr
 		}
 
 		objectType := t.TypeResolver.ResolveTypeFromNode(symbol.Node)
-		if objectType != nil && objectType.Flags&checker.TypeFlagsObject == checker.TypeFlagsObject {
-			t.transformProperty(memberExpression.Property, objectType.AsObjectType())
+		if objectType != nil {
+			if objectType.Flags&checker.TypeFlagsObject == checker.TypeFlagsObject {
+				t.transformProperty(memberExpression.Property, objectType.AsObjectType(), memberExpression.Computed)
+			} else {
+				apparentType := t.TypeResolver.GetApparentType(objectType)
+				t.transformProperty(memberExpression.Property, apparentType.AsObjectType(), memberExpression.Computed)
+			}
 		}
 	}
 }
 
-func (t *Transformer) transformProperty(property *ast.Node, objectType *checker.ObjectType) {
+func (t *Transformer) transformProperty(property *ast.Node, objectType *checker.ObjectType, isComputed bool) {
 	switch property.Type {
 	case ast.NodeTypeIdentifier:
 		identifier := property.AsIdentifier()
-		propertyType := objectType.Properties[identifier.Name]
-		if propertyType.OriginalName != nil {
-			identifier.Name = *propertyType.OriginalName
+		if !isComputed {
+			propertyType := objectType.Properties[identifier.Name]
+			if propertyType.OriginalName != nil {
+				identifier.Name = *propertyType.OriginalName
+			}
 		}
 	}
 }

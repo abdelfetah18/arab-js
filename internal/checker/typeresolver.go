@@ -182,3 +182,21 @@ func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node)
 		return nil
 	}
 }
+
+func (t *TypeResolver) Resolve(name string) *Type {
+	symbol := t.NameResolver.Resolve(name, nil)
+
+	if symbol != nil {
+		return t.ResolveTypeFromTypeDeclaration(symbol.Node)
+	}
+	return nil
+}
+
+func (t *TypeResolver) GetApparentType(_type *Type) *Type {
+	switch {
+	case _type.Flags&TypeFlagsString != 0:
+		return t.Resolve("تعريف_نص")
+	default:
+		return nil
+	}
+}

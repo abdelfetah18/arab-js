@@ -1,6 +1,8 @@
 package binder
 
-import "arab_js/internal/compiler/ast"
+import (
+	"arab_js/internal/compiler/ast"
+)
 
 type NameResolver struct {
 	Globals *ast.Scope
@@ -13,6 +15,10 @@ func NewNameResolver(globals *ast.Scope) *NameResolver {
 }
 
 func (n *NameResolver) Resolve(name string, location *ast.Node) *ast.Symbol {
+	if location == nil && n.Globals != nil {
+		return n.Globals.GetVariableSymbol(name)
+	}
+
 	currentScope := getCurrentScope(location)
 
 	for currentScope != nil {
