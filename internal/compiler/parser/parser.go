@@ -560,15 +560,34 @@ func (p *Parser) parseMemberExpression() *ast.Node {
 	if p.isPrimaryExpression() {
 		memberExpression := p.parsePrimaryExpression()
 
-		for p.optional(lexer.Dot) {
-			identifier := p.parseIdentifier(false)
+		isLeftSquareBracker := p.optional(lexer.LeftSquareBracket)
+		for isLeftSquareBracker || p.optional(lexer.Dot) {
+			var propertyNode *ast.Node = nil
+			if isLeftSquareBracker {
+				switch p.lexer.Peek().Type {
+				case lexer.Identifier:
+					propertyNode = p.parseIdentifier(false).AsNode()
+				case lexer.DoubleQuoteString, lexer.SingleQuoteString:
+					propertyNode = p.parseStringLiteral().AsNode()
+				case lexer.Decimal:
+					propertyNode = p.parseDecimalLiteral().AsNode()
+				}
+			} else {
+				propertyNode = p.parseIdentifier(false).AsNode()
+			}
+
 			memberExpression = ast.NewNode(
-				ast.NewMemberExpression(memberExpression, identifier.AsNode()),
+				ast.NewMemberExpression(memberExpression, propertyNode, isLeftSquareBracker),
 				ast.Location{
 					Pos: memberExpression.Location.Pos,
 					End: p.getEndPosition(),
 				},
 			).AsNode()
+			if isLeftSquareBracker {
+				p.expected(lexer.RightSquareBracket)
+			}
+
+			isLeftSquareBracker = p.optional(lexer.LeftSquareBracket)
 		}
 
 		return memberExpression

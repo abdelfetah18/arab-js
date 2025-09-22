@@ -743,10 +743,11 @@ type MemberExpression struct {
 	NodeBase
 	Object   *Node `json:"object,omitempty"`
 	Property *Node `json:"property,omitempty"`
+	Computed bool
 }
 
-func NewMemberExpression(object *Node, property *Node) *MemberExpression {
-	return &MemberExpression{Object: object, Property: property}
+func NewMemberExpression(object *Node, property *Node, computed bool) *MemberExpression {
+	return &MemberExpression{Object: object, Property: property, Computed: computed}
 }
 
 func (memberExpression *MemberExpression) MarshalJSON() ([]byte, error) {
