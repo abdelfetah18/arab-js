@@ -121,7 +121,7 @@ func generateTransformerOutputFile(inputFilePath, outputFilePath string) {
 	program.ParseSourceFiles([]string{inputFilePath})
 	program.TransformSourceFiles()
 
-	output, err := json.Marshal(program.SourceFiles()[0])
+	output, err := json.Marshal(program.GetSourceFile(inputFilePath))
 	if err != nil {
 		fmt.Println("failed to marshal AST to JSON:", err)
 		return

@@ -62,6 +62,7 @@ func TestTransformer(t *testing.T) {
 			}
 
 			sourceFile := parser.ParseSourceFile(string(inputBytes))
+			sourceFile.Name = filepath.Base(outputFilePath)
 			NewTransformer(&ProgramStub{sourceFiles: []*ast.SourceFile{sourceFile}}).Transform()
 
 			data, err := json.Marshal(sourceFile)

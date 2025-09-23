@@ -72,6 +72,33 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 		}
 
 		return propertyType.Type
+	case ast.NodeTypeObjectExpression:
+		objectExpression := node.AsObjectExpression()
+		switch objectExpression.Parent.Type {
+		case ast.NodeTypeInitializer:
+			variableDeclaration := objectExpression.Parent.Parent.AsVariableDeclaration()
+			return t.ResolveTypeAnnotation(variableDeclaration.Identifier.TypeAnnotation)
+		case ast.NodeTypeAssignmentExpression:
+			assignmentExpression := objectExpression.Parent.AsAssignmentExpression()
+			return t.ResolveTypeFromNode(assignmentExpression.Left)
+		default:
+			objectType := NewObjectType()
+			for _, property := range objectExpression.Properties {
+				if property.Type == ast.NodeTypeObjectProperty {
+					objectProperty := property.AsObjectProperty()
+					propertyName := objectProperty.Name()
+					objectType.AddProperty(
+						propertyName,
+						&PropertyType{
+							Type:         t.ResolveTypeFromNode(objectProperty.Value),
+							Name:         propertyName,
+							OriginalName: nil,
+						},
+					)
+				}
+			}
+			return NewType(objectType).AsType()
+		}
 	default:
 		return nil
 	}

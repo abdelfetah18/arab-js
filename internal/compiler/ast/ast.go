@@ -669,7 +669,7 @@ func (assignmentExpression *AssignmentExpression) ForEachChild(v Visitor) bool {
 
 type FunctionDeclaration struct {
 	NodeBase
-	ContainerBase
+	ContainerBase   `json:"-"`
 	DeclarationBase `json:"-"`
 	ID              *Identifier     `json:"id,omitempty"`
 	Params          []*Node         `json:"params,omitempty"`
@@ -1549,11 +1549,11 @@ func (restElement *RestElement) ForEachChild(v Visitor) bool {
 
 type ForStatement struct {
 	NodeBase
-	ContainerBase
-	Init   *Node `json:"init,omitempty"`
-	Test   *Node `json:"test,omitempty"`
-	Update *Node `json:"update,omitempty"`
-	Body   *Node `json:"body,omitempty"`
+	ContainerBase `json:"-"`
+	Init          *Node `json:"init,omitempty"`
+	Test          *Node `json:"test,omitempty"`
+	Update        *Node `json:"update,omitempty"`
+	Body          *Node `json:"body,omitempty"`
 }
 
 func NewForStatement(init *Node, test *Node, update *Node, body *Node) *ForStatement {

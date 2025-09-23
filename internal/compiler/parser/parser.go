@@ -103,7 +103,6 @@ func (p *Parser) parseStatement() *ast.Node {
 
 			hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
 			originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
-
 			p.expectedTypeKeyword(lexer.TypeKeywordDeclare)
 
 			if p.optionalKeyword(lexer.KeywordLet) {
