@@ -166,7 +166,7 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 	token := p.lexer.Peek()
 	switch token.Type {
 	case lexer.LeftCurlyBrace:
-		p.parseImportSpecifiers(importSpecifiers)
+		importSpecifiers = p.parseImportSpecifiers(importSpecifiers)
 	case lexer.Identifier:
 		identifier := p.parseIdentifier(false)
 		importSpecifiers = append(importSpecifiers,
@@ -186,7 +186,6 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 		p.expected(lexer.Star)
 		p.expectedKeyword(lexer.KeywordAs)
 		identifier := p.parseIdentifier(false)
-
 		importSpecifiers = append(importSpecifiers,
 			ast.NewNode(
 				ast.NewImportNamespaceSpecifier(identifier),

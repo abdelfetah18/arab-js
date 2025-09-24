@@ -1,6 +1,8 @@
 package ast
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type BinaryExpressionOperator = string
 
@@ -156,6 +158,22 @@ func (node *Node) AsFunctionType() *FunctionType {
 
 func (node *Node) AsArrayType() *ArrayType {
 	return node.Data.(*ArrayType)
+}
+
+func (node *Node) AsImportDeclaration() *ImportDeclaration {
+	return node.Data.(*ImportDeclaration)
+}
+
+func (node *Node) AsImportDefaultSpecifier() *ImportDefaultSpecifier {
+	return node.Data.(*ImportDefaultSpecifier)
+}
+
+func (node *Node) AsImportNamespaceSpecifier() *ImportNamespaceSpecifier {
+	return node.Data.(*ImportNamespaceSpecifier)
+}
+
+func (node *Node) AsImportSpecifier() *ImportSpecifier {
+	return node.Data.(*ImportSpecifier)
 }
 
 func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }

@@ -63,6 +63,36 @@ func (printer *Printer) writeStatement(statement *ast.Node) {
 		printer.Writer.Write(";")
 	case ast.NodeTypeForStatement:
 		printer.writeForStatement(statement.AsForStatement())
+	case ast.NodeTypeImportDeclaration:
+		importDeclaration := statement.AsImportDeclaration()
+		printer.Writer.Write("import ")
+		didWriteOpenBracker := false
+		for index, specifier := range importDeclaration.Specifiers {
+			switch specifier.Type {
+			case ast.NodeTypeImportDefaultSpecifier:
+				printer.Writer.Write(specifier.AsImportDefaultSpecifier().Local.Name)
+			case ast.NodeTypeImportSpecifier:
+				if !didWriteOpenBracker {
+					printer.Writer.Write("{ ")
+					didWriteOpenBracker = true
+				}
+				printer.Writer.Write(specifier.AsImportSpecifier().Local.Name)
+			case ast.NodeTypeImportNamespaceSpecifier:
+				printer.Writer.Writef("* as %s", specifier.AsImportNamespaceSpecifier().Local.Name)
+			}
+
+			if index < len(importDeclaration.Specifiers)-1 {
+				printer.Writer.Write(", ")
+			}
+		}
+
+		if didWriteOpenBracker {
+			printer.Writer.Write(" }")
+		}
+
+		printer.Writer.Write(" from ")
+		printer.Writer.Writef("\"%s\"", importDeclaration.Source.Value)
+		printer.Writer.Write(";")
 	}
 }
 

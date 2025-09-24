@@ -516,3 +516,35 @@ func TestAssignmentExpression(t *testing.T) {
 		}
 	})
 }
+
+func TestImportDeclaration(t *testing.T) {
+	t.Run("should print default import", func(t *testing.T) {
+		input := "استيراد شيئ من \"ملف\"؛"
+		output := WriteSourceFile(parser.ParseSourceFile(input))
+		expected := "import شيئ from \"ملف\";"
+
+		if output != expected {
+			t.Errorf("\nExpected %s, got %s\n", expected, output)
+		}
+	})
+
+	t.Run("should print namespace import", func(t *testing.T) {
+		input := "استيراد * بإسم شيئ_أخر من \"ملف\"؛"
+		output := WriteSourceFile(parser.ParseSourceFile(input))
+		expected := "import * as شيئ_أخر from \"ملف\";"
+
+		if output != expected {
+			t.Errorf("\nExpected %s, got %s\n", expected, output)
+		}
+	})
+
+	t.Run("should print named imports", func(t *testing.T) {
+		input := "استيراد { شيئ, شيئ_أخر } من \"ملف\"؛"
+		output := WriteSourceFile(parser.ParseSourceFile(input))
+		expected := "import { شيئ, شيئ_أخر } from \"ملف\";"
+
+		if output != expected {
+			t.Errorf("\nExpected %s, got %s\n", expected, output)
+		}
+	})
+}
