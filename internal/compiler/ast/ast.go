@@ -721,7 +721,7 @@ func (functionDeclaration *FunctionDeclaration) NodeType() NodeType {
 func (functionDeclaration *FunctionDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, functionDeclaration.ID.AsNode()) ||
 		visitNodes(v, functionDeclaration.Params) ||
-		visit(v, functionDeclaration.Body.AsNode()) ||
+		(functionDeclaration.Body != nil && visit(v, functionDeclaration.Body.AsNode())) ||
 		(functionDeclaration.TypeAnnotation != nil && visit(v, functionDeclaration.TypeAnnotation.AsNode()))
 }
 
@@ -1639,6 +1639,68 @@ func (updateExpression *UpdateExpression) NodeType() NodeType {
 
 func (updateExpression *UpdateExpression) ForEachChild(v Visitor) bool {
 	return visit(v, updateExpression.Argument)
+}
+
+type ModuleDeclaration struct {
+	NodeBase
+	DeclarationBase `json:"-"`
+	Id              *StringLiteral
+	OriginalName    *string `json:"original_name,omitempty"`
+	Body            *ModuleBlock
+}
+
+func NewModuleDeclaration(id *StringLiteral, body *ModuleBlock) *ModuleDeclaration {
+	return &ModuleDeclaration{
+		Id:   id,
+		Body: body,
+	}
+}
+
+func (moduleDeclaration *ModuleDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias ModuleDeclaration
+	return json.Marshal(
+		wrapNode(
+			*moduleDeclaration.AsNode(),
+			(*Alias)(moduleDeclaration),
+		),
+	)
+}
+
+func (moduleDeclaration *ModuleDeclaration) NodeType() NodeType {
+	return NodeTypeModuleDeclaration
+}
+
+func (moduleDeclaration *ModuleDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, moduleDeclaration.Id.AsNode()) || visit(v, moduleDeclaration.Body.AsNode())
+}
+
+type ModuleBlock struct {
+	NodeBase
+	Body []*Node
+}
+
+func NewModuleBlock(body []*Node) *ModuleBlock {
+	return &ModuleBlock{
+		Body: body,
+	}
+}
+
+func (moduleBlock *ModuleBlock) MarshalJSON() ([]byte, error) {
+	type Alias ModuleBlock
+	return json.Marshal(
+		wrapNode(
+			*moduleBlock.AsNode(),
+			(*Alias)(moduleBlock),
+		),
+	)
+}
+
+func (moduleBlock *ModuleBlock) NodeType() NodeType {
+	return NodeTypeModuleBlock
+}
+
+func (moduleBlock *ModuleBlock) ForEachChild(v Visitor) bool {
+	return visitNodes(v, moduleBlock.Body)
 }
 
 type Visitor func(*Node) bool

@@ -55,6 +55,8 @@ const (
 	NodeTypeTypeReference
 	NodeTypeArrayType
 	NodeTypeRestElement
+	NodeTypeModuleDeclaration
+	NodeTypeModuleBlock
 )
 
 func (t NodeType) String() string {
@@ -157,6 +159,10 @@ func (t NodeType) String() string {
 		return "RestElement"
 	case NodeTypeTypeLiteral:
 		return "TypeLiteral"
+	case NodeTypeModuleDeclaration:
+		return "ModuleDeclaration"
+	case NodeTypeModuleBlock:
+		return "ModuleBlock"
 	default:
 		return "Unknown"
 	}

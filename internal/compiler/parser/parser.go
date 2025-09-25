@@ -78,9 +78,9 @@ func (p *Parser) parseStatement() *ast.Node {
 		case lexer.KeywordIf:
 			return p.parseIfStatement().AsNode()
 		case lexer.KeywordLet:
-			return p.parseVariableDeclaration().AsNode()
+			return p.parseVariableDeclaration(true).AsNode()
 		case lexer.KeywordFunction:
-			return p.parseFunctionDeclaration().AsNode()
+			return p.parseFunctionDeclaration(true).AsNode()
 		case lexer.KeywordImport:
 			return p.parseImportDeclaration().AsNode()
 		case lexer.KeywordExport:
@@ -105,21 +105,22 @@ func (p *Parser) parseStatement() *ast.Node {
 			originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
 			p.expectedTypeKeyword(lexer.TypeKeywordDeclare)
 
-			if p.optionalKeyword(lexer.KeywordLet) {
-				identifier := p.parseIdentifier(true)
-				if hasPrecedingOriginalNameDirective {
-					identifier.OriginalName = &originalNameDirectiveValue
+			token := p.lexer.Peek()
+			switch token.Type {
+			case lexer.KeywordToken:
+				switch token.Value {
+				case lexer.KeywordLet:
+					return p.parseVariableDeclaration(false).AsNode()
 				}
-
-				p.expected(lexer.Semicolon)
-
-				return ast.NewNode(
-					ast.NewVariableDeclaration(identifier, nil, true),
-					ast.Location{
-						Pos: p.startPositions.Pop(),
-						End: p.getEndPosition(),
-					},
-				).AsNode()
+			case lexer.Identifier:
+				switch token.Value {
+				case lexer.TypeKeywordModule:
+					moduleDeclaration := p.parseModuleDeclaration()
+					if hasPrecedingOriginalNameDirective {
+						moduleDeclaration.OriginalName = &originalNameDirectiveValue
+					}
+					return moduleDeclaration.AsNode()
+				}
 			}
 
 			p.errorf(
@@ -127,7 +128,7 @@ func (p *Parser) parseStatement() *ast.Node {
 					Pos: p.startPositions.Pop(),
 					End: p.getEndPosition(),
 				},
-				"Expected a variable declaration but got '%s'\n", p.lexer.Peek().Value)
+				"Expected a declare based declaration but got '%s'\n", p.lexer.Peek().Value)
 			return nil
 		}
 	}
@@ -304,9 +305,9 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 	case lexer.KeywordToken:
 		switch token.Value {
 		case lexer.KeywordFunction:
-			return p.parseFunctionDeclaration().AsNode()
+			return p.parseFunctionDeclaration(true).AsNode()
 		case lexer.KeywordLet, lexer.KeywordConst:
-			return p.parseVariableDeclaration().AsNode()
+			return p.parseVariableDeclaration(true).AsNode()
 		}
 	}
 
@@ -322,7 +323,7 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 func (p *Parser) parseFunctionDeclarationOrExpression() *ast.Node {
 	token := p.lexer.Peek()
 	if token.Type == lexer.KeywordToken && token.Value == lexer.KeywordFunction {
-		return p.parseFunctionDeclaration().AsNode()
+		return p.parseFunctionDeclaration(true).AsNode()
 	}
 
 	return p.parseExpression()
@@ -432,17 +433,22 @@ func (p *Parser) parseTypeNode() *ast.Node {
 	}
 }
 
-func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
+func (p *Parser) parseVariableDeclaration(doParseInitializer bool) *ast.VariableDeclaration {
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordLet)
 	identifier := p.parseIdentifier(true)
 	p.expected(lexer.Equal)
-	assignmentExpression := p.parseAssignmentExpression()
-	initializer := ast.NewNode(
-		ast.NewInitializer(assignmentExpression),
-		assignmentExpression.Location,
-	)
+
+	var initializer *ast.Initializer = nil
+	if doParseInitializer {
+		assignmentExpression := p.parseAssignmentExpression()
+		initializer = ast.NewNode(
+			ast.NewInitializer(assignmentExpression),
+			assignmentExpression.Location,
+		)
+	}
+
 	p.expected(lexer.Semicolon)
 
 	return ast.NewNode(
@@ -454,7 +460,7 @@ func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 	)
 }
 
-func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
+func (p *Parser) parseFunctionDeclaration(doParseBody bool) *ast.FunctionDeclaration {
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordFunction)
@@ -507,7 +513,10 @@ func (p *Parser) parseFunctionDeclaration() *ast.FunctionDeclaration {
 		typeAnnotation = p.parseTypeAnnotation()
 	}
 
-	body := p.parseBlockStatement()
+	var body *ast.BlockStatement = nil
+	if doParseBody {
+		body = p.parseBlockStatement()
+	}
 
 	return ast.NewNode(
 		ast.NewFunctionDeclaration(identifier, params, body, typeAnnotation),
@@ -1247,7 +1256,7 @@ func (p *Parser) parseForStatement() *ast.ForStatement {
 	var init *ast.Node = nil
 	token := p.lexer.Peek()
 	if token.Type == lexer.KeywordToken && token.Value == lexer.KeywordLet {
-		init = p.parseVariableDeclaration().AsNode()
+		init = p.parseVariableDeclaration(true).AsNode()
 	} else {
 		init = p.parseExpression()
 		p.expected(lexer.Semicolon)
@@ -1651,6 +1660,59 @@ func (p *Parser) parseTypeReference() *ast.TypeReference {
 	)
 }
 
+func (p *Parser) parseModuleDeclaration() *ast.ModuleDeclaration {
+	p.markStartPosition()
+
+	p.expectedTypeKeyword(lexer.TypeKeywordModule)
+	id := p.parseStringLiteral()
+	body := p.parseModuleBlock()
+
+	return ast.NewNode(
+		ast.NewModuleDeclaration(id, body),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseModuleBlock() *ast.ModuleBlock {
+	p.markStartPosition()
+
+	body := []*ast.Node{}
+
+	p.expected(lexer.LeftCurlyBrace)
+	token := p.lexer.Peek()
+	for token.Type != lexer.RightCurlyBrace {
+		switch token.Type {
+		case lexer.KeywordToken:
+			switch token.Value {
+			case lexer.KeywordLet:
+				body = append(body, p.parseVariableDeclaration(false).AsNode())
+			case lexer.KeywordFunction:
+				body = append(body, p.parseFunctionDeclaration(false).AsNode())
+				p.expected(lexer.Semicolon)
+			}
+		case lexer.Identifier:
+			switch token.Value {
+			case lexer.TypeKeywordInterface:
+				body = append(body, p.parseInterfaceDeclaration().AsNode())
+			}
+		}
+		token = p.lexer.Peek()
+	}
+
+	p.expected(lexer.RightCurlyBrace)
+
+	return ast.NewNode(
+		ast.NewModuleBlock(body),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
 func (p *Parser) expected(tokenType lexer.TokenType) bool {
 	token := p.lexer.Peek()
 	if token.Type != tokenType {
@@ -1704,6 +1766,15 @@ func (p *Parser) optional(tokenType lexer.TokenType) bool {
 func (p *Parser) optionalKeyword(keyword lexer.Keyword) bool {
 	token := p.lexer.Peek()
 	if token.Type == lexer.KeywordToken && token.Value == keyword {
+		p.lexer.Next()
+		return true
+	}
+	return false
+}
+
+func (p *Parser) optionalTypeKeyword(typeKeyword lexer.TypeKeyword) bool {
+	token := p.lexer.Peek()
+	if token.Type == lexer.Identifier && token.Value == typeKeyword {
 		p.lexer.Next()
 		return true
 	}

@@ -287,6 +287,7 @@ const (
 	TypeKeywordInterface TypeKeyword = "واجهة"
 	TypeKeywordType      TypeKeyword = "نوع"
 	TypeKeywordDeclare   TypeKeyword = "تصريح"
+	TypeKeywordModule    TypeKeyword = "وحدة"
 )
 
 type Lexer struct {
