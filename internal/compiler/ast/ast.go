@@ -1703,6 +1703,35 @@ func (moduleBlock *ModuleBlock) ForEachChild(v Visitor) bool {
 	return visitNodes(v, moduleBlock.Body)
 }
 
+type UnionType struct {
+	NodeBase
+	Types []*Node
+}
+
+func NewUnionType(types []*Node) *UnionType {
+	return &UnionType{
+		Types: types,
+	}
+}
+
+func (unionType *UnionType) MarshalJSON() ([]byte, error) {
+	type Alias UnionType
+	return json.Marshal(
+		wrapNode(
+			*unionType.AsNode(),
+			(*Alias)(unionType),
+		),
+	)
+}
+
+func (unionType *UnionType) NodeType() NodeType {
+	return NodeTypeUnionType
+}
+
+func (unionType *UnionType) ForEachChild(v Visitor) bool {
+	return visitNodes(v, unionType.Types)
+}
+
 type Visitor func(*Node) bool
 
 func visit(v Visitor, node *Node) bool {

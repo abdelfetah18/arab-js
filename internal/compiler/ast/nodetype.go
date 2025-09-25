@@ -57,6 +57,7 @@ const (
 	NodeTypeRestElement
 	NodeTypeModuleDeclaration
 	NodeTypeModuleBlock
+	NodeTypeUnionType
 )
 
 func (t NodeType) String() string {
@@ -163,6 +164,8 @@ func (t NodeType) String() string {
 		return "ModuleDeclaration"
 	case NodeTypeModuleBlock:
 		return "ModuleBlock"
+	case NodeTypeUnionType:
+		return "UnionType"
 	default:
 		return "Unknown"
 	}

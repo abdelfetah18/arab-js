@@ -1006,52 +1006,54 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	p.markStartPosition()
 
-	switch p.lexer.Peek().Type {
-	case lexer.LeftParenthesis:
-		return ast.NewNode(
-			ast.NewTypeAnnotation(
-				p.parseFunctionType().AsNode(),
-			),
-			ast.Location{
-				Pos: p.startPositions.Pop(),
-				End: p.getEndPosition(),
-			},
-		)
-	case lexer.LeftCurlyBrace:
-		return ast.NewNode(
-			ast.NewTypeAnnotation(
-				p.parseTypeLiteral().AsNode(),
-			),
-			ast.Location{
-				Pos: p.startPositions.Pop(),
-				End: p.getEndPosition(),
-			},
-		)
+	isUnionType := true
+	types := []*ast.Node{}
+
+	for isUnionType {
+		switch p.lexer.Peek().Type {
+		case lexer.LeftParenthesis:
+			types = append(types, p.parseFunctionType().AsNode())
+		case lexer.LeftCurlyBrace:
+			types = append(types, p.parseTypeLiteral().AsNode())
+		default:
+			typeNode := p.parseTypeNode()
+
+			if p.optional(lexer.LeftSquareBracket) && p.optional(lexer.RightSquareBracket) {
+				arrayType := ast.NewNode(
+					ast.NewArrayType(typeNode),
+					ast.Location{
+						Pos: typeNode.Location.Pos,
+						End: p.getEndPosition(),
+					},
+				)
+				types = append(types, arrayType.AsNode())
+			} else {
+				types = append(types, typeNode)
+			}
+		}
+
+		if !p.optional(lexer.BitwiseOr) {
+			isUnionType = false
+		}
 	}
 
-	typeNode := p.parseTypeNode()
-
-	if p.optional(lexer.LeftSquareBracket) && p.optional(lexer.RightSquareBracket) {
-		pos := p.startPositions.Pop()
-		arrayType := ast.NewNode(
-			ast.NewArrayType(typeNode),
+	if len(types) > 1 {
+		unionType := ast.NewNode(
+			ast.NewUnionType(types),
 			ast.Location{
-				Pos: pos,
+				Pos: p.startPositions.Pop(),
 				End: p.getEndPosition(),
 			},
 		)
 
 		return ast.NewNode(
-			ast.NewTypeAnnotation(arrayType.AsNode()),
-			ast.Location{
-				Pos: pos,
-				End: p.getEndPosition(),
-			},
+			ast.NewTypeAnnotation(unionType.AsNode()),
+			unionType.Location,
 		)
 	}
 
 	return ast.NewNode(
-		ast.NewTypeAnnotation(typeNode),
+		ast.NewTypeAnnotation(types[0]),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
