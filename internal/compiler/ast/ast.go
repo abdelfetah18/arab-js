@@ -331,7 +331,7 @@ func (typeAnnotation *TypeAnnotation) MarshalJSON() ([]byte, error) {
 }
 
 func (typeAnnotation *TypeAnnotation) NodeType() NodeType {
-	return NodeTypeVariableDeclaration
+	return NodeTypeTypeAnnotation
 }
 
 func (typeAnnotation *TypeAnnotation) ForEachChild(v Visitor) bool {
