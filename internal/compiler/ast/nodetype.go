@@ -60,6 +60,7 @@ const (
 	NodeTypeUnionType
 	NodeTypeTypeParameter
 	NodeTypeTypeParametersDeclaration
+	NodeTypeTypeParameterInstantiation
 )
 
 func (t NodeType) String() string {
@@ -172,6 +173,8 @@ func (t NodeType) String() string {
 		return "TypeParametersDeclaration"
 	case NodeTypeTypeParameter:
 		return "TypeParameter"
+	case NodeTypeTypeParameterInstantiation:
+		return "TypeParameterInstantiation"
 	default:
 		return "Unknown"
 	}

@@ -416,20 +416,66 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 }
 
 func (p *Parser) parseTypeNode() *ast.Node {
-	token := p.lexer.Peek()
+	p.markStartPosition()
 
-	switch token.Value {
-	case lexer.TypeKeywordString:
-		return p.parseStringKeyword().AsNode()
-	case lexer.TypeKeywordNumber:
-		return p.parseNumberKeyword().AsNode()
-	case lexer.TypeKeywordBoolean:
-		return p.parseBooleanKeyword().AsNode()
-	case lexer.TypeKeywordAny:
-		return p.parseAnyKeyword().AsNode()
+	var typeNode *ast.Node = nil
 
-	default:
-		return p.parseTypeReference().AsNode()
+	isUnionType := true
+	types := []*ast.Node{}
+
+	for isUnionType {
+		token := p.lexer.Peek()
+		switch token.Type {
+		case lexer.LeftParenthesis:
+			typeNode = p.parseFunctionType().AsNode()
+		case lexer.LeftCurlyBrace:
+			typeNode = p.parseTypeLiteral().AsNode()
+		case lexer.Identifier:
+			switch token.Value {
+			case lexer.TypeKeywordString:
+				typeNode = p.parseStringKeyword().AsNode()
+			case lexer.TypeKeywordNumber:
+				typeNode = p.parseNumberKeyword().AsNode()
+			case lexer.TypeKeywordBoolean:
+				typeNode = p.parseBooleanKeyword().AsNode()
+			case lexer.TypeKeywordAny:
+				typeNode = p.parseAnyKeyword().AsNode()
+			default:
+				typeNode = p.parseTypeReference().AsNode()
+			}
+		default:
+			return nil
+		}
+
+		if p.optional(lexer.LeftSquareBracket) && p.optional(lexer.RightSquareBracket) {
+			arrayType := ast.NewNode(
+				ast.NewArrayType(typeNode),
+				ast.Location{
+					Pos: typeNode.Location.Pos,
+					End: p.getEndPosition(),
+				},
+			)
+			types = append(types, arrayType.AsNode())
+		} else {
+			types = append(types, typeNode)
+		}
+
+		if !p.optional(lexer.BitwiseOr) {
+			isUnionType = false
+		}
+	}
+
+	if len(types) > 1 {
+		return ast.NewNode(
+			ast.NewUnionType(types),
+			ast.Location{
+				Pos: p.startPositions.Pop(),
+				End: p.getEndPosition(),
+			},
+		).AsNode()
+	} else {
+		p.startPositions.Pop()
+		return types[0]
 	}
 }
 
@@ -1013,55 +1059,8 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 
 func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	p.markStartPosition()
-
-	isUnionType := true
-	types := []*ast.Node{}
-
-	for isUnionType {
-		switch p.lexer.Peek().Type {
-		case lexer.LeftParenthesis:
-			types = append(types, p.parseFunctionType().AsNode())
-		case lexer.LeftCurlyBrace:
-			types = append(types, p.parseTypeLiteral().AsNode())
-		default:
-			typeNode := p.parseTypeNode()
-
-			if p.optional(lexer.LeftSquareBracket) && p.optional(lexer.RightSquareBracket) {
-				arrayType := ast.NewNode(
-					ast.NewArrayType(typeNode),
-					ast.Location{
-						Pos: typeNode.Location.Pos,
-						End: p.getEndPosition(),
-					},
-				)
-				types = append(types, arrayType.AsNode())
-			} else {
-				types = append(types, typeNode)
-			}
-		}
-
-		if !p.optional(lexer.BitwiseOr) {
-			isUnionType = false
-		}
-	}
-
-	if len(types) > 1 {
-		unionType := ast.NewNode(
-			ast.NewUnionType(types),
-			ast.Location{
-				Pos: p.startPositions.Pop(),
-				End: p.getEndPosition(),
-			},
-		)
-
-		return ast.NewNode(
-			ast.NewTypeAnnotation(unionType.AsNode()),
-			unionType.Location,
-		)
-	}
-
 	return ast.NewNode(
-		ast.NewTypeAnnotation(types[0]),
+		ast.NewTypeAnnotation(p.parseTypeNode()),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1665,8 +1664,13 @@ func (p *Parser) parseTypeReference() *ast.TypeReference {
 
 	identifier := p.parseIdentifier(false)
 
+	var typeParameters *ast.TypeParameterInstantiation = nil
+	if p.lexer.Peek().Type == lexer.LeftArrow {
+		typeParameters = p.parseTypeParameterInstantiation()
+	}
+
 	return ast.NewNode(
-		ast.NewTypeReference(identifier),
+		ast.NewTypeReference(identifier, typeParameters),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1746,6 +1750,25 @@ func (p *Parser) parseTypeParametersDeclaration() *ast.TypeParametersDeclaration
 
 	return ast.NewNode(
 		ast.NewTypeParametersDeclaration(params),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseTypeParameterInstantiation() *ast.TypeParameterInstantiation {
+	p.markStartPosition()
+
+	params := []*ast.Node{}
+	p.expected(lexer.LeftArrow)
+	params = append(params, p.parseTypeNode())
+	for p.optional(lexer.Comma) {
+		params = append(params, p.parseTypeNode())
+	}
+	p.expected(lexer.RightArrow)
+	return ast.NewNode(
+		ast.NewTypeParameterInstantiation(params),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),

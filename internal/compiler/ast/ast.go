@@ -1489,11 +1489,12 @@ func (typeLiteral *TypeLiteral) ForEachChild(v Visitor) bool {
 
 type TypeReference struct {
 	NodeBase
-	TypeName *Identifier `json:"type_name,omitempty"`
+	TypeName       *Identifier                 `json:"type_name,omitempty"`
+	TypeParameters *TypeParameterInstantiation `json:"type_parameters,omitempty"`
 }
 
-func NewTypeReference(TypeName *Identifier) *TypeReference {
-	return &TypeReference{TypeName: TypeName}
+func NewTypeReference(TypeName *Identifier, typeParameters *TypeParameterInstantiation) *TypeReference {
+	return &TypeReference{TypeName: TypeName, TypeParameters: typeParameters}
 }
 
 func (typeReference *TypeReference) MarshalJSON() ([]byte, error) {
@@ -1792,6 +1793,33 @@ func (typeParametersDeclaration *TypeParametersDeclaration) ForEachChild(v Visit
 		_params = append(_params, param.AsNode())
 	}
 	return visitNodes(v, _params)
+}
+
+type TypeParameterInstantiation struct {
+	NodeBase
+	Params []*Node `json:"params,omitempty"`
+}
+
+func NewTypeParameterInstantiation(params []*Node) *TypeParameterInstantiation {
+	return &TypeParameterInstantiation{Params: params}
+}
+
+func (typeParameterInstantiation *TypeParameterInstantiation) MarshalJSON() ([]byte, error) {
+	type Alias TypeParameterInstantiation
+	return json.Marshal(
+		wrapNode(
+			*typeParameterInstantiation.AsNode(),
+			(*Alias)(typeParameterInstantiation),
+		),
+	)
+}
+
+func (typeParameterInstantiation *TypeParameterInstantiation) NodeType() NodeType {
+	return NodeTypeTypeParameterInstantiation
+}
+
+func (typeParameterInstantiation *TypeParameterInstantiation) ForEachChild(v Visitor) bool {
+	return visitNodes(v, typeParameterInstantiation.Params)
 }
 
 type Visitor func(*Node) bool
