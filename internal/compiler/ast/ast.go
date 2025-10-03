@@ -689,15 +689,17 @@ type FunctionDeclaration struct {
 	NodeBase
 	ContainerBase   `json:"-"`
 	DeclarationBase `json:"-"`
-	ID              *Identifier     `json:"id,omitempty"`
-	Params          []*Node         `json:"params,omitempty"`
-	Body            *BlockStatement `json:"body,omitempty"`
-	TypeAnnotation  *TypeAnnotation `json:"type_annotation,omitempty"`
+	ID              *Identifier                `json:"id,omitempty"`
+	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
+	Params          []*Node                    `json:"params,omitempty"`
+	Body            *BlockStatement            `json:"body,omitempty"`
+	TypeAnnotation  *TypeAnnotation            `json:"type_annotation,omitempty"`
 }
 
-func NewFunctionDeclaration(id *Identifier, params []*Node, body *BlockStatement, typeAnnotation *TypeAnnotation) *FunctionDeclaration {
+func NewFunctionDeclaration(id *Identifier, typeParameters *TypeParametersDeclaration, params []*Node, body *BlockStatement, typeAnnotation *TypeAnnotation) *FunctionDeclaration {
 	return &FunctionDeclaration{
 		ID:             id,
+		TypeParameters: typeParameters,
 		Params:         params,
 		Body:           body,
 		TypeAnnotation: typeAnnotation,
@@ -1277,14 +1279,16 @@ func (sourceFile *SourceFile) ContainerBaseData() *ContainerBase {
 type InterfaceDeclaration struct {
 	NodeBase
 	DeclarationBase `json:"-"`
-	Id              *Identifier    `json:"id,omitempty"`
-	Body            *InterfaceBody `json:"body,omitempty"`
+	Id              *Identifier                `json:"id,omitempty"`
+	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
+	Body            *InterfaceBody             `json:"body,omitempty"`
 }
 
-func NewInterfaceDeclaration(id *Identifier, body *InterfaceBody) *InterfaceDeclaration {
+func NewInterfaceDeclaration(id *Identifier, typeParameters *TypeParametersDeclaration, body *InterfaceBody) *InterfaceDeclaration {
 	return &InterfaceDeclaration{
-		Id:   id,
-		Body: body,
+		Id:             id,
+		TypeParameters: typeParameters,
+		Body:           body,
 	}
 }
 
@@ -1424,13 +1428,16 @@ func (functionType *FunctionType) ForEachChild(v Visitor) bool {
 
 type TypeAliasDeclaration struct {
 	NodeBase
-	Id             *Identifier     `json:"id,omitempty"`
-	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
+	DeclarationBase `json:"-"`
+	Id              *Identifier                `json:"id,omitempty"`
+	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
+	TypeAnnotation  *TypeAnnotation            `json:"type_annotation,omitempty"`
 }
 
-func NewTypeAliasDeclaration(id *Identifier, typeAnnotation *TypeAnnotation) *TypeAliasDeclaration {
+func NewTypeAliasDeclaration(id *Identifier, typeParameters *TypeParametersDeclaration, typeAnnotation *TypeAnnotation) *TypeAliasDeclaration {
 	return &TypeAliasDeclaration{
 		Id:             id,
+		TypeParameters: typeParameters,
 		TypeAnnotation: typeAnnotation,
 	}
 }
@@ -1730,6 +1737,61 @@ func (unionType *UnionType) NodeType() NodeType {
 
 func (unionType *UnionType) ForEachChild(v Visitor) bool {
 	return visitNodes(v, unionType.Types)
+}
+
+type TypeParameter struct {
+	NodeBase
+	DeclarationBase `json:"-"`
+	Name            string `json:"name,omitempty"`
+}
+
+func NewTypeParameter(name string) *TypeParameter {
+	return &TypeParameter{Name: name}
+}
+
+func (typeParameter *TypeParameter) MarshalJSON() ([]byte, error) {
+	type Alias TypeParameter
+	return json.Marshal(
+		wrapNode(
+			*typeParameter.AsNode(),
+			(*Alias)(typeParameter),
+		),
+	)
+}
+
+func (typeParameter *TypeParameter) NodeType() NodeType {
+	return NodeTypeTypeParameter
+}
+
+type TypeParametersDeclaration struct {
+	NodeBase
+	Params []*TypeParameter `json:"params,omitempty"`
+}
+
+func NewTypeParametersDeclaration(params []*TypeParameter) *TypeParametersDeclaration {
+	return &TypeParametersDeclaration{Params: params}
+}
+
+func (typeParametersDeclaration *TypeParametersDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias TypeParametersDeclaration
+	return json.Marshal(
+		wrapNode(
+			*typeParametersDeclaration.AsNode(),
+			(*Alias)(typeParametersDeclaration),
+		),
+	)
+}
+
+func (typeParametersDeclaration *TypeParametersDeclaration) NodeType() NodeType {
+	return NodeTypeTypeParametersDeclaration
+}
+
+func (typeParametersDeclaration *TypeParametersDeclaration) ForEachChild(v Visitor) bool {
+	_params := []*Node{}
+	for _, param := range typeParametersDeclaration.Params {
+		_params = append(_params, param.AsNode())
+	}
+	return visitNodes(v, _params)
 }
 
 type Visitor func(*Node) bool

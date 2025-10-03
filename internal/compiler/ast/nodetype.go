@@ -58,6 +58,8 @@ const (
 	NodeTypeModuleDeclaration
 	NodeTypeModuleBlock
 	NodeTypeUnionType
+	NodeTypeTypeParameter
+	NodeTypeTypeParametersDeclaration
 )
 
 func (t NodeType) String() string {
@@ -166,6 +168,10 @@ func (t NodeType) String() string {
 		return "ModuleBlock"
 	case NodeTypeUnionType:
 		return "UnionType"
+	case NodeTypeTypeParametersDeclaration:
+		return "TypeParametersDeclaration"
+	case NodeTypeTypeParameter:
+		return "TypeParameter"
 	default:
 		return "Unknown"
 	}

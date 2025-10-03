@@ -465,6 +465,10 @@ func (p *Parser) parseFunctionDeclaration(doParseBody bool) *ast.FunctionDeclara
 
 	p.expectedKeyword(lexer.KeywordFunction)
 	identifier := p.parseIdentifier(false)
+	var typeParameters *ast.TypeParametersDeclaration = nil
+	if p.lexer.Peek().Type == lexer.LeftArrow {
+		typeParameters = p.parseTypeParametersDeclaration()
+	}
 	p.expected(lexer.LeftParenthesis)
 
 	token := p.lexer.Peek()
@@ -519,7 +523,7 @@ func (p *Parser) parseFunctionDeclaration(doParseBody bool) *ast.FunctionDeclara
 	}
 
 	return ast.NewNode(
-		ast.NewFunctionDeclaration(identifier, params, body, typeAnnotation),
+		ast.NewFunctionDeclaration(identifier, typeParameters, params, body, typeAnnotation),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -895,12 +899,16 @@ func (p *Parser) parseInterfaceDeclaration() *ast.InterfaceDeclaration {
 	p.expectedTypeKeyword(lexer.TypeKeywordInterface)
 
 	identifier := p.parseIdentifier(false)
+	var typeParameters *ast.TypeParametersDeclaration = nil
+	if p.lexer.Peek().Type == lexer.LeftArrow {
+		typeParameters = p.parseTypeParametersDeclaration()
+	}
 	body := p.parseInterfaceBody()
 
 	p.optional(lexer.Semicolon)
 
 	return ast.NewNode(
-		ast.NewInterfaceDeclaration(identifier, body),
+		ast.NewInterfaceDeclaration(identifier, typeParameters, body),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1131,11 +1139,15 @@ func (p *Parser) parseTypeAliasDeclaration() *ast.TypeAliasDeclaration {
 
 	p.expectedTypeKeyword(lexer.TypeKeywordType)
 	identifier := p.parseIdentifier(false)
+	var typeParameters *ast.TypeParametersDeclaration = nil
+	if p.lexer.Peek().Type == lexer.LeftArrow {
+		typeParameters = p.parseTypeParametersDeclaration()
+	}
 	p.expected(lexer.Equal)
 	typeAnnotation := p.parseTypeAnnotation()
 
 	return ast.NewNode(
-		ast.NewTypeAliasDeclaration(identifier, typeAnnotation),
+		ast.NewTypeAliasDeclaration(identifier, typeParameters, typeAnnotation),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1708,6 +1720,32 @@ func (p *Parser) parseModuleBlock() *ast.ModuleBlock {
 
 	return ast.NewNode(
 		ast.NewModuleBlock(body),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseTypeParametersDeclaration() *ast.TypeParametersDeclaration {
+	p.markStartPosition()
+
+	params := []*ast.TypeParameter{}
+
+	p.expected(lexer.LeftArrow)
+
+	identifier := p.parseIdentifier(false)
+	params = append(params, ast.NewNode(ast.NewTypeParameter(identifier.Name), identifier.Location))
+
+	for p.optional(lexer.Comma) {
+		identifier := p.parseIdentifier(false)
+		params = append(params, ast.NewNode(ast.NewTypeParameter(identifier.Name), identifier.Location))
+	}
+
+	p.expected(lexer.RightArrow)
+
+	return ast.NewNode(
+		ast.NewTypeParametersDeclaration(params),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
