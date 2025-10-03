@@ -290,8 +290,7 @@ const (
 	TypeKeywordModule    TypeKeyword = "وحدة"
 )
 
-type Lexer struct {
-	input                             string
+type LexerState struct {
 	position                          int
 	startPosition                     int
 	beforeWhitespacePosition          int
@@ -300,8 +299,15 @@ type Lexer struct {
 	OriginalNameDirectiveValue        string
 }
 
+type Lexer struct {
+	input string
+	LexerState
+}
+
 func NewLexer(input string) *Lexer {
-	lexer := &Lexer{input: input, position: 0, HasPrecedingOriginalNameDirective: false}
+	lexer := &Lexer{input: input}
+	lexer.position = 0
+	lexer.HasPrecedingOriginalNameDirective = false
 	lexer.currentToken = lexer.nextToken()
 	return lexer
 }
@@ -512,4 +518,17 @@ func (l *Lexer) nextToken() Token {
 	}
 
 	return Token{Type: Invalid, Value: l.current(), Position: l.position}
+}
+
+func (l *Lexer) Mark() LexerState {
+	return l.LexerState
+}
+
+func (l *Lexer) Rewind(state LexerState) {
+	l.position = state.position
+	l.startPosition = state.startPosition
+	l.beforeWhitespacePosition = state.beforeWhitespacePosition
+	l.currentToken = state.currentToken
+	l.HasPrecedingOriginalNameDirective = state.HasPrecedingOriginalNameDirective
+	l.OriginalNameDirectiveValue = state.OriginalNameDirectiveValue
 }

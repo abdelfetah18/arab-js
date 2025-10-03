@@ -7,6 +7,12 @@ import (
 	"fmt"
 )
 
+type ParserState struct {
+	lexerState        lexer.LexerState
+	startPositionsLen int
+	diagnosticLen     int
+}
+
 type Parser struct {
 	lexer          *lexer.Lexer
 	startPositions stack.Stack[uint]
@@ -1868,4 +1874,18 @@ func (p *Parser) error(location ast.Location, message string) {
 
 func (p *Parser) errorf(location ast.Location, format string, a ...any) {
 	p.error(location, fmt.Sprintf(format, a...))
+}
+
+func (p *Parser) mark() ParserState {
+	return ParserState{
+		lexerState:        p.lexer.Mark(),
+		startPositionsLen: p.startPositions.Size(),
+		diagnosticLen:     len(p.Diagnostics),
+	}
+}
+
+func (p *Parser) rewind(state ParserState) {
+	p.lexer.Rewind(state.lexerState)
+	p.startPositions.PopItems(p.startPositions.Size() - state.startPositionsLen)
+	p.Diagnostics = p.Diagnostics[0:state.diagnosticLen]
 }

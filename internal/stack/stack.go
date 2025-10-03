@@ -33,6 +33,17 @@ func (s *Stack[T]) Pop() T {
 	return item
 }
 
+func (s *Stack[T]) PopItems(items int) {
+	count := items
+	for count > 0 {
+		if s.Size() == 0 {
+			return
+		}
+		s.Pop()
+		count--
+	}
+}
+
 // TryPeek returns the top item and true if ok.
 // Returns zero value and false if the stack is empty.
 func (s *Stack[T]) TryPeek() (T, bool) {
