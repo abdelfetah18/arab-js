@@ -733,12 +733,13 @@ func (functionDeclaration *FunctionDeclaration) ContainerBaseData() *ContainerBa
 
 type CallExpression struct {
 	NodeBase
-	Callee *Node   `json:"callee,omitempty"`
-	Args   []*Node `json:"args,omitempty"`
+	Callee         *Node                       `json:"callee,omitempty"`
+	TypeParameters *TypeParameterInstantiation `json:"type_parameters,omitempty"`
+	Args           []*Node                     `json:"args,omitempty"`
 }
 
-func NewCallExpression(callee *Node, args []*Node) *CallExpression {
-	return &CallExpression{Callee: callee, Args: args}
+func NewCallExpression(callee *Node, typeParameters *TypeParameterInstantiation, args []*Node) *CallExpression {
+	return &CallExpression{Callee: callee, TypeParameters: typeParameters, Args: args}
 }
 
 func (callExpression *CallExpression) MarshalJSON() ([]byte, error) {
@@ -756,7 +757,9 @@ func (callExpression *CallExpression) NodeType() NodeType {
 }
 
 func (callExpression *CallExpression) ForEachChild(v Visitor) bool {
-	return visit(v, callExpression.Callee) || visitNodes(v, callExpression.Args)
+	return visit(v, callExpression.Callee) ||
+		(callExpression.TypeParameters != nil && visit(v, callExpression.TypeParameters.AsNode())) ||
+		visitNodes(v, callExpression.Args)
 }
 
 type MemberExpression struct {

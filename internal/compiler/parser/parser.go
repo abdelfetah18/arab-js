@@ -586,6 +586,11 @@ func (p *Parser) parseFunctionDeclaration(doParseBody bool) *ast.FunctionDeclara
 func (p *Parser) parseLeftHandSideExpression() *ast.Node {
 	expression := p.parseMemberExpression()
 
+	var typeParameters *ast.TypeParameterInstantiation = nil
+	if p.lexer.Peek().Type == lexer.LeftArrow {
+		typeParameters = p.parseTypeParameterInstantiation()
+	}
+
 	for p.optional(lexer.LeftParenthesis) {
 		argumentList := []*ast.Node{}
 
@@ -608,7 +613,7 @@ func (p *Parser) parseLeftHandSideExpression() *ast.Node {
 
 		p.expected(lexer.RightParenthesis)
 		expression = ast.NewNode(
-			ast.NewCallExpression(expression, argumentList),
+			ast.NewCallExpression(expression, typeParameters, argumentList),
 			ast.Location{
 				Pos: expression.Location.Pos,
 				End: p.getEndPosition(),
@@ -1764,6 +1769,7 @@ func (p *Parser) parseTypeParametersDeclaration() *ast.TypeParametersDeclaration
 }
 
 func (p *Parser) parseTypeParameterInstantiation() *ast.TypeParameterInstantiation {
+	state := p.mark()
 	p.markStartPosition()
 
 	params := []*ast.Node{}
@@ -1772,7 +1778,12 @@ func (p *Parser) parseTypeParameterInstantiation() *ast.TypeParameterInstantiati
 	for p.optional(lexer.Comma) {
 		params = append(params, p.parseTypeNode())
 	}
-	p.expected(lexer.RightArrow)
+
+	if !p.expected(lexer.RightArrow) {
+		p.rewind(state)
+		return nil
+	}
+
 	return ast.NewNode(
 		ast.NewTypeParameterInstantiation(params),
 		ast.Location{
