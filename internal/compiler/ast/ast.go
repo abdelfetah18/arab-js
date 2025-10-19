@@ -176,6 +176,10 @@ func (node *Node) AsImportSpecifier() *ImportSpecifier {
 	return node.Data.(*ImportSpecifier)
 }
 
+func (node *Node) AsUnionType() *UnionType {
+	return node.Data.(*UnionType)
+}
+
 func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }
 func (node *NodeBase) ForEachChild(v Visitor) bool { return false }
 

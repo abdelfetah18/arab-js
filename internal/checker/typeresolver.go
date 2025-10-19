@@ -166,6 +166,13 @@ func (t *TypeResolver) ResolveTypeNode(typeNode *ast.Node) *Type {
 	case ast.NodeTypeArrayType:
 		arrayTypeNode := typeNode.AsArrayType()
 		return NewType(NewArrayType(t.ResolveTypeNode(arrayTypeNode.ElementType))).AsType()
+	case ast.NodeTypeUnionType:
+		unionTypeNode := typeNode.AsUnionType()
+		types := []*Type{}
+		for _, typeNode := range unionTypeNode.Types {
+			types = append(types, t.ResolveTypeNode(typeNode))
+		}
+		return NewType(NewUnionType(types)).AsType()
 	}
 
 	return nil

@@ -15,6 +15,7 @@ const (
 	TypeFlagsNull     TypeFlags = 1 << 5
 	TypeFlagsFunction TypeFlags = 1 << 6
 	TypeFlagsArray    TypeFlags = 1 << 7
+	TypeFlagsUnion    TypeFlags = 1 << 8
 )
 
 func (t TypeFlags) String() string {
@@ -37,6 +38,8 @@ func (t TypeFlags) String() string {
 		return "function"
 	case TypeFlagsArray:
 		return "array"
+	case TypeFlagsUnion:
+		return "union"
 	default:
 		return "unknown"
 	}
@@ -157,6 +160,15 @@ type ArrayType struct {
 func NewArrayType(elementsType *Type) *ArrayType { return &ArrayType{ElementsType: elementsType} }
 func (t *ArrayType) Flags() TypeFlags            { return TypeFlagsArray }
 func (t *ArrayType) Name() string                { return "array" }
+
+type UnionType struct {
+	Type
+	types []*Type
+}
+
+func NewUnionType(types []*Type) *UnionType { return &UnionType{types: types} }
+func (t *UnionType) Flags() TypeFlags       { return TypeFlagsArray }
+func (t *UnionType) Name() string           { return "union" }
 
 func InferTypeFromNode(node *ast.Node) *Type {
 	switch node.Type {
