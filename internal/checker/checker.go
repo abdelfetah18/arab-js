@@ -89,7 +89,7 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 		return
 	}
 
-	if !AreTypesCompatible(identifierType, initializerType) {
+	if !c.TypeResolver.areTypesCompatible(identifierType, initializerType) {
 		c.errorf(variableDeclaration.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, identifierType.Data.Name(), initializerType.Data.Name())
 		return
 	}
@@ -117,7 +117,7 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 			return nil
 		}
 
-		if !AreTypesCompatible(leftType, rightType) {
+		if !c.TypeResolver.areTypesCompatible(leftType, rightType) {
 			c.errorf(assignmentExpression.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, leftType.Data.Name(), rightType.Data.Name())
 			return nil
 		}
@@ -142,59 +142,58 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 		return nil
 	}
 
-	if _type.Flags&TypeFlagsFunction != TypeFlagsFunction {
+	if _type.Flags&TypeFlagsObject == 0 {
 		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.Data.Name())
 		return nil
 	}
 
-	functionType := _type.AsFunctionType()
+	objectType := _type.AsObjectType()
+	if objectType.signature == nil {
+		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.Data.Name())
+		return nil
+	}
 
-	if functionType.RestType == nil {
-		if len(functionType.Params) != len(callExpression.Args) {
-			c.errorf(callExpression.Location, EXPECTED_0_ARGUMENTS_BUT_GOT_1, len(functionType.Params), len(callExpression.Args))
+	if objectType.signature.flags&SignatureFlagsHasRestParameter == 0 {
+		if len(objectType.signature.parameters) != len(callExpression.Args) {
+			c.errorf(callExpression.Location, EXPECTED_0_ARGUMENTS_BUT_GOT_1, len(objectType.signature.parameters), len(callExpression.Args))
 			return nil
 		}
 	}
 
-	for index, param := range functionType.Params {
+	var restType *Type = nil
+	var restIndex = -1
+	for index, param := range objectType.signature.parameters {
+		if param.isRest {
+			restIndex = index
+			restType = param.Type
+			break
+		}
+
 		arg := callExpression.Args[index]
 		_type := c.checkExpression(arg)
-		if !AreTypesCompatible(param, _type) {
-			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Data.Name())
+		if !c.TypeResolver.areTypesCompatible(param.Type, _type) {
+			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
 			return nil
 		}
 	}
 
-	if functionType.RestType != nil {
-		for index := len(functionType.Params); index < len(callExpression.Args); index++ {
+	if restType != nil {
+		for index := restIndex; index < len(callExpression.Args); index++ {
+			param := objectType.signature.parameters[index]
 			arg := callExpression.Args[index]
 			_type := c.checkExpression(arg)
-			if !AreTypesCompatible(functionType.RestType.AsArrayType().ElementsType, _type) {
-				c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), functionType.RestType.Data.Name())
+			if !c.TypeResolver.areTypesCompatible(param.Type, _type) {
+				c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
 				return nil
 			}
 		}
 	}
 
-	return functionType.ReturnType
+	return objectType.signature.returnType
 }
 
 func (c *Checker) checkObjectExpression(objectExpression *ast.ObjectExpression) *Type {
-	objectType := NewType(NewObjectType())
-	for _, property := range objectExpression.Properties {
-		switch property.Type {
-		case ast.NodeTypeObjectProperty:
-			objectProperty := property.AsObjectProperty()
-			propertyName := objectProperty.Name()
-			objectType.AddProperty(propertyName, &PropertyType{
-				Name:         propertyName,
-				OriginalName: nil,
-				Type:         InferTypeFromNode(objectProperty.Value),
-			})
-		}
-	}
-
-	return objectType.AsType()
+	return c.TypeResolver.inferTypeFromNode(objectExpression.AsNode())
 }
 
 func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) *Type {
@@ -210,12 +209,11 @@ func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) 
 		return nil
 	}
 
-	propertyType := objectType.AsObjectType().GetProperty(propertyName)
+	propertyType := objectType.AsObjectType().members[propertyName]
 	if propertyType == nil {
 		c.errorf(memberExpression.AsNode().Location, PROPERTY_0_DOES_NOT_EXIST_ON_TYPE_1, propertyName, objectType.Data.Name())
 		return nil
 	}
-
 	return propertyType.Type
 }
 

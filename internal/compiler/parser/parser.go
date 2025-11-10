@@ -116,7 +116,11 @@ func (p *Parser) parseStatement() *ast.Node {
 			case lexer.KeywordToken:
 				switch token.Value {
 				case lexer.KeywordLet:
-					return p.parseVariableDeclaration(false).AsNode()
+					variableDeclaration := p.parseVariableDeclaration(false)
+					if hasPrecedingOriginalNameDirective {
+						variableDeclaration.Identifier.OriginalName = &originalNameDirectiveValue
+					}
+					return variableDeclaration.AsNode()
 				}
 			case lexer.Identifier:
 				switch token.Value {

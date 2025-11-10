@@ -136,7 +136,7 @@ func (t *Transformer) transformProperty(property *ast.Node, objectType *checker.
 	case ast.NodeTypeIdentifier:
 		identifier := property.AsIdentifier()
 		if !isComputed {
-			propertyType := objectType.Properties[identifier.Name]
+			propertyType := objectType.Members()[identifier.Name]
 			if propertyType.OriginalName != nil {
 				identifier.Name = *propertyType.OriginalName
 			}
@@ -172,7 +172,7 @@ func (t *Transformer) transformObjectExpression(objectExpression *ast.ObjectExpr
 			objectProperty := property.AsObjectProperty()
 			if objectProperty.Key.Type == ast.NodeTypeIdentifier {
 				identifier := objectProperty.Key.AsIdentifier()
-				propertyType := objectType.Properties[identifier.Name]
+				propertyType := objectType.Members()[identifier.Name]
 				if propertyType.OriginalName != nil {
 					identifier.Name = *propertyType.OriginalName
 				}

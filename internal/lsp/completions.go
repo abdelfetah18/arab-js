@@ -50,13 +50,13 @@ func getCompletionData(node *ast.Node, checker *checker.Checker) []defines.Compl
 	if isPropertyAccess {
 		_type := checker.TypeResolver.ResolveTypeFromNode(node.Parent.AsMemberExpression().Object)
 		objectType := _type.AsObjectType()
-		for _, param := range objectType.Properties {
+		for name := range objectType.Members() {
 			label := "property"
 			d := defines.CompletionItemKindText
 			completions = append(completions, defines.CompletionItem{
 				Label:      label,
 				Kind:       &d,
-				InsertText: &param.Name,
+				InsertText: &name,
 			})
 		}
 	} else {

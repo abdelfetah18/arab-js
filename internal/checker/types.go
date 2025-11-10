@@ -1,21 +1,17 @@
 package checker
 
-import "arab_js/internal/compiler/ast"
-
 type TypeFlags uint32
 
 const (
 	TypeFlagsNone TypeFlags = 0
 
-	TypeFlagsAny      TypeFlags = 1 << 0
-	TypeFlagsObject   TypeFlags = 1 << 1
-	TypeFlagsString   TypeFlags = 1 << 2
-	TypeFlagsNumber   TypeFlags = 1 << 3
-	TypeFlagsBoolean  TypeFlags = 1 << 4
-	TypeFlagsNull     TypeFlags = 1 << 5
-	TypeFlagsFunction TypeFlags = 1 << 6
-	TypeFlagsArray    TypeFlags = 1 << 7
-	TypeFlagsUnion    TypeFlags = 1 << 8
+	TypeFlagsAny     TypeFlags = 1 << 0
+	TypeFlagsObject  TypeFlags = 1 << 1
+	TypeFlagsString  TypeFlags = 1 << 2
+	TypeFlagsNumber  TypeFlags = 1 << 3
+	TypeFlagsBoolean TypeFlags = 1 << 4
+	TypeFlagsNull    TypeFlags = 1 << 5
+	TypeFlagsUnion   TypeFlags = 1 << 7
 )
 
 func (t TypeFlags) String() string {
@@ -34,10 +30,6 @@ func (t TypeFlags) String() string {
 		return "boolean"
 	case TypeFlagsNull:
 		return "null"
-	case TypeFlagsFunction:
-		return "function"
-	case TypeFlagsArray:
-		return "array"
 	case TypeFlagsUnion:
 		return "union"
 	default:
@@ -45,121 +37,89 @@ func (t TypeFlags) String() string {
 	}
 }
 
-type Type struct {
-	Flags TypeFlags
-	Data  TypeData
+type ObjectFlags uint32
+
+const (
+	ObjectFlagsNone          ObjectFlags = 0
+	ObjectFlagsInterface     ObjectFlags = 1 << 1 // Interface
+	ObjectFlagsAnonymous     ObjectFlags = 1 << 2 // Anonymous
+	ObjectFlagsObjectLiteral ObjectFlags = 1 << 3 // Originates in an object literal
+	ObjectFlagsEvolvingArray ObjectFlags = 1 << 4 // Evolving array type
+	ObjectFlagsArrayLiteral  ObjectFlags = 1 << 5 // Originates in an array literal
+)
+
+func (o ObjectFlags) String() string {
+	switch o {
+	case ObjectFlagsNone:
+		return "None"
+	case ObjectFlagsInterface:
+		return "Interface"
+	case ObjectFlagsAnonymous:
+		return "Anonymous"
+	case ObjectFlagsObjectLiteral:
+		return "ObjectLiteral"
+	case ObjectFlagsEvolvingArray:
+		return "EvolvingArray"
+	case ObjectFlagsArrayLiteral:
+		return "ArrayLiteral"
+	default:
+		return "unknown"
+	}
 }
 
-func NewType[T TypeData](typeData T) T {
-	_type := typeData.AsType()
-	_type.Flags = typeData.Flags()
-	_type.Data = typeData
-	return typeData
+type Type struct {
+	Flags       TypeFlags
+	ObjectFlags ObjectFlags
+	Data        TypeData
 }
 
 type TypeData interface {
 	AsType() *Type
-	Flags() TypeFlags
 	Name() string
 }
 
-func (t *Type) AsType() *Type                 { return t }
-func (t *Type) AsStringType() *StringType     { return t.Data.(*StringType) }
-func (t *Type) AsNumberType() *NumberType     { return t.Data.(*NumberType) }
-func (t *Type) AsBooleanType() *BooleanType   { return t.Data.(*BooleanType) }
-func (t *Type) AsNullType() *NullType         { return t.Data.(*NullType) }
-func (t *Type) AsObjectType() *ObjectType     { return t.Data.(*ObjectType) }
-func (t *Type) AsFunctionType() *FunctionType { return t.Data.(*FunctionType) }
-func (t *Type) AsArrayType() *ArrayType       { return t.Data.(*ArrayType) }
+func (t *Type) AsType() *Type                   { return t }
+func (t *Type) AsIntrinsicType() *IntrinsicType { return t.Data.(*IntrinsicType) }
+func (t *Type) AsObjectType() *ObjectType       { return t.Data.(*ObjectType) }
+func (t *Type) AsArrayType() *ArrayType         { return t.Data.(*ArrayType) }
 
-type StringType struct {
+type IntrinsicType struct {
 	Type
+	intrinsicName string
 }
 
-func NewStringType() *StringType       { return &StringType{} }
-func (t *StringType) Flags() TypeFlags { return TypeFlagsString }
-func (t *StringType) Name() string     { return "string" }
+func (t *IntrinsicType) Name() string { return t.intrinsicName }
 
-type NumberType struct {
+type LiteralType struct {
 	Type
+	value       string
+	regularType *Type
 }
 
-func NewNumberType() *NumberType       { return &NumberType{} }
-func (t *NumberType) Flags() TypeFlags { return TypeFlagsNumber }
-func (t *NumberType) Name() string     { return "number" }
+func (t *LiteralType) Name() string { return t.value }
 
-type BooleanType struct {
-	Type
+type ObjectTypeMember struct {
+	Type         *Type
+	OriginalName *string
 }
 
-func NewBooleanType() *BooleanType      { return &BooleanType{} }
-func (t *BooleanType) Flags() TypeFlags { return TypeFlagsBoolean }
-func (t *BooleanType) Name() string     { return "boolean" }
-
-type NullType struct {
-	Type
-}
-
-func NewNullType() *NullType         { return &NullType{} }
-func (t *NullType) Flags() TypeFlags { return TypeFlagsNull }
-func (t *NullType) Name() string     { return "null" }
-
-type AnyType struct {
-	Type
-}
-
-func NewAnyType() *AnyType          { return &AnyType{} }
-func (t *AnyType) Flags() TypeFlags { return TypeFlagsAny }
-func (t *AnyType) Name() string     { return "boolean" }
-
+type ObjectTypeMembers = map[string]*ObjectTypeMember
 type ObjectType struct {
 	Type
-	Properties map[string]*PropertyType
+	members   ObjectTypeMembers
+	signature *Signature
 }
 
-type PropertyType struct {
-	Name         string
-	OriginalName *string
-	Type         *Type
-}
-
-func NewObjectType() *ObjectType       { return &ObjectType{Properties: make(map[string]*PropertyType)} }
-func (t *ObjectType) Flags() TypeFlags { return TypeFlagsObject }
-func (t *ObjectType) Name() string     { return "object" }
-
-func (t *ObjectType) AddProperty(name string, propertyType *PropertyType) {
-	t.Properties[name] = propertyType
-}
-
-func (t *ObjectType) GetProperty(name string) *PropertyType {
-	return t.Properties[name]
-}
-
-func (t *ObjectType) HasProperty(propertyName string) bool {
-	_, exists := t.Properties[propertyName]
-	return exists
-}
-
-type FunctionType struct {
-	Type
-	Params     []*Type
-	ReturnType *Type
-	RestType   *Type
-}
-
-func NewFunctionType() *FunctionType             { return &FunctionType{Params: []*Type{}} }
-func (t *FunctionType) Flags() TypeFlags         { return TypeFlagsFunction }
-func (t *FunctionType) Name() string             { return "function" }
-func (t *FunctionType) AddParamType(_type *Type) { t.Params = append(t.Params, _type) }
+func (t *ObjectType) Name() string               { return "object" }
+func (t *ObjectType) Members() ObjectTypeMembers { return t.members }
 
 type ArrayType struct {
-	Type
-	ElementsType *Type
+	ObjectType
+	ElementType *Type
 }
 
-func NewArrayType(elementsType *Type) *ArrayType { return &ArrayType{ElementsType: elementsType} }
-func (t *ArrayType) Flags() TypeFlags            { return TypeFlagsArray }
-func (t *ArrayType) Name() string                { return "array" }
+func NewArrayType(elementType *Type) *ArrayType { return &ArrayType{ElementType: elementType} }
+func (t *ArrayType) Name() string               { return "array" }
 
 type UnionType struct {
 	Type
@@ -167,72 +127,24 @@ type UnionType struct {
 }
 
 func NewUnionType(types []*Type) *UnionType { return &UnionType{types: types} }
-func (t *UnionType) Flags() TypeFlags       { return TypeFlagsArray }
 func (t *UnionType) Name() string           { return "union" }
 
-func InferTypeFromNode(node *ast.Node) *Type {
-	switch node.Type {
-	case ast.NodeTypeStringLiteral:
-		return NewType(NewStringType()).AsType()
-	case ast.NodeTypeDecimalLiteral:
-		return NewType(NewNumberType()).AsType()
-	case ast.NodeTypeBooleanLiteral:
-		return NewType(NewBooleanType()).AsType()
-	case ast.NodeTypeNullLiteral:
-		return NewType(NewNullType()).AsType()
-	}
+type SignatureFlags uint32
 
-	return nil
+const (
+	SignatureFlagsNone SignatureFlags = 0
+
+	SignatureFlagsHasRestParameter SignatureFlags = 1 << 0 // Indicates last parameter is rest parameter
+)
+
+type SignatureParameter struct {
+	Name   string
+	Type   *Type
+	isRest bool
 }
 
-func AreTypesCompatible(leftType *Type, rightType *Type) bool {
-	if leftType == nil || rightType == nil {
-		return false
-	}
-
-	if leftType.Flags == TypeFlagsAny || rightType.Flags == TypeFlagsAny {
-		return true
-	}
-
-	if leftType.Flags == rightType.Flags {
-		switch leftType.Flags {
-		case TypeFlagsString, TypeFlagsNumber, TypeFlagsBoolean, TypeFlagsNull:
-			return true
-		}
-	}
-
-	if leftType.Flags == TypeFlagsObject && rightType.Flags == TypeFlagsObject {
-		leftObj := leftType.AsObjectType()
-		rightObj := rightType.AsObjectType()
-
-		for name, rightProp := range rightObj.Properties {
-			leftProp, ok := leftObj.Properties[name]
-			if !ok {
-				return false
-			}
-			if !AreTypesCompatible(leftProp.Type, rightProp.Type) {
-				return false
-			}
-		}
-		return true
-	}
-
-	if leftType.Flags == TypeFlagsFunction && rightType.Flags == TypeFlagsFunction {
-		leftFn := leftType.AsFunctionType()
-		rightFn := rightType.AsFunctionType()
-
-		if len(leftFn.Params) != len(rightFn.Params) {
-			return false
-		}
-
-		for i := range leftFn.Params {
-			if !AreTypesCompatible(leftFn.Params[i], rightFn.Params[i]) {
-				return false
-			}
-		}
-
-		return AreTypesCompatible(leftFn.ReturnType, rightFn.ReturnType)
-	}
-
-	return false
+type Signature struct {
+	flags      SignatureFlags
+	parameters []*SignatureParameter
+	returnType *Type
 }
