@@ -548,3 +548,15 @@ func TestImportDeclaration(t *testing.T) {
 		}
 	})
 }
+
+func TestFunctionExpression(t *testing.T) {
+	t.Run("should print function expression", func(t *testing.T) {
+		input := "جمع = دالة جمع(أ: عدد, ب: عدد): عدد { إرجاع أ + ب؛ }"
+		output := WriteSourceFile(parser.ParseSourceFile(input))
+		expected := "جمع = function جمع(أ, ب) {\n  return أ + ب;\n};"
+
+		if output != expected {
+			t.Errorf("\nExpected:\n%s\nGot:\n%s\n", expected, output)
+		}
+	})
+}

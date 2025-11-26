@@ -118,6 +118,7 @@ func (node *Node) AsUpdateExpression() *UpdateExpression { return node.Data.(*Up
 func (node *Node) AsAssignmentExpression() *AssignmentExpression {
 	return node.Data.(*AssignmentExpression)
 }
+func (node *Node) AsFunctionExpression() *FunctionExpression { return node.Data.(*FunctionExpression) }
 
 func (node *Node) AsIfStatement() *IfStatement         { return node.Data.(*IfStatement) }
 func (node *Node) AsForStatement() *ForStatement       { return node.Data.(*ForStatement) }
@@ -1867,4 +1868,50 @@ func (thisEpxression *ThisEpxression) MarshalJSON() ([]byte, error) {
 
 func (thisEpxression *ThisEpxression) NodeType() NodeType {
 	return NodeTypeThisEpxression
+}
+
+type FunctionExpression struct {
+	NodeBase
+	ContainerBase   `json:"-"`
+	DeclarationBase `json:"-"`
+	ID              *Identifier                `json:"id,omitempty"`
+	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
+	Params          []*Node                    `json:"params,omitempty"`
+	Body            *BlockStatement            `json:"body,omitempty"`
+	TypeAnnotation  *TypeAnnotation            `json:"type_annotation,omitempty"`
+}
+
+func NewFunctionExpression(id *Identifier, typeParameters *TypeParametersDeclaration, params []*Node, body *BlockStatement, typeAnnotation *TypeAnnotation) *FunctionExpression {
+	return &FunctionExpression{
+		ID:             id,
+		TypeParameters: typeParameters,
+		Params:         params,
+		Body:           body,
+		TypeAnnotation: typeAnnotation,
+	}
+}
+
+func (functionExpression *FunctionExpression) MarshalJSON() ([]byte, error) {
+	type Alias FunctionExpression
+	return json.Marshal(
+		wrapNode(
+			*functionExpression.AsNode(),
+			(*Alias)(functionExpression),
+		),
+	)
+}
+
+func (functionExpression *FunctionExpression) NodeType() NodeType {
+	return NodeTypeFunctionExpression
+}
+
+func (functionExpression *FunctionExpression) ForEachChild(v Visitor) bool {
+	return visit(v, functionExpression.ID.AsNode()) ||
+		visitNodes(v, functionExpression.Params) ||
+		(functionExpression.Body != nil && visit(v, functionExpression.Body.AsNode())) ||
+		(functionExpression.TypeAnnotation != nil && visit(v, functionExpression.TypeAnnotation.AsNode()))
+}
+
+func (functionExpression *FunctionExpression) ContainerBaseData() *ContainerBase {
+	return &functionExpression.ContainerBase
 }

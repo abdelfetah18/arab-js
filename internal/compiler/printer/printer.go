@@ -218,6 +218,8 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 		printer.writeAssignmentExpression(expression.AsAssignmentExpression())
 	case ast.NodeTypeThisEpxression:
 		printer.Writer.Write("this")
+	case ast.NodeTypeFunctionExpression:
+		printer.writeFunctionExpression(expression.AsFunctionExpression())
 	}
 }
 
@@ -324,4 +326,27 @@ func (printer *Printer) writeAssignmentExpression(assignmentExpression *ast.Assi
 	printer.writeExpression(assignmentExpression.Left)
 	printer.Writer.Writef(" %s ", assignmentExpression.Operator)
 	printer.writeExpression(assignmentExpression.Right)
+}
+
+func (printer *Printer) writeFunctionExpression(functionExpression *ast.FunctionExpression) {
+	printer.Writer.Write("function ")
+	if functionExpression.ID != nil {
+		printer.Writer.Write(functionExpression.ID.Name)
+	}
+	printer.Writer.Write("(")
+	for index, param := range functionExpression.Params {
+		switch param.Type {
+		case ast.NodeTypeRestElement:
+			printer.Writer.Write("...")
+			printer.Writer.Write(param.AsRestElement().Argument.Name)
+		case ast.NodeTypeIdentifier:
+			printer.Writer.Write(param.AsIdentifier().Name)
+		}
+
+		if index < len(functionExpression.Params)-1 {
+			printer.Writer.Write(", ")
+		}
+	}
+	printer.Writer.Write(") ")
+	printer.writeBlockStatement(functionExpression.Body)
 }

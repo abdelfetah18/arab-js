@@ -23,6 +23,7 @@ const (
 	NodeTypeFunctionDeclaration
 	NodeTypeCallExpression
 	NodeTypeThisEpxression
+	NodeTypeFunctionExpression
 	NodeTypeMemberExpression
 	NodeTypeImportSpecifier
 	NodeTypeImportDefaultSpecifier
@@ -176,6 +177,10 @@ func (t NodeType) String() string {
 		return "TypeParameter"
 	case NodeTypeTypeParameterInstantiation:
 		return "TypeParameterInstantiation"
+	case NodeTypeThisEpxression:
+		return "ThisExpression"
+	case NodeTypeFunctionExpression:
+		return "FunctionExpression"
 	default:
 		return "Unknown"
 	}

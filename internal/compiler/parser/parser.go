@@ -384,7 +384,7 @@ func (p *Parser) isPrimaryExpression() bool {
 		return true
 	case lexer.KeywordToken:
 		switch token.Value {
-		case lexer.KeywordNull, lexer.KeywordTrue, lexer.KeywordFalse, lexer.KeywordThis:
+		case lexer.KeywordNull, lexer.KeywordTrue, lexer.KeywordFalse, lexer.KeywordThis, lexer.KeywordFunction:
 			return true
 		default:
 			return false
@@ -406,7 +406,9 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 		case lexer.KeywordTrue, lexer.KeywordFalse:
 			return p.parseBooleanLiteral().AsNode()
 		case lexer.KeywordThis:
-			p.parseThisExpression().AsNode()
+			return p.parseThisExpression().AsNode()
+		case lexer.KeywordFunction:
+			return p.parseFunctionExpression().AsNode()
 		}
 	case lexer.Decimal:
 		return p.parseDecimalLiteral().AsNode()
@@ -1806,6 +1808,79 @@ func (p *Parser) parseThisExpression() *ast.ThisEpxression {
 
 	return ast.NewNode(
 		ast.NewThisEpxression(),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
+	p.markStartPosition()
+
+	p.expectedKeyword(lexer.KeywordFunction)
+
+	var identifier *ast.Identifier = nil
+	if p.lexer.Peek().Type == lexer.Identifier {
+		identifier = p.parseIdentifier(false)
+	}
+
+	var typeParameters *ast.TypeParametersDeclaration = nil
+	if p.lexer.Peek().Type == lexer.LeftArrow {
+		typeParameters = p.parseTypeParametersDeclaration()
+	}
+	p.expected(lexer.LeftParenthesis)
+
+	token := p.lexer.Peek()
+	params := []*ast.Node{}
+
+	isInLoop := func() bool {
+		token := p.lexer.Peek()
+		return token.Type != lexer.EOF &&
+			token.Type != lexer.Invalid &&
+			token.Type != lexer.RightParenthesis &&
+			(token.Type == lexer.Identifier || token.Type == lexer.TripleDots)
+	}
+
+	for isInLoop() {
+		pos := uint(p.lexer.Position())
+		if p.optional(lexer.TripleDots) {
+			identifier := p.parseIdentifier(false)
+			var typeAnnotation *ast.TypeAnnotation = nil
+			if p.optional(lexer.Colon) {
+				typeAnnotation = p.parseTypeAnnotation()
+			}
+
+			params = append(params,
+				ast.NewNode(
+					ast.NewRestElement(identifier, typeAnnotation),
+					ast.Location{
+						Pos: pos,
+						End: p.getEndPosition(),
+					},
+				).AsNode(),
+			)
+		} else {
+			params = append(params, p.parseIdentifier(true).AsNode())
+		}
+
+		token = p.lexer.Peek()
+		if token.Type != lexer.RightParenthesis && token.Type != lexer.TripleDots {
+			p.expected(lexer.Comma)
+		}
+	}
+
+	p.expected(lexer.RightParenthesis)
+
+	var typeAnnotation *ast.TypeAnnotation = nil
+	if p.optional(lexer.Colon) {
+		typeAnnotation = p.parseTypeAnnotation()
+	}
+
+	body := p.parseBlockStatement()
+
+	return ast.NewNode(
+		ast.NewFunctionExpression(identifier, typeParameters, params, body, typeAnnotation),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
