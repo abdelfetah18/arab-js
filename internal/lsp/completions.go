@@ -51,10 +51,9 @@ func getCompletionData(node *ast.Node, checker *checker.Checker) []defines.Compl
 		_type := checker.TypeResolver.ResolveTypeFromNode(node.Parent.AsMemberExpression().Object)
 		objectType := _type.AsObjectType()
 		for name := range objectType.Members() {
-			label := "property"
 			d := defines.CompletionItemKindText
 			completions = append(completions, defines.CompletionItem{
-				Label:      label,
+				Label:      name,
 				Kind:       &d,
 				InsertText: &name,
 			})
@@ -64,17 +63,15 @@ func getCompletionData(node *ast.Node, checker *checker.Checker) []defines.Compl
 
 		for currentScope != nil {
 			for k, symbol := range currentScope.Locals {
-				label := "code"
 				d := defines.CompletionItemKindText
 				switch symbol.Node.Type {
 				case ast.NodeTypeFunctionDeclaration:
-					label = "function"
 					d = defines.CompletionItemKindFunction
 				case ast.NodeTypeVariableDeclaration:
 					d = defines.CompletionItemKindVariable
 				}
 				completions = append(completions, defines.CompletionItem{
-					Label:      label,
+					Label:      k,
 					Kind:       &d,
 					InsertText: &k,
 				})
@@ -83,17 +80,15 @@ func getCompletionData(node *ast.Node, checker *checker.Checker) []defines.Compl
 		}
 
 		for k, symbol := range checker.NameResolver.Globals.Locals {
-			label := "code"
 			d := defines.CompletionItemKindText
 			switch symbol.Node.Type {
 			case ast.NodeTypeFunctionDeclaration:
-				label = "function"
 				d = defines.CompletionItemKindFunction
 			case ast.NodeTypeVariableDeclaration:
 				d = defines.CompletionItemKindVariable
 			}
 			completions = append(completions, defines.CompletionItem{
-				Label:      label,
+				Label:      k,
 				Kind:       &d,
 				InsertText: &k,
 			})
