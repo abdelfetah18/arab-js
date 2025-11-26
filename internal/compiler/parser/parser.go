@@ -384,7 +384,7 @@ func (p *Parser) isPrimaryExpression() bool {
 		return true
 	case lexer.KeywordToken:
 		switch token.Value {
-		case lexer.KeywordNull, lexer.KeywordTrue, lexer.KeywordFalse:
+		case lexer.KeywordNull, lexer.KeywordTrue, lexer.KeywordFalse, lexer.KeywordThis:
 			return true
 		default:
 			return false
@@ -405,6 +405,8 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 			return p.parseNullLiteral().AsNode()
 		case lexer.KeywordTrue, lexer.KeywordFalse:
 			return p.parseBooleanLiteral().AsNode()
+		case lexer.KeywordThis:
+			p.parseThisExpression().AsNode()
 		}
 	case lexer.Decimal:
 		return p.parseDecimalLiteral().AsNode()
@@ -1790,6 +1792,20 @@ func (p *Parser) parseTypeParameterInstantiation() *ast.TypeParameterInstantiati
 
 	return ast.NewNode(
 		ast.NewTypeParameterInstantiation(params),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseThisExpression() *ast.ThisEpxression {
+	p.markStartPosition()
+
+	p.expectedKeyword(lexer.KeywordThis)
+
+	return ast.NewNode(
+		ast.NewThisEpxression(),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),

@@ -216,6 +216,8 @@ func (printer *Printer) writeExpression(expression *ast.Node) {
 		}
 	case ast.NodeTypeAssignmentExpression:
 		printer.writeAssignmentExpression(expression.AsAssignmentExpression())
+	case ast.NodeTypeThisEpxression:
+		printer.Writer.Write("this")
 	}
 }
 

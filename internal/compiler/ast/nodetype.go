@@ -22,6 +22,7 @@ const (
 	NodeTypeAssignmentExpression
 	NodeTypeFunctionDeclaration
 	NodeTypeCallExpression
+	NodeTypeThisEpxression
 	NodeTypeMemberExpression
 	NodeTypeImportSpecifier
 	NodeTypeImportDefaultSpecifier

@@ -23,6 +23,7 @@ const (
 	KeywordDefault  Keyword = "افتراضي"
 	KeywordReturn   Keyword = "إرجاع"
 	KeywordFor      Keyword = "من_أجل"
+	KeywordThis     Keyword = "هذا"
 )
 
 type TokenType int

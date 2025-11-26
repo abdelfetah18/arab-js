@@ -1846,3 +1846,25 @@ func visitNodes(v Visitor, nodes []*Node) bool {
 	}
 	return false
 }
+
+type ThisEpxression struct {
+	NodeBase
+}
+
+func NewThisEpxression() *ThisEpxression {
+	return &ThisEpxression{}
+}
+
+func (thisEpxression *ThisEpxression) MarshalJSON() ([]byte, error) {
+	type Alias ThisEpxression
+	return json.Marshal(
+		wrapNode(
+			*thisEpxression.AsNode(),
+			(*Alias)(thisEpxression),
+		),
+	)
+}
+
+func (thisEpxression *ThisEpxression) NodeType() NodeType {
+	return NodeTypeThisEpxression
+}
