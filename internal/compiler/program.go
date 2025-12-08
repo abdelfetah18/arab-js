@@ -42,7 +42,7 @@ func (p *Program) SourceFiles() []*ast.SourceFile { return p.sourceFiles }
 
 func (p *Program) ParseSourceFiles(sourceFilesPaths []string) error {
 	p.sourceFiles = append(p.sourceFiles, parser.ParseSourceFile(bundled.ReadLibFile(bundled.LibNameDom)))
-	p.sourceFiles = append(p.sourceFiles, parser.ParseSourceFile(bundled.ReadLibFile(bundled.LibNameBase)))
+	p.sourceFiles = append(p.sourceFiles, parser.ParseSourceFile(bundled.ReadLibFile(bundled.LibNameES5)))
 
 	for _, filePath := range sourceFilesPaths {
 		data, err := os.ReadFile(filePath)

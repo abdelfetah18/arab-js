@@ -10,8 +10,8 @@ var content embed.FS
 type LibName = string
 
 const (
-	LibNameBase LibName = "base"
-	LibNameDom  LibName = "dom"
+	LibNameES5 LibName = "es5"
+	LibNameDom LibName = "dom"
 )
 
 func ReadLibFile(name LibName) string {
@@ -22,8 +22,8 @@ func ReadLibFile(name LibName) string {
 			panic(err)
 		}
 		return string(data)
-	case "base":
-		data, err := content.ReadFile("assets/libs/lib.base.d.arabjs")
+	case "es5":
+		data, err := content.ReadFile("assets/libs/lib.es5.d.arts")
 		if err != nil {
 			panic(err)
 		}
