@@ -5,9 +5,9 @@ import (
 	"arab_js/internal/bundled"
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler/ast"
+	printer "arab_js/internal/compiler/emitter"
 	"arab_js/internal/compiler/lexer"
 	"arab_js/internal/compiler/parser"
-	"arab_js/internal/compiler/printer"
 	"arab_js/internal/transformer"
 	"fmt"
 	"os"
@@ -89,9 +89,9 @@ func (p *Program) WriteSourceFiles(outputDir string) error {
 			outputFileName = "index.js"
 		}
 
-		p := printer.NewPrinter()
-		p.Write(sourceFile)
-		output := p.Writer.Output
+		_emitter := printer.NewEmitter()
+		_emitter.Emit(sourceFile)
+		output := _emitter.Writer.Output
 
 		outputFile := filepath.Join(outputDir, outputFileName)
 		if err := os.WriteFile(outputFile, []byte(output), 0644); err != nil {

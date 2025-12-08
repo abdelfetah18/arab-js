@@ -1,4 +1,4 @@
-package printer
+package emitter
 
 import (
 	"arab_js/internal/compiler/lexer"
@@ -10,7 +10,7 @@ func TestVariableDeclaration(t *testing.T) {
 	t.Run("should parse a VariableDeclaration", func(t *testing.T) {
 		input := "متغير عدد = 100؛"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "let عدد = 100;"
 
 		if output != expected {
@@ -21,7 +21,7 @@ func TestVariableDeclaration(t *testing.T) {
 	t.Run("should parse a VariableDeclaration inside a BlockStatement", func(t *testing.T) {
 		input := "{ متغير عدد = 100؛ }"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "{\n  let عدد = 100;\n}"
 
 		if output != expected {
@@ -34,7 +34,7 @@ func TestVariableDeclaration(t *testing.T) {
 
 		parser := parser.NewParser(lexer.NewLexer(input))
 		sourceFile := parser.Parse()
-		WriteSourceFile(sourceFile)
+		EmitSourceFile(sourceFile)
 
 		if len(parser.Diagnostics) == 0 {
 			t.Errorf("\nExpected errors for missing semicolon")
@@ -46,7 +46,7 @@ func TestVariableDeclaration(t *testing.T) {
 
 		parser := parser.NewParser(lexer.NewLexer(input))
 		sourceFile := parser.Parse()
-		WriteSourceFile(sourceFile)
+		EmitSourceFile(sourceFile)
 
 		if len(parser.Diagnostics) == 0 {
 			t.Errorf("\nExpected errors for invalid identifier")
@@ -58,7 +58,7 @@ func TestStringLiteral(t *testing.T) {
 	t.Run("should parse a double-quoted StringLiteral", func(t *testing.T) {
 		input := "متغير نص = \"أهلا\"؛"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "let نص = \"أهلا\";"
 
 		if output != expected {
@@ -69,7 +69,7 @@ func TestStringLiteral(t *testing.T) {
 	t.Run("should parse a single-quoted StringLiteral", func(t *testing.T) {
 		input := "متغير نص = 'أهلا'؛"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "let نص = \"أهلا\";"
 
 		if output != expected {
@@ -80,7 +80,7 @@ func TestStringLiteral(t *testing.T) {
 	t.Run("should parse a StringLiteral inside a BlockStatement", func(t *testing.T) {
 		input := "{ اطبع(\"مرحبا\")؛ }"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "{\n  اطبع(\"مرحبا\");\n}"
 
 		if output != expected {
@@ -93,7 +93,7 @@ func TestBlockStatement(t *testing.T) {
 	t.Run("should parse an empty BlockStatement", func(t *testing.T) {
 		input := "{}"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "{}"
 
 		if output != expected {
@@ -104,7 +104,7 @@ func TestBlockStatement(t *testing.T) {
 	t.Run("should parse a BlockStatement with a single VariableDeclaration", func(t *testing.T) {
 		input := "{ متغير عدد = 100؛ }"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "{\n  let عدد = 100;\n}"
 
 		if output != expected {
@@ -115,7 +115,7 @@ func TestBlockStatement(t *testing.T) {
 	t.Run("should parse a BlockStatement with multiple statements", func(t *testing.T) {
 		input := "{ متغير عدد = 100؛ متغير رقم = 1؛}"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "{\n  let عدد = 100;\n  let رقم = 1;\n}"
 
 		if output != expected {
@@ -126,7 +126,7 @@ func TestBlockStatement(t *testing.T) {
 	t.Run("should parse a nested BlockStatement", func(t *testing.T) {
 		input := "{ { متغير س = 5؛ } }"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "{\n  {\n    let س = 5;\n  }\n}"
 
 		if output != expected {
@@ -137,7 +137,7 @@ func TestBlockStatement(t *testing.T) {
 	t.Run("should parse a BlockStatement with different statement types", func(t *testing.T) {
 		input := "{ احسب(1,2)؛ متغير س = 10؛ }"
 		sourceFile := parser.ParseSourceFile(input)
-		output := WriteSourceFile(sourceFile)
+		output := EmitSourceFile(sourceFile)
 		expected := "{\n  احسب(1, 2);\n  let س = 10;\n}"
 
 		if output != expected {
@@ -150,7 +150,7 @@ func TestBlockStatement(t *testing.T) {
 
 		parser := parser.NewParser(lexer.NewLexer(input))
 		sourceFile := parser.Parse()
-		WriteSourceFile(sourceFile)
+		EmitSourceFile(sourceFile)
 
 		if len(parser.Diagnostics) == 0 {
 			t.Errorf("\nExpected errors for missing closing brace")
@@ -264,7 +264,7 @@ func TestBinaryExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sourceFile := parser.ParseSourceFile(tt.input)
-			output := WriteSourceFile(sourceFile)
+			output := EmitSourceFile(sourceFile)
 
 			if output != tt.expected {
 				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, output)
@@ -299,7 +299,7 @@ func TestArrayExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sourceFile := parser.ParseSourceFile(tt.input)
-			output := WriteSourceFile(sourceFile)
+			output := EmitSourceFile(sourceFile)
 
 			if output != tt.expected {
 				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, output)
@@ -349,7 +349,7 @@ func TestObjectExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sourceFile := parser.ParseSourceFile(tt.input)
-			output := WriteSourceFile(sourceFile)
+			output := EmitSourceFile(sourceFile)
 
 			if output != tt.expected {
 				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, output)
@@ -399,7 +399,7 @@ func TestMemberExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sourceFile := parser.ParseSourceFile(tt.input)
-			output := WriteSourceFile(sourceFile)
+			output := EmitSourceFile(sourceFile)
 
 			if output != tt.expected {
 				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, output)
@@ -472,7 +472,7 @@ func TestFunctionDeclaration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sourceFile := parser.ParseSourceFile(tt.input)
-			output := WriteSourceFile(sourceFile)
+			output := EmitSourceFile(sourceFile)
 
 			if output != tt.expected {
 				t.Errorf("Expected:\n%s\nGot:\n%s\n", tt.expected, output)
@@ -482,9 +482,9 @@ func TestFunctionDeclaration(t *testing.T) {
 }
 
 func TestUpdateExpression(t *testing.T) {
-	t.Run("should write a update expression", func(t *testing.T) {
+	t.Run("should emit a update expression", func(t *testing.T) {
 		input := "أ++؛"
-		output := WriteSourceFile(parser.ParseSourceFile(input))
+		output := EmitSourceFile(parser.ParseSourceFile(input))
 		expected := "أ++;"
 
 		if output != expected {
@@ -496,7 +496,7 @@ func TestUpdateExpression(t *testing.T) {
 func TestForStatement(t *testing.T) {
 	t.Run("should parse a for statement", func(t *testing.T) {
 		input := "من_أجل (متغير أ = 0؛ أ <= 10؛ أ++) { أ؛ }"
-		output := WriteSourceFile(parser.ParseSourceFile(input))
+		output := EmitSourceFile(parser.ParseSourceFile(input))
 		expected := "for (let أ = 0; أ <= 10; أ++) {\n  أ;\n}"
 
 		if output != expected {
@@ -508,7 +508,7 @@ func TestForStatement(t *testing.T) {
 func TestAssignmentExpression(t *testing.T) {
 	t.Run("should parse assignment expression", func(t *testing.T) {
 		input := "أ = 100؛"
-		output := WriteSourceFile(parser.ParseSourceFile(input))
+		output := EmitSourceFile(parser.ParseSourceFile(input))
 		expected := "أ = 100;"
 
 		if output != expected {
@@ -520,7 +520,7 @@ func TestAssignmentExpression(t *testing.T) {
 func TestImportDeclaration(t *testing.T) {
 	t.Run("should print default import", func(t *testing.T) {
 		input := "استيراد شيئ من \"ملف\"؛"
-		output := WriteSourceFile(parser.ParseSourceFile(input))
+		output := EmitSourceFile(parser.ParseSourceFile(input))
 		expected := "import شيئ from \"ملف\";"
 
 		if output != expected {
@@ -530,7 +530,7 @@ func TestImportDeclaration(t *testing.T) {
 
 	t.Run("should print namespace import", func(t *testing.T) {
 		input := "استيراد * بإسم شيئ_أخر من \"ملف\"؛"
-		output := WriteSourceFile(parser.ParseSourceFile(input))
+		output := EmitSourceFile(parser.ParseSourceFile(input))
 		expected := "import * as شيئ_أخر from \"ملف\";"
 
 		if output != expected {
@@ -540,7 +540,7 @@ func TestImportDeclaration(t *testing.T) {
 
 	t.Run("should print named imports", func(t *testing.T) {
 		input := "استيراد { شيئ, شيئ_أخر } من \"ملف\"؛"
-		output := WriteSourceFile(parser.ParseSourceFile(input))
+		output := EmitSourceFile(parser.ParseSourceFile(input))
 		expected := "import { شيئ, شيئ_أخر } from \"ملف\";"
 
 		if output != expected {
@@ -552,7 +552,7 @@ func TestImportDeclaration(t *testing.T) {
 func TestFunctionExpression(t *testing.T) {
 	t.Run("should print function expression", func(t *testing.T) {
 		input := "جمع = دالة جمع(أ: عدد, ب: عدد): عدد { إرجاع أ + ب؛ }"
-		output := WriteSourceFile(parser.ParseSourceFile(input))
+		output := EmitSourceFile(parser.ParseSourceFile(input))
 		expected := "جمع = function جمع(أ, ب) {\n  return أ + ب;\n};"
 
 		if output != expected {
