@@ -101,6 +101,14 @@ func (p *Program) WriteSourceFiles(outputDir string) error {
 	return nil
 }
 
+func (p *Program) EmitSourceFile(filePath string) string {
+	sourceFile := p.filesByPath[filePath]
+
+	_emitter := printer.NewEmitter()
+	_emitter.Emit(sourceFile)
+	return _emitter.Writer.Output
+}
+
 func (p *Program) GetSourceFile(filePath string) *ast.SourceFile {
 	return p.filesByPath[filePath]
 }
