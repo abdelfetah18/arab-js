@@ -98,7 +98,9 @@ func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclar
 		b.bindParam(param)
 	}
 
-	b.bindBlockStatement(functionDeclaration.Body)
+	if functionDeclaration.Body != nil {
+		b.bindBlockStatement(functionDeclaration.Body)
+	}
 
 	b.container = saveContainer
 }

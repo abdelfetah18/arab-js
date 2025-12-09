@@ -121,6 +121,12 @@ func (p *Parser) parseStatement() *ast.Node {
 						variableDeclaration.Identifier.OriginalName = &originalNameDirectiveValue
 					}
 					return variableDeclaration.AsNode()
+				case lexer.KeywordFunction:
+					functionDeclaration := p.parseFunctionDeclaration(false)
+					if hasPrecedingOriginalNameDirective {
+						functionDeclaration.ID.OriginalName = &originalNameDirectiveValue
+					}
+					return functionDeclaration.AsNode()
 				}
 			case lexer.Identifier:
 				switch token.Value {
@@ -580,6 +586,8 @@ func (p *Parser) parseFunctionDeclaration(doParseBody bool) *ast.FunctionDeclara
 	var body *ast.BlockStatement = nil
 	if doParseBody {
 		body = p.parseBlockStatement()
+	} else {
+		p.expected(lexer.Semicolon)
 	}
 
 	return ast.NewNode(
@@ -1728,7 +1736,6 @@ func (p *Parser) parseModuleBlock() *ast.ModuleBlock {
 				body = append(body, p.parseVariableDeclaration(false).AsNode())
 			case lexer.KeywordFunction:
 				body = append(body, p.parseFunctionDeclaration(false).AsNode())
-				p.expected(lexer.Semicolon)
 			}
 		case lexer.Identifier:
 			switch token.Value {
