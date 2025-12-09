@@ -151,7 +151,9 @@ func (t *Transformer) transformBlockStatement(blockStatement *ast.BlockStatement
 }
 
 func (t *Transformer) transformFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
-	t.transformBlockStatement(functionDeclaration.Body)
+	if functionDeclaration.Body != nil {
+		t.transformBlockStatement(functionDeclaration.Body)
+	}
 }
 
 func (t *Transformer) transformObjectExpression(objectExpression *ast.ObjectExpression) {

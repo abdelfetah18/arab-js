@@ -44,6 +44,8 @@ func (s *Session) loadProject(filePath string) {
 	program.CheckSourceFiles()
 	// TODO: report diasnostics
 
+	s.Project.Program.TransformSourceFiles()
+
 	s.isProjectLoaded = true
 }
 
