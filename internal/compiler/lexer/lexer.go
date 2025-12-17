@@ -291,6 +291,7 @@ const (
 	TypeKeywordType      TypeKeyword = "نوع"
 	TypeKeywordDeclare   TypeKeyword = "تصريح"
 	TypeKeywordModule    TypeKeyword = "وحدة"
+	TypeKeywordReadOnly  TypeKeyword = "قراءة_فقط"
 )
 
 type LexerState struct {

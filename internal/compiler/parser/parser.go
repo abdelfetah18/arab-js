@@ -1019,6 +1019,11 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 		originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
 
 		var key *ast.Node
+		var modifierList *ast.ModifierList = nil
+		if p.optionalTypeKeyword(lexer.TypeKeywordReadOnly) {
+			modifierList = ast.NewModifierList(ast.ModifierFlagsReadonly)
+		}
+
 		switch token.Type {
 		case lexer.Identifier:
 			identifier := p.parseIdentifier(false)
@@ -1044,7 +1049,7 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 		if p.optional(lexer.Colon) {
 			body = append(body,
 				ast.NewNode(
-					ast.NewPropertySignature(key, p.parseTypeAnnotation()),
+					ast.NewPropertySignature(key, p.parseTypeAnnotation(), modifierList),
 					ast.Location{
 						Pos: key.Location.Pos,
 						End: p.getEndPosition(),
@@ -1069,7 +1074,7 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 			if key.Type == ast.NodeTypeIdentifier {
 				body = append(body,
 					ast.NewNode(
-						ast.NewPropertySignature(key, p.parseTypeAnnotation()),
+						ast.NewPropertySignature(key, p.parseTypeAnnotation(), modifierList),
 						ast.Location{
 							Pos: key.Location.Pos,
 							End: p.getEndPosition(),
@@ -1208,6 +1213,10 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 	token := p.lexer.Peek()
 	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
 		var key *ast.Node
+		var modifierList *ast.ModifierList = nil
+		if p.optionalTypeKeyword(lexer.TypeKeywordReadOnly) {
+			modifierList = ast.NewModifierList(ast.ModifierFlagsReadonly)
+		}
 		switch token.Type {
 		case lexer.Identifier:
 			key = p.parseIdentifier(false).AsNode()
@@ -1228,7 +1237,7 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 		if p.optional(lexer.Colon) {
 			members = append(members,
 				ast.NewNode(
-					ast.NewPropertySignature(key, p.parseTypeAnnotation()),
+					ast.NewPropertySignature(key, p.parseTypeAnnotation(), modifierList),
 					ast.Location{
 						Pos: key.Location.Pos,
 						End: p.getEndPosition(),
@@ -1252,7 +1261,7 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 			if key.Type == ast.NodeTypeIdentifier {
 				members = append(members,
 					ast.NewNode(
-						ast.NewPropertySignature(key, p.parseTypeAnnotation()),
+						ast.NewPropertySignature(key, p.parseTypeAnnotation(), modifierList),
 						ast.Location{
 							Pos: key.Location.Pos,
 							End: p.getEndPosition(),

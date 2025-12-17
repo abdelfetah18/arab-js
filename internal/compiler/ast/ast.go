@@ -1374,14 +1374,16 @@ func (interfaceBody *InterfaceBody) ForEachChild(v Visitor) bool {
 
 type PropertySignature struct {
 	NodeBase
+	ModifiersBase
 	Key            *Node           `json:"key,omitempty"`
 	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
 }
 
-func NewPropertySignature(key *Node, typeAnnotation *TypeAnnotation) *PropertySignature {
+func NewPropertySignature(key *Node, typeAnnotation *TypeAnnotation, modifiers *ModifierList) *PropertySignature {
 	return &PropertySignature{
 		Key:            key,
 		TypeAnnotation: typeAnnotation,
+		ModifiersBase:  ModifiersBase{modifiers: modifiers},
 	}
 }
 
