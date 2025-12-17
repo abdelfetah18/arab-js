@@ -28,6 +28,9 @@ func NewTransformer(program Program) *Transformer {
 
 func (t *Transformer) Transform() {
 	for _, sourceFile := range t.program.SourceFiles() {
+		if sourceFile.IsDeclarationFile {
+			continue
+		}
 		for _, node := range sourceFile.Body {
 			t.transformStatement(node)
 		}

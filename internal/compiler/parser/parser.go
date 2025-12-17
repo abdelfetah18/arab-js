@@ -5,6 +5,7 @@ import (
 	"arab_js/internal/compiler/lexer"
 	"arab_js/internal/stack"
 	"fmt"
+	"strings"
 )
 
 type ParserState struct {
@@ -18,21 +19,25 @@ type Parser struct {
 	startPositions stack.Stack[uint]
 
 	Diagnostics []*ast.Diagnostic
+
+	opts ast.SourceFileParseOptions
 }
 
-func NewParser(lexer *lexer.Lexer) *Parser {
+func NewParser(lexer *lexer.Lexer, opts ast.SourceFileParseOptions) *Parser {
 	return &Parser{
 		lexer:          lexer,
 		startPositions: stack.Stack[uint]{},
 		Diagnostics:    []*ast.Diagnostic{},
+		opts:           opts,
 	}
 }
 
 func ParseSourceFile(sourceText string) *ast.SourceFile {
-	return NewParser(lexer.NewLexer(sourceText)).Parse()
+	return NewParser(lexer.NewLexer(sourceText), ast.SourceFileParseOptions{FileName: "", Path: ""}).Parse()
 }
 
 func (p *Parser) Parse() *ast.SourceFile {
+	isDeclarationFile := strings.Contains(p.opts.FileName, ".d.") || strings.Contains(p.opts.FileName, ".تعريف.")
 	p.markStartPosition()
 
 	directives := p.parseDirectives()
@@ -43,7 +48,7 @@ func (p *Parser) Parse() *ast.SourceFile {
 		statements = append(statements, statement)
 	}
 
-	return ast.NewNode(ast.NewSourceFile(statements, directives), ast.Location{Pos: p.startPositions.Pop(), End: uint(p.lexer.Position())})
+	return ast.NewNode(ast.NewSourceFile(statements, directives, isDeclarationFile), ast.Location{Pos: p.startPositions.Pop(), End: uint(p.lexer.Position())})
 }
 
 func (p *Parser) parseIfStatement() *ast.IfStatement {

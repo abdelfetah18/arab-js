@@ -1275,10 +1275,11 @@ type SourceFile struct {
 
 	ExternalModuleIndicator *Node  `json:"-"`
 	Path                    string `json:"-"`
+	IsDeclarationFile       bool   `json:"-"`
 }
 
-func NewSourceFile(body []*Node, directives []*Directive) *SourceFile {
-	return &SourceFile{Name: "", Body: body, Directives: directives}
+func NewSourceFile(body []*Node, directives []*Directive, isDeclarationFile bool) *SourceFile {
+	return &SourceFile{Name: "", Body: body, Directives: directives, IsDeclarationFile: isDeclarationFile}
 }
 
 func (sourceFile *SourceFile) MarshalJSON() ([]byte, error) {

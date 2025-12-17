@@ -1,6 +1,7 @@
 package emitter
 
 import (
+	"arab_js/internal/compiler/ast"
 	"arab_js/internal/compiler/lexer"
 	"arab_js/internal/compiler/parser"
 	"testing"
@@ -32,7 +33,7 @@ func TestVariableDeclaration(t *testing.T) {
 	t.Run("should throw on VariableDeclaration missing semicolon", func(t *testing.T) {
 		input := "متغير عدد = 100"
 
-		parser := parser.NewParser(lexer.NewLexer(input))
+		parser := parser.NewParser(lexer.NewLexer(input), ast.SourceFileParseOptions{})
 		sourceFile := parser.Parse()
 		EmitSourceFile(sourceFile)
 
@@ -44,7 +45,7 @@ func TestVariableDeclaration(t *testing.T) {
 	t.Run("should throw on VariableDeclaration with invalid identifier", func(t *testing.T) {
 		input := "متغير عد1د = 100؛"
 
-		parser := parser.NewParser(lexer.NewLexer(input))
+		parser := parser.NewParser(lexer.NewLexer(input), ast.SourceFileParseOptions{})
 		sourceFile := parser.Parse()
 		EmitSourceFile(sourceFile)
 
@@ -148,7 +149,7 @@ func TestBlockStatement(t *testing.T) {
 	t.Run("should throw on BlockStatement with missing closing brace", func(t *testing.T) {
 		input := "{ متغير عدد = 100؛ "
 
-		parser := parser.NewParser(lexer.NewLexer(input))
+		parser := parser.NewParser(lexer.NewLexer(input), ast.SourceFileParseOptions{})
 		sourceFile := parser.Parse()
 		EmitSourceFile(sourceFile)
 

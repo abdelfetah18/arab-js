@@ -50,7 +50,7 @@ func (p *Program) ParseSourceFiles(sourceFilesPaths []string) error {
 			return err
 		}
 
-		parser := parser.NewParser(lexer.NewLexer(string(data)))
+		parser := parser.NewParser(lexer.NewLexer(string(data)), ast.SourceFileParseOptions{FileName: filepath.Base(filePath), Path: filePath})
 		sourceFile := parser.Parse()
 		sourceFile.Path = filePath
 		sourceFile.Name = filepath.Base(filePath)
@@ -119,7 +119,7 @@ func (p *Program) UpdateSourceFile(filePath string, content string) {
 		return
 	}
 
-	parser := parser.NewParser(lexer.NewLexer(string(content)))
+	parser := parser.NewParser(lexer.NewLexer(string(content)), ast.SourceFileParseOptions{FileName: filepath.Base(filePath), Path: filePath})
 	sourceFile := parser.Parse()
 	sourceFile.Path = filePath
 	sourceFile.Name = filepath.Base(filePath)
