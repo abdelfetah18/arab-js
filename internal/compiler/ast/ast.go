@@ -259,6 +259,12 @@ type DeclarationBase struct {
 	Symbol *Symbol
 }
 
+type ModifiersBase struct {
+	modifiers *ModifierList
+}
+
+func (node *ModifiersBase) Modifiers() *ModifierList { return node.modifiers }
+
 type ExpressionStatement struct {
 	NodeBase
 	Expression *Node `json:"expression,omitempty"`
@@ -289,13 +295,20 @@ func (expressionStatement *ExpressionStatement) ForEachChild(v Visitor) bool {
 type VariableDeclaration struct {
 	NodeBase
 	DeclarationBase `json:"-"`
+	ModifiersBase   `json:"-"`
 	Identifier      *Identifier  `json:"identifier,omitempty"`
 	Initializer     *Initializer `json:"initializer,omitempty"`
 	Declare         bool         `json:"declare,omitempty"`
 }
 
-func NewVariableDeclaration(identifier *Identifier, initializer *Initializer, declare bool) *VariableDeclaration {
-	return &VariableDeclaration{Identifier: identifier, Initializer: initializer, Declare: declare}
+func NewVariableDeclaration(identifier *Identifier, initializer *Initializer, modifiers *ModifierList) *VariableDeclaration {
+	return &VariableDeclaration{
+		Identifier:  identifier,
+		Initializer: initializer,
+		ModifiersBase: ModifiersBase{
+			modifiers: modifiers,
+		},
+	}
 }
 
 func (variableDeclaration *VariableDeclaration) MarshalJSON() ([]byte, error) {
@@ -694,6 +707,7 @@ type FunctionDeclaration struct {
 	NodeBase
 	ContainerBase   `json:"-"`
 	DeclarationBase `json:"-"`
+	ModifiersBase   `json:"-"`
 	ID              *Identifier                `json:"id,omitempty"`
 	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
 	Params          []*Node                    `json:"params,omitempty"`
@@ -701,13 +715,23 @@ type FunctionDeclaration struct {
 	TypeAnnotation  *TypeAnnotation            `json:"type_annotation,omitempty"`
 }
 
-func NewFunctionDeclaration(id *Identifier, typeParameters *TypeParametersDeclaration, params []*Node, body *BlockStatement, typeAnnotation *TypeAnnotation) *FunctionDeclaration {
+func NewFunctionDeclaration(
+	id *Identifier,
+	typeParameters *TypeParametersDeclaration,
+	params []*Node,
+	body *BlockStatement,
+	typeAnnotation *TypeAnnotation,
+	modifiers *ModifierList,
+) *FunctionDeclaration {
 	return &FunctionDeclaration{
 		ID:             id,
 		TypeParameters: typeParameters,
 		Params:         params,
 		Body:           body,
 		TypeAnnotation: typeAnnotation,
+		ModifiersBase: ModifiersBase{
+			modifiers: modifiers,
+		},
 	}
 }
 
@@ -1914,4 +1938,12 @@ func (functionExpression *FunctionExpression) ForEachChild(v Visitor) bool {
 
 func (functionExpression *FunctionExpression) ContainerBaseData() *ContainerBase {
 	return &functionExpression.ContainerBase
+}
+
+type ModifierList struct {
+	ModifierFlags ModifierFlags
+}
+
+func NewModifierList(ModifierFlags ModifierFlags) *ModifierList {
+	return &ModifierList{ModifierFlags: ModifierFlags}
 }

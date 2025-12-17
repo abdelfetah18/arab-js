@@ -84,9 +84,9 @@ func (p *Parser) parseStatement() *ast.Node {
 		case lexer.KeywordIf:
 			return p.parseIfStatement().AsNode()
 		case lexer.KeywordLet:
-			return p.parseVariableDeclaration(true).AsNode()
+			return p.parseVariableDeclaration(nil).AsNode()
 		case lexer.KeywordFunction:
-			return p.parseFunctionDeclaration(true).AsNode()
+			return p.parseFunctionDeclaration(nil).AsNode()
 		case lexer.KeywordImport:
 			return p.parseImportDeclaration().AsNode()
 		case lexer.KeywordExport:
@@ -105,6 +105,7 @@ func (p *Parser) parseStatement() *ast.Node {
 		case lexer.TypeKeywordType:
 			return p.parseTypeAliasDeclaration().AsNode()
 		case lexer.TypeKeywordDeclare:
+			modifierList := ast.NewModifierList(ast.ModifierFlagsAmbient)
 			p.markStartPosition()
 
 			hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
@@ -116,13 +117,13 @@ func (p *Parser) parseStatement() *ast.Node {
 			case lexer.KeywordToken:
 				switch token.Value {
 				case lexer.KeywordLet:
-					variableDeclaration := p.parseVariableDeclaration(false)
+					variableDeclaration := p.parseVariableDeclaration(modifierList)
 					if hasPrecedingOriginalNameDirective {
 						variableDeclaration.Identifier.OriginalName = &originalNameDirectiveValue
 					}
 					return variableDeclaration.AsNode()
 				case lexer.KeywordFunction:
-					functionDeclaration := p.parseFunctionDeclaration(false)
+					functionDeclaration := p.parseFunctionDeclaration(modifierList)
 					if hasPrecedingOriginalNameDirective {
 						functionDeclaration.ID.OriginalName = &originalNameDirectiveValue
 					}
@@ -321,9 +322,9 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 	case lexer.KeywordToken:
 		switch token.Value {
 		case lexer.KeywordFunction:
-			return p.parseFunctionDeclaration(true).AsNode()
+			return p.parseFunctionDeclaration(nil).AsNode()
 		case lexer.KeywordLet, lexer.KeywordConst:
-			return p.parseVariableDeclaration(true).AsNode()
+			return p.parseVariableDeclaration(nil).AsNode()
 		}
 	}
 
@@ -339,7 +340,7 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 func (p *Parser) parseFunctionDeclarationOrExpression() *ast.Node {
 	token := p.lexer.Peek()
 	if token.Type == lexer.KeywordToken && token.Value == lexer.KeywordFunction {
-		return p.parseFunctionDeclaration(true).AsNode()
+		return p.parseFunctionDeclaration(nil).AsNode()
 	}
 
 	return p.parseExpression()
@@ -499,7 +500,7 @@ func (p *Parser) parseTypeNode() *ast.Node {
 	}
 }
 
-func (p *Parser) parseVariableDeclaration(doParseInitializer bool) *ast.VariableDeclaration {
+func (p *Parser) parseVariableDeclaration(modifierList *ast.ModifierList) *ast.VariableDeclaration {
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordLet)
@@ -507,18 +508,17 @@ func (p *Parser) parseVariableDeclaration(doParseInitializer bool) *ast.Variable
 	p.expected(lexer.Equal)
 
 	var initializer *ast.Initializer = nil
-	if doParseInitializer {
+	if !p.optional(lexer.Semicolon) {
 		assignmentExpression := p.parseAssignmentExpression()
 		initializer = ast.NewNode(
 			ast.NewInitializer(assignmentExpression),
 			assignmentExpression.Location,
 		)
+		p.expected(lexer.Semicolon)
 	}
 
-	p.expected(lexer.Semicolon)
-
 	return ast.NewNode(
-		ast.NewVariableDeclaration(identifier, initializer, false),
+		ast.NewVariableDeclaration(identifier, initializer, modifierList),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -526,7 +526,7 @@ func (p *Parser) parseVariableDeclaration(doParseInitializer bool) *ast.Variable
 	)
 }
 
-func (p *Parser) parseFunctionDeclaration(doParseBody bool) *ast.FunctionDeclaration {
+func (p *Parser) parseFunctionDeclaration(modifierList *ast.ModifierList) *ast.FunctionDeclaration {
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordFunction)
@@ -584,14 +584,12 @@ func (p *Parser) parseFunctionDeclaration(doParseBody bool) *ast.FunctionDeclara
 	}
 
 	var body *ast.BlockStatement = nil
-	if doParseBody {
+	if !p.optional(lexer.Semicolon) {
 		body = p.parseBlockStatement()
-	} else {
-		p.expected(lexer.Semicolon)
 	}
 
 	return ast.NewNode(
-		ast.NewFunctionDeclaration(identifier, typeParameters, params, body, typeAnnotation),
+		ast.NewFunctionDeclaration(identifier, typeParameters, params, body, typeAnnotation, modifierList),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1296,7 +1294,7 @@ func (p *Parser) parseForStatement() *ast.ForStatement {
 	var init *ast.Node = nil
 	token := p.lexer.Peek()
 	if token.Type == lexer.KeywordToken && token.Value == lexer.KeywordLet {
-		init = p.parseVariableDeclaration(true).AsNode()
+		init = p.parseVariableDeclaration(nil).AsNode()
 	} else {
 		init = p.parseExpression()
 		p.expected(lexer.Semicolon)
@@ -1733,9 +1731,9 @@ func (p *Parser) parseModuleBlock() *ast.ModuleBlock {
 		case lexer.KeywordToken:
 			switch token.Value {
 			case lexer.KeywordLet:
-				body = append(body, p.parseVariableDeclaration(false).AsNode())
+				body = append(body, p.parseVariableDeclaration(nil).AsNode())
 			case lexer.KeywordFunction:
-				body = append(body, p.parseFunctionDeclaration(false).AsNode())
+				body = append(body, p.parseFunctionDeclaration(nil).AsNode())
 			}
 		case lexer.Identifier:
 			switch token.Value {
