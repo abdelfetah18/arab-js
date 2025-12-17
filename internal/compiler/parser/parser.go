@@ -5,6 +5,7 @@ import (
 	"arab_js/internal/compiler/lexer"
 	"arab_js/internal/stack"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -979,12 +980,25 @@ func (p *Parser) parseInterfaceDeclaration() *ast.InterfaceDeclaration {
 	if p.lexer.Peek().Type == lexer.LeftArrow {
 		typeParameters = p.parseTypeParametersDeclaration()
 	}
+
+	extends := []*ast.Node{}
+	if p.optionalKeyword(lexer.KeywordExtends) {
+		for {
+			extends = append(extends, p.parseIdentifier(false).AsNode())
+			if !p.optional(lexer.Comma) {
+				break
+			}
+		}
+	}
+
 	body := p.parseInterfaceBody()
 
 	p.optional(lexer.Semicolon)
 
+	log.Printf("extends=%v, body=%v\n", extends, body)
+
 	return ast.NewNode(
-		ast.NewInterfaceDeclaration(identifier, typeParameters, body),
+		ast.NewInterfaceDeclaration(identifier, typeParameters, body, extends),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),

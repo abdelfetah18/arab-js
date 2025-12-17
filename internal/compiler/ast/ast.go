@@ -1315,13 +1315,15 @@ type InterfaceDeclaration struct {
 	Id              *Identifier                `json:"id,omitempty"`
 	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
 	Body            *InterfaceBody             `json:"body,omitempty"`
+	Extends         []*Node                    `json:"extends,omitempty"`
 }
 
-func NewInterfaceDeclaration(id *Identifier, typeParameters *TypeParametersDeclaration, body *InterfaceBody) *InterfaceDeclaration {
+func NewInterfaceDeclaration(id *Identifier, typeParameters *TypeParametersDeclaration, body *InterfaceBody, extends []*Node) *InterfaceDeclaration {
 	return &InterfaceDeclaration{
 		Id:             id,
 		TypeParameters: typeParameters,
 		Body:           body,
+		Extends:        extends,
 	}
 }
 

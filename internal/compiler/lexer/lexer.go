@@ -24,6 +24,7 @@ const (
 	KeywordReturn   Keyword = "إرجاع"
 	KeywordFor      Keyword = "من_أجل"
 	KeywordThis     Keyword = "هذا"
+	KeywordExtends  Keyword = "إمتداد_ل"
 )
 
 type TokenType int
@@ -220,6 +221,7 @@ var Keywords = []Keyword{
 
 	KeywordFor, // Must stay before KeywordFrom
 	KeywordFrom,
+	KeywordExtends,
 }
 
 var OneCharTokens = map[string]TokenType{
