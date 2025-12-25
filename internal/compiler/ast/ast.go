@@ -1952,3 +1952,36 @@ type ModifierList struct {
 func NewModifierList(ModifierFlags ModifierFlags) *ModifierList {
 	return &ModifierList{ModifierFlags: ModifierFlags}
 }
+
+type IndexSignatureDeclaration struct {
+	NodeBase
+	DeclarationBase `json:"-"`
+	ModifiersBase   `json:"-"`
+	Index           *Identifier `json:"index,omitempty"`
+	Type            *Node       `json:"type,omitempty"`
+}
+
+func NewIndexSignatureDeclaration(index *Identifier, typeNode *Node) *IndexSignatureDeclaration {
+	return &IndexSignatureDeclaration{
+		Index: index,
+		Type:  typeNode,
+	}
+}
+
+func (indexSignatureDeclaration *IndexSignatureDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias IndexSignatureDeclaration
+	return json.Marshal(
+		wrapNode(
+			*indexSignatureDeclaration.AsNode(),
+			(*Alias)(indexSignatureDeclaration),
+		),
+	)
+}
+
+func (indexSignatureDeclaration *IndexSignatureDeclaration) NodeType() NodeType {
+	return NodeTypeIndexSignatureDeclaration
+}
+
+func (indexSignatureDeclaration *IndexSignatureDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, indexSignatureDeclaration.Index.AsNode())
+}

@@ -63,6 +63,7 @@ const (
 	NodeTypeTypeParameter
 	NodeTypeTypeParametersDeclaration
 	NodeTypeTypeParameterInstantiation
+	NodeTypeIndexSignatureDeclaration
 )
 
 func (t NodeType) String() string {
@@ -181,6 +182,8 @@ func (t NodeType) String() string {
 		return "ThisExpression"
 	case NodeTypeFunctionExpression:
 		return "FunctionExpression"
+	case NodeTypeIndexSignatureDeclaration:
+		return "IndexSignatureDeclaration"
 	default:
 		return "Unknown"
 	}

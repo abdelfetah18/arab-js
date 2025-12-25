@@ -1036,6 +1036,11 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 			key = p.parseStringLiteral().AsNode()
 		case lexer.Decimal:
 			key = p.parseDecimalLiteral().AsNode()
+		case lexer.LeftSquareBracket:
+			body = append(body, p.parseIndexSignatureDeclaration().AsNode())
+			p.optional(lexer.Comma)
+			token = p.lexer.Peek()
+			continue
 		default:
 			p.errorf(
 				ast.Location{
@@ -1914,6 +1919,24 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 
 	return ast.NewNode(
 		ast.NewFunctionExpression(identifier, typeParameters, params, body, typeAnnotation),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseIndexSignatureDeclaration() *ast.IndexSignatureDeclaration {
+	p.markStartPosition()
+
+	p.expected(lexer.LeftSquareBracket)
+	index := p.parseIdentifier(true)
+	p.expected(lexer.RightSquareBracket)
+	p.expected(lexer.Colon)
+	typeNode := p.parseTypeNode()
+
+	return ast.NewNode(
+		ast.NewIndexSignatureDeclaration(index, typeNode),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
