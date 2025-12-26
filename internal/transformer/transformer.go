@@ -52,7 +52,9 @@ func (t *Transformer) transformStatement(node *ast.Node) {
 		ifStatement := node.AsIfStatement()
 		t.transformExpression(ifStatement.TestExpression)
 		t.transformStatement(ifStatement.ConsequentStatement)
-		t.transformStatement(ifStatement.AlternateStatement)
+		if ifStatement.AlternateStatement != nil {
+			t.transformStatement(ifStatement.AlternateStatement)
+		}
 	case ast.NodeTypeBlockStatement:
 		t.transformBlockStatement(node.AsBlockStatement())
 	case ast.NodeTypeForStatement:
@@ -81,7 +83,7 @@ func (t *Transformer) transformExpression(node *ast.Node) {
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
 		symbol := t.NameResolver.Resolve(identifier.Name, node)
-		if symbol.OriginalName != nil {
+		if symbol != nil && symbol.OriginalName != nil {
 			identifier.Name = *symbol.OriginalName
 		}
 	case ast.NodeTypeBinaryExpression:

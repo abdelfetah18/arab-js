@@ -36,7 +36,9 @@ func (b *Binder) bindStatement(node *ast.Node) {
 	case ast.NodeTypeIfStatement:
 		ifStatement := node.AsIfStatement()
 		b.bindStatement(ifStatement.ConsequentStatement)
-		b.bindStatement(ifStatement.AlternateStatement)
+		if ifStatement.AlternateStatement != nil {
+			b.bindStatement(ifStatement.AlternateStatement)
+		}
 	case ast.NodeTypeBlockStatement:
 		b.bindBlockStatement(node.AsBlockStatement())
 	case ast.NodeTypeVariableDeclaration:
