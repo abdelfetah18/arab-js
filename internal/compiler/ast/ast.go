@@ -1936,7 +1936,7 @@ func (functionExpression *FunctionExpression) NodeType() NodeType {
 }
 
 func (functionExpression *FunctionExpression) ForEachChild(v Visitor) bool {
-	return visit(v, functionExpression.ID.AsNode()) ||
+	return (functionExpression.ID != nil && visit(v, functionExpression.ID.AsNode())) ||
 		visitNodes(v, functionExpression.Params) ||
 		(functionExpression.Body != nil && visit(v, functionExpression.Body.AsNode())) ||
 		(functionExpression.TypeAnnotation != nil && visit(v, functionExpression.TypeAnnotation.AsNode()))
