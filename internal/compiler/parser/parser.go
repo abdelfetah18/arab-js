@@ -602,82 +602,58 @@ func (p *Parser) parseFunctionDeclaration(modifierList *ast.ModifierList) *ast.F
 	)
 }
 
-func (p *Parser) parseLeftHandSideExpression() *ast.Node {
-	expression := p.parseMemberExpression()
-
-	var typeParameters *ast.TypeParameterInstantiation = nil
-	if p.lexer.Peek().Type == lexer.LeftArrow {
-		typeParameters = p.parseTypeParameterInstantiation()
-	}
-
-	for p.optional(lexer.LeftParenthesis) {
-		argumentList := []*ast.Node{}
-
-		token := p.lexer.Peek()
-		for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightParenthesis {
-			if !p.isExpression() {
-				p.errorf(
-					ast.Location{
-						Pos: p.startPositions.Peek(),
-						End: p.getEndPosition(),
-					},
-					"Expecting expression but got %s\n", token.Value)
-			}
-			argumentList = append(argumentList, p.parseExpression())
-			token = p.lexer.Peek()
-			if token.Type == lexer.Comma {
-				token = p.lexer.Next()
-			}
+func (p *Parser) parseCallExpressionRest(expression *ast.Node) *ast.Node {
+	for {
+		expression = p.parseMemberExpressionRest(expression)
+		var typeParameters *ast.TypeParameterInstantiation = nil
+		if p.lexer.Peek().Type == lexer.LeftArrow {
+			typeParameters = p.parseTypeParameterInstantiation()
 		}
 
-		p.expected(lexer.RightParenthesis)
-		expression = ast.NewNode(
-			ast.NewCallExpression(expression, typeParameters, argumentList),
-			ast.Location{
-				Pos: expression.Location.Pos,
-				End: p.getEndPosition(),
-			},
-		).AsNode()
-	}
+		if p.optional(lexer.LeftParenthesis) {
+			argumentList := []*ast.Node{}
 
+			token := p.lexer.Peek()
+			for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightParenthesis {
+				if !p.isExpression() {
+					p.errorf(
+						ast.Location{
+							Pos: p.startPositions.Peek(),
+							End: p.getEndPosition(),
+						},
+						"Expecting expression but got %s\n", token.Value)
+				}
+				argumentList = append(argumentList, p.parseExpression())
+				token = p.lexer.Peek()
+				if token.Type == lexer.Comma {
+					token = p.lexer.Next()
+				}
+			}
+
+			p.expected(lexer.RightParenthesis)
+			expression = ast.NewNode(
+				ast.NewCallExpression(expression, typeParameters, argumentList),
+				ast.Location{
+					Pos: expression.Location.Pos,
+					End: p.getEndPosition(),
+				},
+			).AsNode()
+			continue
+		}
+
+		break
+	}
 	return expression
+}
+
+func (p *Parser) parseLeftHandSideExpression() *ast.Node {
+	return p.parseCallExpressionRest(p.parseMemberExpression())
 }
 
 func (p *Parser) parseMemberExpression() *ast.Node {
 	if p.isPrimaryExpression() {
 		memberExpression := p.parsePrimaryExpression()
-
-		isLeftSquareBracker := p.optional(lexer.LeftSquareBracket)
-		for isLeftSquareBracker || p.optional(lexer.Dot) {
-			var propertyNode *ast.Node = nil
-			if isLeftSquareBracker {
-				switch p.lexer.Peek().Type {
-				case lexer.Identifier:
-					propertyNode = p.parseIdentifier(false).AsNode()
-				case lexer.DoubleQuoteString, lexer.SingleQuoteString:
-					propertyNode = p.parseStringLiteral().AsNode()
-				case lexer.Decimal:
-					propertyNode = p.parseDecimalLiteral().AsNode()
-				}
-			} else {
-				propertyNode = p.parseIdentifier(false).AsNode()
-			}
-
-			memberExpression = ast.NewNode(
-				ast.NewMemberExpression(memberExpression, propertyNode, isLeftSquareBracker),
-				ast.Location{
-					Pos: memberExpression.Location.Pos,
-					End: p.getEndPosition(),
-				},
-			).AsNode()
-			if isLeftSquareBracker {
-				p.expected(lexer.RightSquareBracket)
-			}
-
-			isLeftSquareBracker = p.optional(lexer.LeftSquareBracket)
-		}
-
-		return memberExpression
+		return p.parseMemberExpressionRest(memberExpression)
 	}
 
 	p.errorf(
@@ -687,6 +663,36 @@ func (p *Parser) parseMemberExpression() *ast.Node {
 		},
 		"Expected MemberExpression but got %s\n", p.lexer.Peek().Value)
 	return nil
+}
+
+func (p *Parser) parseMemberExpressionRest(memberExpression *ast.Node) *ast.Node {
+	for {
+		if p.optional(lexer.LeftSquareBracket) {
+			computed := true
+			property := p.parseExpression()
+			memberExpression = ast.NewNode(
+				ast.NewMemberExpression(memberExpression, property, computed),
+				ast.Location{
+					Pos: memberExpression.Location.Pos,
+					End: p.getEndPosition(),
+				},
+			).AsNode()
+			p.expected(lexer.RightSquareBracket)
+		} else if p.optional(lexer.Dot) {
+			computed := false
+			property := p.parseIdentifier(false).AsNode()
+			memberExpression = ast.NewNode(
+				ast.NewMemberExpression(memberExpression, property, computed),
+				ast.Location{
+					Pos: memberExpression.Location.Pos,
+					End: p.getEndPosition(),
+				},
+			).AsNode()
+		} else {
+			break
+		}
+	}
+	return memberExpression
 }
 
 func (p *Parser) parseUpdateExpression() *ast.Node {
@@ -718,7 +724,6 @@ func (p *Parser) parseUpdateExpression() *ast.Node {
 		).AsNode()
 	}
 
-	// Since its not update expression we remove position mark
 	p.startPositions.Pop()
 
 	return leftHandSideExpression
