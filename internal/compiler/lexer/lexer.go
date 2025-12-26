@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"regexp"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -380,13 +381,26 @@ func (l *Lexer) match(value string) bool {
 	return l.input[l.position:l.position+len(value)] == value
 }
 
-func (l *Lexer) isArabicLetter() bool {
-	ch := l.current()
-	if ch == "" {
-		return false
-	}
-	r, _ := utf8.DecodeRuneInString(ch)
-	return r >= 0x0620 && r <= 0x064A
+func (l *Lexer) isIdentifierStart() bool {
+	ch, _ := l.charAndSize()
+	return ch == '$' ||
+		ch == '_' ||
+		unicode.IsLetter(ch) ||
+		unicode.Is(unicode.Nl, ch) ||
+		unicode.Is(unicode.Other_ID_Start, ch)
+}
+
+func (l *Lexer) isIdentifierPart() bool {
+	ch, _ := l.charAndSize()
+
+	return ch == '$' ||
+		ch == '_' ||
+		unicode.IsLetter(ch) ||
+		unicode.IsDigit(ch) ||
+		unicode.Is(unicode.Mn, ch) ||
+		unicode.Is(unicode.Mc, ch) ||
+		unicode.Is(unicode.Nl, ch) ||
+		unicode.Is(unicode.Other_ID_Continue, ch)
 }
 
 func (l *Lexer) isDigit() bool {
@@ -499,15 +513,18 @@ func (l *Lexer) nextToken() Token {
 	}
 
 	identifier := ""
-	for !l.isEOF() && l.isArabicLetter() {
-		char, size := l.charAndSize()
-		identifier += string(char)
+	if l.isIdentifierStart() {
+		ch, size := l.charAndSize()
 		l.increasePosition(size)
-		if l.current() == "_" {
-			identifier += "_"
-			l.increasePosition(1)
+		identifier += string(ch)
+
+		for l.isIdentifierPart() {
+			ch, size := l.charAndSize()
+			l.increasePosition(size)
+			identifier += string(ch)
 		}
 	}
+
 	if len(identifier) > 0 {
 		return Token{Type: Identifier, Value: identifier, Position: l.position - len(identifier)}
 	}

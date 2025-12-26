@@ -41,18 +41,6 @@ func TestVariableDeclaration(t *testing.T) {
 			t.Errorf("\nExpected errors for missing semicolon")
 		}
 	})
-
-	t.Run("should throw on VariableDeclaration with invalid identifier", func(t *testing.T) {
-		input := "متغير عد1د = 100؛"
-
-		parser := parser.NewParser(lexer.NewLexer(input), ast.SourceFileParseOptions{})
-		sourceFile := parser.Parse()
-		EmitSourceFile(sourceFile)
-
-		if len(parser.Diagnostics) == 0 {
-			t.Errorf("\nExpected errors for invalid identifier")
-		}
-	})
 }
 
 func TestStringLiteral(t *testing.T) {
