@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -33,50 +34,87 @@ var buildCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath := args[0]
-		fmt.Println("Building project in path:", projectPath)
+		outputPath, _ := cmd.Flags().GetString("output")
 
 		info, err := os.Stat(projectPath)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		if !info.IsDir() {
-			panic("Expeced a Directory but got a file")
+			return buildFile(projectPath, outputPath)
 		}
 
-		packageDefinition, err := package_definition.FromYAMLFile(filepath.Join(projectPath, "رزمة.تعريف"))
-		if err != nil {
-			panic(err)
+		return buildProject(projectPath, outputPath)
+	},
+}
+
+func buildProject(projectPath string, outputPath string) error {
+	fmt.Printf("Build project '%s'\n", projectPath)
+	packageDefinition, err := package_definition.FromYAMLFile(filepath.Join(projectPath, "رزمة.تعريف"))
+	if err != nil {
+		return err
+	}
+
+	files, err := ListFilesWithExt(projectPath, ".كود")
+	if err != nil {
+		return err
+	}
+
+	program := compiler.NewProgram()
+	program.ProgramOptions.Main = packageDefinition.Main
+	program.ParseSourceFiles(files)
+	program.TransformSourceFiles()
+
+	if len(program.Diagnostics) > 0 {
+		for _, diagnostic := range program.Diagnostics {
+			println(diagnostic.Message)
 		}
+		return fmt.Errorf("checker errors")
+	}
 
-		files, err := ListFilesWithExt(projectPath, ".كود")
-		if err != nil {
-			panic(err)
-		}
-
-		program := compiler.NewProgram()
-		program.ProgramOptions.Main = packageDefinition.Main
-		program.ParseSourceFiles(files)
-		program.TransformSourceFiles()
-
-		if len(program.Diagnostics) > 0 {
-			for _, diagnostic := range program.Diagnostics {
-				println(diagnostic.Message)
-			}
-			panic("Checker Errors")
-		}
-
-		outputDir := filepath.Join(projectPath, "البناء")
-		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+	pathInfo, err := os.Stat(outputPath)
+	if err != nil || !pathInfo.IsDir() {
+		if err := os.MkdirAll(outputPath, os.ModePerm); err != nil {
 			return fmt.Errorf("failed to create build directory: %w", err)
 		}
 
-		err = program.WriteSourceFiles(outputDir)
-		if err != nil {
-			panic(err)
-		}
+	}
 
-		fmt.Println("Build successful!")
-		return nil
-	},
+	err = program.WriteSourceFiles(outputPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func buildFile(filePath string, outputPath string) error {
+	fmt.Printf("Build file '%s'\n", filePath)
+
+	program := compiler.NewProgram()
+	program.ProgramOptions.Main = filepath.Base(filePath)
+	program.ParseSourceFiles([]string{filePath})
+	program.TransformSourceFiles()
+
+	if len(program.Diagnostics) > 0 {
+		for _, diagnostic := range program.Diagnostics {
+			println(diagnostic.Message)
+		}
+		return fmt.Errorf("checker errors")
+	}
+
+	output := program.EmitSourceFile(filePath)
+	outputFileName := strings.Replace(filepath.Base(filePath), ".arts", ".js", 1)
+	outputFile := filepath.Join(outputPath, outputFileName)
+
+	if err := os.WriteFile(outputFile, []byte(output), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write output file: %w", err)
+	}
+
+	return nil
+}
+
+func init() {
+	buildCmd.Flags().String("output", ".", "output path")
 }
