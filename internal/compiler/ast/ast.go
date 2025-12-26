@@ -471,10 +471,11 @@ type Identifier struct {
 	Name           string          `json:"name,omitempty"`
 	OriginalName   *string         `json:"original_name,omitempty"`
 	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
+	Optional       bool            `json:"optional,omitempty"`
 }
 
-func NewIdentifier(name string, typeAnnotation *TypeAnnotation) *Identifier {
-	return &Identifier{Name: name, TypeAnnotation: typeAnnotation, OriginalName: nil}
+func NewIdentifier(name string, typeAnnotation *TypeAnnotation, optional bool) *Identifier {
+	return &Identifier{Name: name, TypeAnnotation: typeAnnotation, OriginalName: nil, Optional: optional}
 }
 
 func (identifier *Identifier) MarshalJSON() ([]byte, error) {

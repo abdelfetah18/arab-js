@@ -1353,7 +1353,7 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 	if !p.expected(lexer.Identifier) {
 		pos := p.startPositions.Pop()
 		return ast.NewNode(
-			ast.NewIdentifier(identifierName, nil),
+			ast.NewIdentifier(identifierName, nil, false),
 			ast.Location{
 				Pos: pos,
 				End: pos,
@@ -1361,13 +1361,14 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 		)
 	}
 
+	optional := p.optional(lexer.Question)
 	var typeAnnotation *ast.TypeAnnotation = nil
 	if doParseTypeAnnotation && p.optional(lexer.Colon) {
 		typeAnnotation = p.parseTypeAnnotation()
 	}
 
 	return ast.NewNode(
-		ast.NewIdentifier(identifierName, typeAnnotation),
+		ast.NewIdentifier(identifierName, typeAnnotation, optional),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),

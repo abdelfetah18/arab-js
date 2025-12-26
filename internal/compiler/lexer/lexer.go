@@ -69,6 +69,7 @@ const (
 	DoubleStar
 	TripleDots
 	Colon
+	Question
 	EqualRightArrow
 	DoublePlus
 	DoubleMinus
@@ -192,6 +193,8 @@ func (t TokenType) String() string {
 		return "BitwiseOrEqual"
 	case DoubleStarEqual:
 		return "DoubleStarEqual"
+	case Question:
+		return "Question"
 	case Invalid:
 		return "Invalid"
 	default:
@@ -246,6 +249,7 @@ var OneCharTokens = map[string]TokenType{
 	"/": Slash,
 	"%": Percent,
 	":": Colon,
+	"؟": Question,
 }
 
 var TwoCharTokens = map[string]TokenType{
@@ -445,6 +449,22 @@ func (l *Lexer) nextToken() Token {
 			l.OriginalNameDirectiveValue = matches[1]
 			l.HasPrecedingOriginalNameDirective = true
 		}
+
+		if l.isEOF() {
+			return Token{Type: EOF, Value: l.current(), Position: l.position}
+		}
+	}
+
+	if l.currentTwoChars() == "/*" {
+		comment := "/*"
+		l.increasePosition(2)
+		for !l.isEOF() && !(l.currentTwoChars() == "*/") {
+			char, size := l.charAndSize()
+			comment += string(char)
+			l.increasePosition(size)
+		}
+
+		l.skipWhiteSpace()
 
 		if l.isEOF() {
 			return Token{Type: EOF, Value: l.current(), Position: l.position}
