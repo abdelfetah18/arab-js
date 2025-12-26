@@ -464,6 +464,10 @@ func (l *Lexer) nextToken() Token {
 			l.increasePosition(size)
 		}
 
+		if l.currentTwoChars() == "*/" {
+			l.increasePosition(2)
+		}
+
 		l.skipWhiteSpace()
 
 		if l.isEOF() {
