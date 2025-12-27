@@ -627,15 +627,7 @@ func (p *Parser) parseCallExpressionRest(expression *ast.Node) *ast.Node {
 
 			token := p.lexer.Peek()
 			for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightParenthesis {
-				if !p.isExpression() {
-					p.errorf(
-						ast.Location{
-							Pos: p.startPositions.Peek(),
-							End: p.getEndPosition(),
-						},
-						"Expecting expression but got %s\n", token.Value)
-				}
-				argumentList = append(argumentList, p.parseExpression())
+				argumentList = append(argumentList, p.parseAssignmentExpression())
 				token = p.lexer.Peek()
 				if token.Type == lexer.Comma {
 					token = p.lexer.Next()
