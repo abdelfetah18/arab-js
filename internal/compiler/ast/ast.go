@@ -12,6 +12,7 @@ const (
 	SLASH              BinaryExpressionOperator = "/"
 	PERCENT            BinaryExpressionOperator = "%"
 	STAR               BinaryExpressionOperator = "*"
+	COMMA              BinaryExpressionOperator = ","
 	DOUBLE_STAR        BinaryExpressionOperator = "**"
 	BITWISE_AND        BinaryExpressionOperator = "&"
 	BITWISE_OR         BinaryExpressionOperator = "|"

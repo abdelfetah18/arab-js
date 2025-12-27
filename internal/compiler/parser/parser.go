@@ -392,7 +392,13 @@ func (p *Parser) isExpression() bool {
 func (p *Parser) isPrimaryExpression() bool {
 	token := p.lexer.Peek()
 	switch token.Type {
-	case lexer.Identifier, lexer.SingleQuoteString, lexer.DoubleQuoteString, lexer.Decimal, lexer.LeftSquareBracket, lexer.LeftCurlyBrace:
+	case lexer.Identifier,
+		lexer.SingleQuoteString,
+		lexer.DoubleQuoteString,
+		lexer.Decimal,
+		lexer.LeftSquareBracket,
+		lexer.LeftCurlyBrace,
+		lexer.LeftParenthesis:
 		return true
 	case lexer.KeywordToken:
 		switch token.Value {
@@ -430,6 +436,12 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 		return p.parseArrayExpression().AsNode()
 	case lexer.LeftCurlyBrace:
 		return p.parseObjectExpression().AsNode()
+	case lexer.LeftParenthesis:
+		p.expected(lexer.LeftParenthesis)
+		expression := p.parseExpression()
+		p.optional(lexer.Comma)
+		p.expected(lexer.RightParenthesis)
+		return expression
 	}
 
 	p.errorf(
@@ -971,7 +983,19 @@ func (p *Parser) parseAssignmentExpression() *ast.Node {
 }
 
 func (p *Parser) parseExpression() *ast.Node {
-	return p.parseAssignmentExpression()
+	left := p.parseAssignmentExpression()
+	// Comma Operator: https://tc39.es/ecma262/#sec-comma-operator
+	for p.optional(lexer.Comma) {
+		right := p.parseAssignmentExpression()
+		left = ast.NewNode(
+			ast.NewBinaryExpression(",", left, right),
+			ast.Location{
+				Pos: left.Location.Pos,
+				End: p.getEndPosition(),
+			},
+		).AsNode()
+	}
+	return left
 }
 
 func (p *Parser) parseInterfaceDeclaration() *ast.InterfaceDeclaration {
