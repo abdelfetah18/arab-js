@@ -53,3 +53,37 @@ func TestParser(t *testing.T) {
 		})
 	}
 }
+
+func TestTest262ParserTests(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..", "..")
+
+	parserDir := filepath.Join(repoRoot, "testdata", "test262-parser-tests")
+	passDir := filepath.Join(parserDir, "pass")
+
+	entries, err := os.ReadDir(passDir)
+	if err != nil {
+		t.Fatalf("failed to read input dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		t.Run(entry.Name(), func(t *testing.T) {
+			inputFilePath := filepath.Join(passDir, entry.Name())
+
+			inputBytes, err := os.ReadFile(inputFilePath)
+			if err != nil {
+				t.Fatalf("failed to read input file %s: %v", inputFilePath, err)
+			}
+
+			sourceFile := ParseSourceFile(string(inputBytes))
+			_, err = json.Marshal(sourceFile)
+			if err != nil {
+				t.Fatalf("failed to marshal AST: %v", err)
+			}
+		})
+	}
+}

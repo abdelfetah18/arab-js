@@ -1,0 +1,6 @@
+// Do not remove first if consequent block
+إذا (a) {
+    إذا (b) { صحيح؛ }
+} و_إلا {
+    خطأ؛
+}

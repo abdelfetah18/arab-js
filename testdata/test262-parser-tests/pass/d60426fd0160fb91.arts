@@ -1,0 +1,7 @@
+(دالة () {
+  // not void context
+  // do not optimize
+  1 + (دالة () {
+    إرجاع 2؛
+  }())؛
+}())؛

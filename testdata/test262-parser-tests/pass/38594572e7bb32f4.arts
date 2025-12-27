@@ -1,0 +1,6 @@
+(دالة () {
+  دالة arguments() {
+    a(arguments)؛
+  }
+  a(arguments)؛
+}())؛

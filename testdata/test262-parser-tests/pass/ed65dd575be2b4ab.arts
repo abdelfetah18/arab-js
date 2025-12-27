@@ -1,0 +1,8 @@
+// Don't apply transformation to global code
+دالة a() {
+    b.c('d')؛
+}
+دالة a() {
+    b.c('e')؛
+}
+a()؛

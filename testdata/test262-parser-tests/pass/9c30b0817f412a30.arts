@@ -1,0 +1,1 @@
+(دالة(){ إرجاع {} })().a = 1؛ // should not transform this one

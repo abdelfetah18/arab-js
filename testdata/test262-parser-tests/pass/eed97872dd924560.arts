@@ -1,0 +1,1 @@
+`outer${{a: {b: 1}}}bar${`nested${دالة(){إرجاع 2؛}}endnest`}end`
