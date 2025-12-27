@@ -398,7 +398,8 @@ func (p *Parser) isPrimaryExpression() bool {
 		lexer.Decimal,
 		lexer.LeftSquareBracket,
 		lexer.LeftCurlyBrace,
-		lexer.LeftParenthesis:
+		lexer.LeftParenthesis,
+		lexer.Slash:
 		return true
 	case lexer.KeywordToken:
 		switch token.Value {
@@ -442,6 +443,8 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 		p.optional(lexer.Comma)
 		p.expected(lexer.RightParenthesis)
 		return expression
+	case lexer.Slash:
+		return p.parseRegularExpressionLiteral().AsNode()
 	}
 
 	p.errorf(
@@ -451,6 +454,19 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 		},
 		"Expected PrimaryExpression but got %s\n", p.lexer.Peek().Value)
 	return nil
+}
+
+func (p *Parser) parseRegularExpressionLiteral() *ast.RegularExpressionLiteral {
+	p.markStartPosition()
+	token := p.lexer.ReScanSlashToken()
+	p.lexer.Next()
+	return ast.NewNode(
+		ast.NewRegularExpressionLiteral(token.Value),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
 }
 
 func (p *Parser) parseTypeNode() *ast.Node {

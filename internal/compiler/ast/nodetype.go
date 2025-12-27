@@ -40,6 +40,7 @@ const (
 	NodeTypeObjectExpression
 	NodeTypeDirectiveLiteral
 	NodeTypeDirective
+	NodeTypeRegularExpressionLiteral
 	NodeTypeSourceFile
 
 	NodeTypeTypeAnnotation

@@ -45,6 +45,7 @@ const (
 	EOF
 	DoubleQuoteString
 	SingleQuoteString
+	RegularExpressionLiteral
 	Comma
 	Dot
 	Star
@@ -195,6 +196,8 @@ func (t TokenType) String() string {
 		return "DoubleStarEqual"
 	case Question:
 		return "Question"
+	case RegularExpressionLiteral:
+		return "RegularExpressionLiteral"
 	case Invalid:
 		return "Invalid"
 	default:
@@ -576,4 +579,31 @@ func (l *Lexer) Rewind(state LexerState) {
 	l.currentToken = state.currentToken
 	l.HasPrecedingOriginalNameDirective = state.HasPrecedingOriginalNameDirective
 	l.OriginalNameDirectiveValue = state.OriginalNameDirectiveValue
+}
+
+func (l *Lexer) ReScanSlashToken() Token {
+	// FIXME: must parse Regular Expression Literal Correctly
+	regex := "/"
+	for !l.isEOF() && l.current() != "/" {
+		l.increasePosition(1)
+		regex += l.current()
+	}
+	regex += l.current()
+
+	if l.isIdentifierPart() {
+		char, size := l.charAndSize()
+		l.increasePosition(size)
+		regex += string(char)
+	}
+
+	l.HasPrecedingOriginalNameDirective = false
+	l.OriginalNameDirectiveValue = ""
+	l.beforeWhitespacePosition = l.position
+	l.currentToken = Token{
+		Type:     RegularExpressionLiteral,
+		Value:    regex,
+		Position: l.position - len(regex),
+	}
+	l.startPosition = l.currentToken.Position
+	return l.currentToken
 }

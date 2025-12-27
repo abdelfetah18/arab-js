@@ -1987,3 +1987,28 @@ func (indexSignatureDeclaration *IndexSignatureDeclaration) NodeType() NodeType 
 func (indexSignatureDeclaration *IndexSignatureDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, indexSignatureDeclaration.Index.AsNode())
 }
+
+type RegularExpressionLiteral struct {
+	NodeBase
+	Text string `json:"text,omitempty"`
+}
+
+func NewRegularExpressionLiteral(text string) *RegularExpressionLiteral {
+	return &RegularExpressionLiteral{
+		Text: text,
+	}
+}
+
+func (regularExpressionLiteral *RegularExpressionLiteral) MarshalJSON() ([]byte, error) {
+	type Alias RegularExpressionLiteral
+	return json.Marshal(
+		wrapNode(
+			*regularExpressionLiteral.AsNode(),
+			(*Alias)(regularExpressionLiteral),
+		),
+	)
+}
+
+func (regularExpressionLiteral *RegularExpressionLiteral) NodeType() NodeType {
+	return NodeTypeIndexSignatureDeclaration
+}
