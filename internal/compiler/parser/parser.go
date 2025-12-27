@@ -1367,6 +1367,38 @@ func (p *Parser) parseForStatement() *ast.ForStatement {
 	)
 }
 
+func (p *Parser) isIdentifierName() bool {
+	return p.lexer.Peek().Type == lexer.Identifier || p.lexer.Peek().Type == lexer.KeywordToken
+}
+
+func (p *Parser) parseIdentifierName() *ast.Identifier {
+	p.markStartPosition()
+
+	token := p.lexer.Peek()
+	identifierName := token.Value
+
+	if !p.isIdentifierName() {
+		pos := p.startPositions.Pop()
+		return ast.NewNode(
+			ast.NewIdentifier(identifierName, nil, false),
+			ast.Location{
+				Pos: pos,
+				End: pos,
+			},
+		)
+	}
+
+	p.lexer.Next()
+
+	return ast.NewNode(
+		ast.NewIdentifier(identifierName, nil, false),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
 func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 	p.markStartPosition()
 
@@ -1605,20 +1637,21 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 		} else {
 			var key *ast.Node
 			switch token.Type {
-			case lexer.Identifier:
-				key = p.parseIdentifier(false).AsNode()
 			case lexer.DoubleQuoteString, lexer.SingleQuoteString:
 				key = p.parseStringLiteral().AsNode()
 			case lexer.Decimal:
 				key = p.parseDecimalLiteral().AsNode()
 			default:
-				p.errorf(
-					ast.Location{
-						Pos: p.startPositions.Pop(),
-						End: p.getEndPosition(),
-					},
-					"Expected a valid key but got %s\n", token.Value)
-				return nil
+				if !p.isIdentifierName() {
+					p.errorf(
+						ast.Location{
+							Pos: p.startPositions.Pop(),
+							End: p.getEndPosition(),
+						},
+						"Expected a valid key but got %s\n", token.Value)
+					return nil
+				}
+				key = p.parseIdentifierName().AsNode()
 			}
 
 			if p.optional(lexer.Colon) {
