@@ -152,6 +152,7 @@ func TestCheckCallExpression(t *testing.T) {
 		_checker.Check()
 
 		if len(_checker.Diagnostics) > 0 {
+			t.Logf("_checker.Diagnostics='%v'", _checker.Diagnostics[0])
 			t.Error("should not detect errors")
 		}
 	})

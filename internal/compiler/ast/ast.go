@@ -115,6 +115,7 @@ func (node *Node) AsObjectProperty() *ObjectProperty     { return node.Data.(*Ob
 func (node *Node) AsObjectMethod() *ObjectMethod         { return node.Data.(*ObjectMethod) }
 func (node *Node) AsMemberExpression() *MemberExpression { return node.Data.(*MemberExpression) }
 func (node *Node) AsRestElement() *RestElement           { return node.Data.(*RestElement) }
+func (node *Node) AsBindingElement() *BindingElement     { return node.Data.(*BindingElement) }
 func (node *Node) AsUpdateExpression() *UpdateExpression { return node.Data.(*UpdateExpression) }
 func (node *Node) AsAssignmentExpression() *AssignmentExpression {
 	return node.Data.(*AssignmentExpression)

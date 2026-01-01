@@ -35,6 +35,8 @@ func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
 
 func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 	switch node.Type {
+	case ast.NodeTypeBindingElement:
+		return t.ResolveTypeAnnotation(node.AsBindingElement().TypeAnnotation)
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
 		if node.Parent != nil && node.Parent.Type == ast.NodeTypeVariableDeclaration {
@@ -283,13 +285,20 @@ func (t *TypeResolver) resolveSignature(node *ast.Node) *Signature {
 		for _, param := range functionType.Params {
 			isRest := false
 			name := ""
-			if param.Type == ast.NodeTypeRestElement {
-				isRest = true
-				name = param.AsRestElement().Argument.Name
-				flags |= SignatureFlagsHasRestParameter
-			} else {
-				isRest = false
-				name = param.AsIdentifier().Name
+			if param.Type == ast.NodeTypeBindingElement {
+				bindingElement := param.AsBindingElement()
+				if bindingElement.Element != nil {
+					switch bindingElement.Element.Type {
+					case ast.NodeTypeIdentifier:
+						name = bindingElement.Element.AsIdentifier().Name
+					}
+				}
+
+				isRest = bindingElement.Rest
+				if isRest {
+					flags |= SignatureFlagsHasRestParameter
+				}
+
 			}
 
 			paramType := t.ResolveTypeFromNode(param)
@@ -303,13 +312,20 @@ func (t *TypeResolver) resolveSignature(node *ast.Node) *Signature {
 		for _, param := range functionDeclaration.Params {
 			isRest := false
 			name := ""
-			if param.Type == ast.NodeTypeRestElement {
-				isRest = true
-				name = param.AsRestElement().Argument.Name
-				flags |= SignatureFlagsHasRestParameter
-			} else {
-				isRest = false
-				name = param.AsIdentifier().Name
+			if param.Type == ast.NodeTypeBindingElement {
+				bindingElement := param.AsBindingElement()
+				if bindingElement.Element != nil {
+					switch bindingElement.Element.Type {
+					case ast.NodeTypeIdentifier:
+						name = bindingElement.Element.AsIdentifier().Name
+					}
+				}
+
+				isRest = bindingElement.Rest
+				if isRest {
+					flags |= SignatureFlagsHasRestParameter
+				}
+
 			}
 
 			paramType := t.ResolveTypeFromNode(param)

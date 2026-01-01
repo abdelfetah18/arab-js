@@ -286,12 +286,18 @@ func (emitter *Emitter) emitFunctionDeclaration(functionDeclaration *ast.Functio
 	emitter.Writer.Write(functionDeclaration.ID.Name)
 	emitter.Writer.Write("(")
 	for index, param := range functionDeclaration.Params {
-		switch param.Type {
-		case ast.NodeTypeRestElement:
-			emitter.Writer.Write("...")
-			emitter.Writer.Write(param.AsRestElement().Argument.Name)
-		case ast.NodeTypeIdentifier:
-			emitter.Writer.Write(param.AsIdentifier().Name)
+		if param.Type == ast.NodeTypeBindingElement {
+			bindingElement := param.AsBindingElement()
+			if bindingElement.Rest {
+				emitter.Writer.Write("...")
+			}
+
+			if bindingElement.Element != nil {
+				switch bindingElement.Element.Type {
+				case ast.NodeTypeIdentifier:
+					emitter.Writer.Write(bindingElement.Element.AsIdentifier().Name)
+				}
+			}
 		}
 
 		if index < len(functionDeclaration.Params)-1 {
