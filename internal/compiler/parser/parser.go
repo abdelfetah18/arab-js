@@ -188,8 +188,6 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 
 	token := p.lexer.Peek()
 	switch token.Type {
-	case lexer.LeftCurlyBrace:
-		importSpecifiers = p.parseImportSpecifiers(importSpecifiers)
 	case lexer.Identifier:
 		identifier := p.parseIdentifier(false)
 		importSpecifiers = append(importSpecifiers,
@@ -201,20 +199,17 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 
 		if p.optional(lexer.Comma) {
 			token = p.lexer.Peek()
-			if token.Type == lexer.LeftCurlyBrace {
-				p.parseImportSpecifiers(importSpecifiers)
+			switch token.Type {
+			case lexer.Star:
+				importSpecifiers = append(importSpecifiers, p.parseNameSpaceImport().AsNode())
+			case lexer.LeftCurlyBrace:
+				importSpecifiers = p.parseNamedImports(importSpecifiers)
 			}
 		}
+	case lexer.LeftCurlyBrace:
+		importSpecifiers = p.parseNamedImports(importSpecifiers)
 	case lexer.Star:
-		p.expected(lexer.Star)
-		p.expectedKeyword(lexer.KeywordAs)
-		identifier := p.parseIdentifier(false)
-		importSpecifiers = append(importSpecifiers,
-			ast.NewNode(
-				ast.NewImportNamespaceSpecifier(identifier),
-				identifier.Location,
-			).AsNode(),
-		)
+		importSpecifiers = append(importSpecifiers, p.parseNameSpaceImport().AsNode())
 	default:
 		p.errorf(
 			ast.Location{
@@ -238,7 +233,24 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 	)
 }
 
-func (p *Parser) parseImportSpecifiers(importSpecifiers []*ast.Node) []*ast.Node {
+func (p *Parser) parseNameSpaceImport() *ast.ImportNamespaceSpecifier {
+	p.markStartPosition()
+
+	p.expected(lexer.Star)
+	p.expectedKeyword(lexer.KeywordAs)
+
+	identifier := p.parseIdentifier(false)
+
+	return ast.NewNode(
+		ast.NewImportNamespaceSpecifier(identifier),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseNamedImports(importSpecifiers []*ast.Node) []*ast.Node {
 	p.expected(lexer.LeftCurlyBrace)
 	token := p.lexer.Peek()
 	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {

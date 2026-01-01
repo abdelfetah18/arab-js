@@ -972,7 +972,9 @@ func (exportNamedDeclaration *ExportNamedDeclaration) ForEachChild(v Visitor) bo
 		_specifiers = append(_specifiers, specifier.AsNode())
 	}
 
-	return visit(v, exportNamedDeclaration.Declaration) || visitNodes(v, _specifiers) || visit(v, exportNamedDeclaration.Source.AsNode())
+	return visit(v, exportNamedDeclaration.Declaration) ||
+		visitNodes(v, _specifiers) ||
+		(exportNamedDeclaration.Source != nil && visit(v, exportNamedDeclaration.Source.AsNode()))
 }
 
 type ExportDefaultDeclaration struct {
