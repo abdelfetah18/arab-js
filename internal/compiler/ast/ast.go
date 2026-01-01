@@ -2012,3 +2012,148 @@ func (regularExpressionLiteral *RegularExpressionLiteral) MarshalJSON() ([]byte,
 func (regularExpressionLiteral *RegularExpressionLiteral) NodeType() NodeType {
 	return NodeTypeIndexSignatureDeclaration
 }
+
+type ArrowFunction struct {
+	NodeBase
+	ContainerBase   `json:"-"`
+	DeclarationBase `json:"-"`
+	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
+	Params          []*Node                    `json:"params,omitempty"`
+	Body            *BlockStatement            `json:"body,omitempty"`
+	TypeAnnotation  *TypeAnnotation            `json:"type_annotation,omitempty"`
+}
+
+func NewArrowFunction(typeParameters *TypeParametersDeclaration, params []*Node, body *BlockStatement, typeAnnotation *TypeAnnotation) *ArrowFunction {
+	return &ArrowFunction{
+		TypeParameters: typeParameters,
+		Params:         params,
+		Body:           body,
+		TypeAnnotation: typeAnnotation,
+	}
+}
+
+func (arrowFunction *ArrowFunction) MarshalJSON() ([]byte, error) {
+	type Alias ArrowFunction
+	return json.Marshal(
+		wrapNode(
+			*arrowFunction.AsNode(),
+			(*Alias)(arrowFunction),
+		),
+	)
+}
+
+func (arrowFunction *ArrowFunction) NodeType() NodeType {
+	return NodeTypeFunctionExpression
+}
+
+func (arrowFunction *ArrowFunction) ForEachChild(v Visitor) bool {
+	return visitNodes(v, arrowFunction.Params) ||
+		(arrowFunction.Body != nil && visit(v, arrowFunction.Body.AsNode())) ||
+		(arrowFunction.TypeAnnotation != nil && visit(v, arrowFunction.TypeAnnotation.AsNode()))
+}
+
+func (arrowFunction *ArrowFunction) ContainerBaseData() *ContainerBase {
+	return &arrowFunction.ContainerBase
+}
+
+type Parameter struct {
+	NodeBase
+	DeclarationBase `json:"-"`
+	Name            *Node           `json:"name,omitempty"`
+	TypeAnnotation  *TypeAnnotation `json:"type_annotation,omitempty"`
+	Initializer     *Initializer    `json:"initializer,omitempty"`
+}
+
+func NewParameter(name *Node, typeAnnotation *TypeAnnotation, initializer *Initializer) *Parameter {
+	return &Parameter{
+		Name:           name,
+		TypeAnnotation: typeAnnotation,
+		Initializer:    initializer,
+	}
+}
+
+func (parameter *Parameter) MarshalJSON() ([]byte, error) {
+	type Alias Parameter
+	return json.Marshal(
+		wrapNode(
+			*parameter.AsNode(),
+			(*Alias)(parameter),
+		),
+	)
+}
+
+func (parameter *Parameter) NodeType() NodeType {
+	return NodeTypeParameter
+}
+
+func (parameter *Parameter) ForEachChild(v Visitor) bool {
+	return visit(v, parameter.Name) ||
+		(parameter.TypeAnnotation != nil && visit(v, parameter.TypeAnnotation.AsNode())) ||
+		(parameter.Initializer != nil && visit(v, parameter.Initializer.AsNode()))
+}
+
+type ArrayBindingPattern struct {
+	NodeBase
+	Elements []*Node `json:"elements,omitempty"`
+}
+
+func NewArrayBindingPattern(elements []*Node) *ArrayBindingPattern {
+	return &ArrayBindingPattern{
+		Elements: elements,
+	}
+}
+
+func (arrayBindingPattern *ArrayBindingPattern) MarshalJSON() ([]byte, error) {
+	type Alias ArrayBindingPattern
+	return json.Marshal(
+		wrapNode(
+			*arrayBindingPattern.AsNode(),
+			(*Alias)(arrayBindingPattern),
+		),
+	)
+}
+
+func (arrayBindingPattern *ArrayBindingPattern) NodeType() NodeType {
+	return NodeTypeArrayBindingPattern
+}
+
+func (arrayBindingPattern *ArrayBindingPattern) ForEachChild(v Visitor) bool {
+	return visitNodes(v, arrayBindingPattern.Elements)
+}
+
+type BindingElement struct {
+	NodeBase
+	Element        *Node           `json:"element,omitempty"`
+	Rest           bool            `json:"rest,omitempty"`
+	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
+	Initializer    *Initializer    `json:"initializer,omitempty"`
+}
+
+func NewBindingElement(element *Node, rest bool, typeAnnotation *TypeAnnotation, initializer *Initializer) *BindingElement {
+	return &BindingElement{
+		Element:        element,
+		Rest:           rest,
+		TypeAnnotation: typeAnnotation,
+		Initializer:    initializer,
+	}
+}
+
+func (bindingElement *BindingElement) MarshalJSON() ([]byte, error) {
+	type Alias BindingElement
+	return json.Marshal(
+		wrapNode(
+			*bindingElement.AsNode(),
+			(*Alias)(bindingElement),
+		),
+	)
+}
+
+func (bindingElement *BindingElement) NodeType() NodeType {
+	return NodeTypeBindingElement
+}
+
+func (bindingElement *BindingElement) ForEachChild(v Visitor) bool {
+	return visit(v, bindingElement.Element) ||
+		(bindingElement.TypeAnnotation != nil && visit(v, bindingElement.TypeAnnotation.AsNode())) ||
+		(bindingElement.Initializer != nil && visit(v, bindingElement.Initializer.AsNode()))
+}

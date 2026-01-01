@@ -41,6 +41,9 @@ const (
 	NodeTypeDirectiveLiteral
 	NodeTypeDirective
 	NodeTypeRegularExpressionLiteral
+	NodeTypeParameter
+	NodeTypeArrayBindingPattern
+	NodeTypeBindingElement
 	NodeTypeSourceFile
 
 	NodeTypeTypeAnnotation
@@ -185,6 +188,12 @@ func (t NodeType) String() string {
 		return "FunctionExpression"
 	case NodeTypeIndexSignatureDeclaration:
 		return "IndexSignatureDeclaration"
+	case NodeTypeArrayBindingPattern:
+		return "ArrayBindingPattern"
+	case NodeTypeParameter:
+		return "Parameter"
+	case NodeTypeBindingElement:
+		return "BindingElement"
 	default:
 		return "Unknown"
 	}
