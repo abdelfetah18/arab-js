@@ -116,6 +116,7 @@ func (node *Node) AsObjectMethod() *ObjectMethod         { return node.Data.(*Ob
 func (node *Node) AsMemberExpression() *MemberExpression { return node.Data.(*MemberExpression) }
 func (node *Node) AsRestElement() *RestElement           { return node.Data.(*RestElement) }
 func (node *Node) AsBindingElement() *BindingElement     { return node.Data.(*BindingElement) }
+func (node *Node) AsParameter() *Parameter               { return node.Data.(*Parameter) }
 func (node *Node) AsUpdateExpression() *UpdateExpression { return node.Data.(*UpdateExpression) }
 func (node *Node) AsAssignmentExpression() *AssignmentExpression {
 	return node.Data.(*AssignmentExpression)
@@ -2063,13 +2064,15 @@ type Parameter struct {
 	NodeBase
 	DeclarationBase `json:"-"`
 	Name            *Node           `json:"name,omitempty"`
+	Rest            bool            `json:"rest,omitempty"`
 	TypeAnnotation  *TypeAnnotation `json:"type_annotation,omitempty"`
 	Initializer     *Initializer    `json:"initializer,omitempty"`
 }
 
-func NewParameter(name *Node, typeAnnotation *TypeAnnotation, initializer *Initializer) *Parameter {
+func NewParameter(name *Node, rest bool, typeAnnotation *TypeAnnotation, initializer *Initializer) *Parameter {
 	return &Parameter{
 		Name:           name,
+		Rest:           rest,
 		TypeAnnotation: typeAnnotation,
 		Initializer:    initializer,
 	}
@@ -2093,6 +2096,35 @@ func (parameter *Parameter) ForEachChild(v Visitor) bool {
 	return visit(v, parameter.Name) ||
 		(parameter.TypeAnnotation != nil && visit(v, parameter.TypeAnnotation.AsNode())) ||
 		(parameter.Initializer != nil && visit(v, parameter.Initializer.AsNode()))
+}
+
+type ObjectBindingPattern struct {
+	NodeBase
+	Elements []*Node `json:"elements,omitempty"`
+}
+
+func NewObjectBindingPattern(elements []*Node) *ObjectBindingPattern {
+	return &ObjectBindingPattern{
+		Elements: elements,
+	}
+}
+
+func (objectBindingPattern *ObjectBindingPattern) MarshalJSON() ([]byte, error) {
+	type Alias ObjectBindingPattern
+	return json.Marshal(
+		wrapNode(
+			*objectBindingPattern.AsNode(),
+			(*Alias)(objectBindingPattern),
+		),
+	)
+}
+
+func (objectBindingPattern *ObjectBindingPattern) NodeType() NodeType {
+	return NodeTypeObjectBindingPattern
+}
+
+func (objectBindingPattern *ObjectBindingPattern) ForEachChild(v Visitor) bool {
+	return visitNodes(v, objectBindingPattern.Elements)
 }
 
 type ArrayBindingPattern struct {
@@ -2126,15 +2158,17 @@ func (arrayBindingPattern *ArrayBindingPattern) ForEachChild(v Visitor) bool {
 
 type BindingElement struct {
 	NodeBase
-	Element        *Node           `json:"element,omitempty"`
+	Name           *Node           `json:"name,omitempty"`
+	PropertyName   *Node           `json:"property_name,omitempty"`
 	Rest           bool            `json:"rest,omitempty"`
 	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
 	Initializer    *Initializer    `json:"initializer,omitempty"`
 }
 
-func NewBindingElement(element *Node, rest bool, typeAnnotation *TypeAnnotation, initializer *Initializer) *BindingElement {
+func NewBindingElement(name *Node, propertyName *Node, rest bool, typeAnnotation *TypeAnnotation, initializer *Initializer) *BindingElement {
 	return &BindingElement{
-		Element:        element,
+		Name:           name,
+		PropertyName:   propertyName,
 		Rest:           rest,
 		TypeAnnotation: typeAnnotation,
 		Initializer:    initializer,
@@ -2156,7 +2190,8 @@ func (bindingElement *BindingElement) NodeType() NodeType {
 }
 
 func (bindingElement *BindingElement) ForEachChild(v Visitor) bool {
-	return visit(v, bindingElement.Element) ||
+	return visit(v, bindingElement.Name) ||
+		(bindingElement.PropertyName != nil && visit(v, bindingElement.PropertyName)) ||
 		(bindingElement.TypeAnnotation != nil && visit(v, bindingElement.TypeAnnotation.AsNode())) ||
 		(bindingElement.Initializer != nil && visit(v, bindingElement.Initializer.AsNode()))
 }

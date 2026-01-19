@@ -43,6 +43,7 @@ const (
 	NodeTypeRegularExpressionLiteral
 	NodeTypeParameter
 	NodeTypeArrayBindingPattern
+	NodeTypeObjectBindingPattern
 	NodeTypeBindingElement
 	NodeTypeSourceFile
 
@@ -190,6 +191,8 @@ func (t NodeType) String() string {
 		return "IndexSignatureDeclaration"
 	case NodeTypeArrayBindingPattern:
 		return "ArrayBindingPattern"
+	case NodeTypeObjectBindingPattern:
+		return "ObjectBindingPattern"
 	case NodeTypeParameter:
 		return "Parameter"
 	case NodeTypeBindingElement:

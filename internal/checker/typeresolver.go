@@ -35,8 +35,8 @@ func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
 
 func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 	switch node.Type {
-	case ast.NodeTypeBindingElement:
-		return t.ResolveTypeAnnotation(node.AsBindingElement().TypeAnnotation)
+	case ast.NodeTypeParameter:
+		return t.ResolveTypeAnnotation(node.AsParameter().TypeAnnotation)
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
 		if node.Parent != nil && node.Parent.Type == ast.NodeTypeVariableDeclaration {
@@ -285,16 +285,16 @@ func (t *TypeResolver) resolveSignature(node *ast.Node) *Signature {
 		for _, param := range functionType.Params {
 			isRest := false
 			name := ""
-			if param.Type == ast.NodeTypeBindingElement {
-				bindingElement := param.AsBindingElement()
-				if bindingElement.Element != nil {
-					switch bindingElement.Element.Type {
+			if param.Type == ast.NodeTypeParameter {
+				param := param.AsParameter()
+				if param.Name != nil {
+					switch param.Name.Type {
 					case ast.NodeTypeIdentifier:
-						name = bindingElement.Element.AsIdentifier().Name
+						name = param.Name.AsIdentifier().Name
 					}
 				}
 
-				isRest = bindingElement.Rest
+				isRest = param.Rest
 				if isRest {
 					flags |= SignatureFlagsHasRestParameter
 				}
@@ -312,16 +312,16 @@ func (t *TypeResolver) resolveSignature(node *ast.Node) *Signature {
 		for _, param := range functionDeclaration.Params {
 			isRest := false
 			name := ""
-			if param.Type == ast.NodeTypeBindingElement {
-				bindingElement := param.AsBindingElement()
-				if bindingElement.Element != nil {
-					switch bindingElement.Element.Type {
+			if param.Type == ast.NodeTypeParameter {
+				parameter := param.AsParameter()
+				if parameter.Name != nil {
+					switch parameter.Name.Type {
 					case ast.NodeTypeIdentifier:
-						name = bindingElement.Element.AsIdentifier().Name
+						name = parameter.Name.AsIdentifier().Name
 					}
 				}
 
-				isRest = bindingElement.Rest
+				isRest = parameter.Rest
 				if isRest {
 					flags |= SignatureFlagsHasRestParameter
 				}

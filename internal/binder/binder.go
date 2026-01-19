@@ -109,19 +109,19 @@ func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclar
 
 func (b *Binder) bindParam(node *ast.Node) {
 	switch node.Type {
-	case ast.NodeTypeBindingElement:
-		bindingElement := node.AsBindingElement()
-		if bindingElement.Element == nil {
+	case ast.NodeTypeParameter:
+		param := node.AsParameter()
+		if param.Name == nil {
 			return
 		}
 
-		switch bindingElement.Element.Type {
+		switch param.Name.Type {
 		case ast.NodeTypeIdentifier:
-			identifier := bindingElement.Element.AsIdentifier()
+			identifier := param.Name.AsIdentifier()
 			b.container.Scope.AddVariable(
 				identifier.Name,
 				nil,
-				bindingElement.AsNode(),
+				node,
 			)
 		}
 	}

@@ -184,7 +184,7 @@ func TestBindFunctionDeclaration(t *testing.T) {
 			return
 		}
 
-		if symbol.Node.Type != ast.NodeTypeBindingElement {
+		if symbol.Node.Type != ast.NodeTypeParameter {
 			t.Errorf("expected symbol %q to be %v, but got %v", "أ", ast.NodeTypeBindingElement, symbol.Node.Type)
 			return
 		}
