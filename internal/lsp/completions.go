@@ -62,7 +62,7 @@ func getPrecedingTokensAtPos(sourceFile *ast.SourceFile, startPos int, position 
 	return currentToken, currentToken
 }
 
-func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int, checker *checker.Checker) []defines.CompletionItem {
+func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int, _checker *checker.Checker) []defines.CompletionItem {
 	completions := []defines.CompletionItem{}
 
 	if node.Type == ast.NodeTypeSourceFile {
@@ -86,7 +86,7 @@ func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int,
 			currentScope = currentScope.Parent
 		}
 
-		for k, symbol := range checker.NameResolver.Globals.Locals {
+		for k, symbol := range _checker.NameResolver.Globals.Locals {
 			d := defines.CompletionItemKindText
 			switch symbol.Node.Type {
 			case ast.NodeTypeFunctionDeclaration:
@@ -109,10 +109,13 @@ func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int,
 	isRightOfDot := currentToken.Type == lexer.Dot
 	if isRightOfDot {
 		if node.Type == ast.NodeTypeMemberExpression {
-			_type := checker.TypeResolver.ResolveTypeFromNode(node.AsMemberExpression().Object)
+			_type := _checker.TypeResolver.ResolveTypeFromNode(node.AsMemberExpression().Object)
 			objectType := _type.AsObjectType()
-			for name := range objectType.Members() {
-				d := defines.CompletionItemKindText
+			for name, members := range objectType.Members() {
+				d := defines.CompletionItemKindField
+				if members.Type.ObjectFlags&checker.ObjectFlagsAnonymous != 0 && members.Type.AsObjectType().Signature() != nil {
+					d = defines.CompletionItemKindMethod
+				}
 				completions = append(completions, defines.CompletionItem{
 					Label:      name,
 					Kind:       &d,

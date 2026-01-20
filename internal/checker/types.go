@@ -112,6 +112,7 @@ type ObjectType struct {
 
 func (t *ObjectType) Name() string               { return "object" }
 func (t *ObjectType) Members() ObjectTypeMembers { return t.members }
+func (t *ObjectType) Signature() *Signature      { return t.signature }
 
 type ArrayType struct {
 	ObjectType
