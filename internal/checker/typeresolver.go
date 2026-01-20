@@ -54,7 +54,10 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 
 		return t.ResolveTypeFromNode(symbol.Node)
 	case ast.NodeTypeVariableDeclaration:
-		return t.ResolveTypeAnnotation(node.AsVariableDeclaration().Identifier.TypeAnnotation)
+		variableDeclaration := node.AsVariableDeclaration()
+		if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
+			return t.ResolveTypeAnnotation(variableDeclaration.Name.AsIdentifier().TypeAnnotation)
+		}
 	case ast.NodeTypeFunctionDeclaration:
 		return t.newFunctionType(t.resolveSignature(node))
 	case ast.NodeTypeStringLiteral:
@@ -82,7 +85,9 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 		switch objectExpression.Parent.Type {
 		case ast.NodeTypeInitializer:
 			variableDeclaration := objectExpression.Parent.Parent.AsVariableDeclaration()
-			return t.ResolveTypeAnnotation(variableDeclaration.Identifier.TypeAnnotation)
+			if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
+				return t.ResolveTypeAnnotation(variableDeclaration.Name.AsIdentifier().TypeAnnotation)
+			}
 		case ast.NodeTypeAssignmentExpression:
 			assignmentExpression := objectExpression.Parent.AsAssignmentExpression()
 			return t.ResolveTypeFromNode(assignmentExpression.Left)
@@ -103,6 +108,8 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 	default:
 		return nil
 	}
+
+	return nil
 }
 
 func (t *TypeResolver) ResolveTypeAnnotation(typeAnnotation *ast.TypeAnnotation) *Type {

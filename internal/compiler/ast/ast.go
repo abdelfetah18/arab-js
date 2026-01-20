@@ -193,8 +193,10 @@ func (node *NodeBase) ContainerBaseData() *ContainerBase { return nil }
 func (node *Node) TypeNode() *Node {
 	switch node.Type {
 	case NodeTypeVariableDeclaration:
-		if node.AsVariableDeclaration().Identifier.TypeAnnotation != nil {
-			return node.AsVariableDeclaration().Identifier.TypeAnnotation.TypeAnnotation
+		variableDeclaration := node.AsVariableDeclaration()
+
+		if variableDeclaration.Name.Type == NodeTypeIdentifier && variableDeclaration.Name.AsIdentifier().TypeAnnotation != nil {
+			return variableDeclaration.Name.AsIdentifier().TypeAnnotation.TypeAnnotation
 		}
 	case NodeTypePropertySignature:
 		if node.AsPropertySignature().TypeAnnotation != nil {
@@ -299,14 +301,14 @@ type VariableDeclaration struct {
 	NodeBase
 	DeclarationBase `json:"-"`
 	ModifiersBase   `json:"-"`
-	Identifier      *Identifier  `json:"identifier,omitempty"`
+	Name            *Node        `json:"name,omitempty"`
 	Initializer     *Initializer `json:"initializer,omitempty"`
 	Declare         bool         `json:"declare,omitempty"`
 }
 
-func NewVariableDeclaration(identifier *Identifier, initializer *Initializer, modifiers *ModifierList) *VariableDeclaration {
+func NewVariableDeclaration(name *Node, initializer *Initializer, modifiers *ModifierList) *VariableDeclaration {
 	return &VariableDeclaration{
-		Identifier:  identifier,
+		Name:        name,
 		Initializer: initializer,
 		ModifiersBase: ModifiersBase{
 			modifiers: modifiers,
@@ -329,7 +331,7 @@ func (variableDeclaration *VariableDeclaration) NodeType() NodeType {
 }
 
 func (variableDeclaration *VariableDeclaration) ForEachChild(v Visitor) bool {
-	return visit(v, variableDeclaration.Identifier.AsNode()) || (variableDeclaration.Initializer != nil && visit(v, variableDeclaration.Initializer.AsNode()))
+	return visit(v, variableDeclaration.Name.AsNode()) || (variableDeclaration.Initializer != nil && visit(v, variableDeclaration.Initializer.AsNode()))
 }
 
 type TypeAnnotation struct {
@@ -2194,4 +2196,31 @@ func (bindingElement *BindingElement) ForEachChild(v Visitor) bool {
 		(bindingElement.PropertyName != nil && visit(v, bindingElement.PropertyName)) ||
 		(bindingElement.TypeAnnotation != nil && visit(v, bindingElement.TypeAnnotation.AsNode())) ||
 		(bindingElement.Initializer != nil && visit(v, bindingElement.Initializer.AsNode()))
+}
+
+type ComputedProperty struct {
+	NodeBase
+	Name *Node `json:"name,omitempty"`
+}
+
+func NewComputedProperty(name *Node) *ComputedProperty {
+	return &ComputedProperty{Name: name}
+}
+
+func (computedProperty *ComputedProperty) MarshalJSON() ([]byte, error) {
+	type Alias ComputedProperty
+	return json.Marshal(
+		wrapNode(
+			*computedProperty.AsNode(),
+			(*Alias)(computedProperty),
+		),
+	)
+}
+
+func (computedProperty *ComputedProperty) NodeType() NodeType {
+	return NodeTypeComputedProperty
+}
+
+func (computedProperty *ComputedProperty) ForEachChild(v Visitor) bool {
+	return visit(v, computedProperty.Name)
 }

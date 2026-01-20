@@ -45,6 +45,7 @@ const (
 	NodeTypeArrayBindingPattern
 	NodeTypeObjectBindingPattern
 	NodeTypeBindingElement
+	NodeTypeComputedProperty
 	NodeTypeSourceFile
 
 	NodeTypeTypeAnnotation
@@ -197,6 +198,8 @@ func (t NodeType) String() string {
 		return "Parameter"
 	case NodeTypeBindingElement:
 		return "BindingElement"
+	case NodeTypeComputedProperty:
+		return "ComputedProperty"
 	default:
 		return "Unknown"
 	}

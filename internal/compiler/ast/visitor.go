@@ -29,7 +29,7 @@ func (v *NodeVisitor) visitBlockStatement(blockStatement *BlockStatement) {
 }
 
 func (v *NodeVisitor) visitVariableDeclaration(variableDeclaration *VariableDeclaration) {
-	v.VisitNode(variableDeclaration.Identifier.AsNode())
+	v.VisitNode(variableDeclaration.Name)
 
 	if variableDeclaration.Initializer != nil {
 		v.VisitNode(variableDeclaration.Initializer.Expression)

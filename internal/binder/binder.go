@@ -53,11 +53,13 @@ func (b *Binder) bindStatement(node *ast.Node) {
 }
 
 func (b *Binder) bindVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
-	variableDeclaration.Symbol = b.container.Scope.AddVariable(
-		variableDeclaration.Identifier.Name,
-		variableDeclaration.Identifier.OriginalName,
-		variableDeclaration.AsNode(),
-	)
+	if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
+		variableDeclaration.Symbol = b.container.Scope.AddVariable(
+			variableDeclaration.Name.AsIdentifier().Name,
+			variableDeclaration.Name.AsIdentifier().OriginalName,
+			variableDeclaration.AsNode(),
+		)
+	}
 }
 
 func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {

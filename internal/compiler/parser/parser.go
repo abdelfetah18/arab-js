@@ -124,7 +124,9 @@ func (p *Parser) parseStatement() *ast.Node {
 				case lexer.KeywordLet:
 					variableDeclaration := p.parseVariableDeclaration(modifierList)
 					if hasPrecedingOriginalNameDirective {
-						variableDeclaration.Identifier.OriginalName = &originalNameDirectiveValue
+						if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
+							variableDeclaration.Name.AsIdentifier().OriginalName = &originalNameDirectiveValue
+						}
 					}
 					return variableDeclaration.AsNode()
 				case lexer.KeywordFunction:
@@ -549,7 +551,17 @@ func (p *Parser) parseVariableDeclaration(modifierList *ast.ModifierList) *ast.V
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordLet)
-	identifier := p.parseIdentifier(true)
+
+	var name *ast.Node = nil
+	switch p.lexer.Peek().Type {
+	case lexer.Identifier:
+		name = p.parseIdentifier(true).AsNode()
+	case lexer.LeftSquareBracket:
+		name = p.parseArrayBindingPattern().AsNode()
+	case lexer.LeftCurlyBrace:
+		name = p.parseObjectBindingPattern().AsNode()
+	}
+
 	p.expected(lexer.Equal)
 
 	var initializer *ast.Initializer = nil
@@ -563,7 +575,7 @@ func (p *Parser) parseVariableDeclaration(modifierList *ast.ModifierList) *ast.V
 	}
 
 	return ast.NewNode(
-		ast.NewVariableDeclaration(identifier, initializer, modifierList),
+		ast.NewVariableDeclaration(name, initializer, modifierList),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -963,28 +975,15 @@ func (p *Parser) parseParameters() []*ast.Node {
 	return params
 }
 
-func (p *Parser) parseBindingElement(rest bool) *ast.BindingElement {
+func (p *Parser) parseObjectBindingElement() *ast.BindingElement {
 	p.markStartPosition()
 
-	var name *ast.Node = nil
+	rest := p.optional(lexer.TripleDots)
 	var propertyName *ast.Node = nil
-	switch p.lexer.Peek().Type {
-	case lexer.Identifier:
-		name = p.parseIdentifier(false).AsNode()
-		if p.lexer.Peek().Type == lexer.Colon {
-			p.expected(lexer.Colon)
-			propertyName = name
-			name = p.parseBindingElement(p.optional(lexer.TripleDots)).AsNode()
-		}
-	case lexer.LeftSquareBracket:
-		name = p.parseArrayBindingPattern().AsNode()
-	case lexer.LeftCurlyBrace:
-		name = p.parseObjectBindingPattern().AsNode()
-	}
-
-	if name == nil {
-		p.startPositions.Pop()
-		return nil
+	name := p.parsePropertyName()
+	if p.optional(lexer.Colon) {
+		propertyName = name
+		name = p.parseIdentifierOrPattern()
 	}
 
 	var initializer *ast.Initializer = nil
@@ -1006,18 +1005,22 @@ func (p *Parser) parseBindingElement(rest bool) *ast.BindingElement {
 	)
 }
 
+func (p *Parser) parseIdentifierOrPattern() *ast.Node {
+	switch p.lexer.Peek().Type {
+	case lexer.LeftCurlyBrace:
+		return p.parseObjectBindingPattern().AsNode()
+	case lexer.LeftSquareBracket:
+		return p.parseArrayBindingPattern().AsNode()
+	default:
+		return p.parseIdentifier(false).AsNode()
+	}
+}
+
 func (p *Parser) parseParameter() *ast.Node {
 	p.markStartPosition()
 
 	rest := p.optional(lexer.TripleDots)
-	var element *ast.Node = nil
-	switch p.lexer.Peek().Type {
-	case lexer.Identifier:
-		element = p.parseIdentifier(false).AsNode()
-	case lexer.LeftSquareBracket, lexer.LeftCurlyBrace:
-		element = p.parseBindingElement(rest).AsNode()
-	}
-
+	element := p.parseIdentifierOrPattern()
 	if element == nil {
 		p.startPositions.Pop()
 		return nil
@@ -1047,20 +1050,41 @@ func (p *Parser) parseParameter() *ast.Node {
 	).AsNode()
 }
 
+func (p *Parser) parsePropertyName() *ast.Node {
+	var name *ast.Node = nil
+
+	switch p.lexer.Peek().Type {
+	case lexer.Identifier:
+		name = p.parseIdentifier(false).AsNode()
+	case lexer.DoubleQuoteString, lexer.SingleQuoteString:
+		name = p.parseStringLiteral().AsNode()
+	case lexer.Decimal:
+		name = p.parseDecimalLiteral().AsNode()
+	case lexer.LeftSquareBracket:
+		p.expected(lexer.LeftSquareBracket)
+		assignmentExpression := p.parseAssignmentExpression()
+		name = ast.NewNode(
+			ast.NewComputedProperty(assignmentExpression.AsNode()),
+			assignmentExpression.Location,
+		).AsNode()
+		p.expected(lexer.RightSquareBracket)
+	}
+
+	return name
+}
+
 func (p *Parser) parseObjectBindingPattern() *ast.ObjectBindingPattern {
 	p.markStartPosition()
-	elements := []*ast.Node{}
 	p.expected(lexer.LeftCurlyBrace)
+
+	elements := []*ast.Node{}
 	for {
-		p.optional(lexer.Comma)
-		bindingElement := p.parseBindingElement(p.optional(lexer.TripleDots))
-		if bindingElement != nil {
-			elements = append(elements, bindingElement.AsNode())
-		}
+		elements = append(elements, p.parseObjectBindingElement().AsNode())
 		if !p.optional(lexer.Comma) {
 			break
 		}
 	}
+
 	p.expected(lexer.RightCurlyBrace)
 
 	return ast.NewNode(
@@ -1078,8 +1102,7 @@ func (p *Parser) parseArrayBindingPattern() *ast.ArrayBindingPattern {
 	p.expected(lexer.LeftSquareBracket)
 	for {
 		p.optional(lexer.Comma)
-		rest := p.lexer.Peek().Type == lexer.TripleDots
-		bindingElement := p.parseBindingElement(rest)
+		bindingElement := p.parseIdentifierOrPattern()
 		if bindingElement != nil {
 			elements = append(elements, bindingElement.AsNode())
 		}

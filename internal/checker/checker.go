@@ -74,7 +74,8 @@ func (c *Checker) checkStatement(node *ast.Node) {
 }
 
 func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
-	if variableDeclaration.Identifier.TypeAnnotation == nil {
+	if variableDeclaration.Name.Type == ast.NodeTypeIdentifier &&
+		variableDeclaration.Name.AsIdentifier().TypeAnnotation == nil {
 		// NOTE: Identifier is any so we skip
 		return
 	}

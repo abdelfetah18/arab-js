@@ -106,7 +106,12 @@ func (emitter *Emitter) emitVariableDeclaration(variableDeclaration *ast.Variabl
 		return
 	}
 
-	emitter.Writer.Write(fmt.Sprintf("let %s = ", variableDeclaration.Identifier.Name))
+	emitter.Writer.Write("let ")
+	switch variableDeclaration.Name.Type {
+	case ast.NodeTypeIdentifier:
+		emitter.Writer.Write(variableDeclaration.Name.AsIdentifier().Name)
+	}
+	emitter.Writer.Write(" = ")
 	if variableDeclaration.Initializer != nil {
 		emitter.emitInitializer(variableDeclaration.Initializer)
 	}
