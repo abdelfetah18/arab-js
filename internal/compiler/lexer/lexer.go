@@ -412,7 +412,91 @@ func (l *Lexer) isIdentifierPart() bool {
 
 func (l *Lexer) isDigit() bool {
 	ch := l.current()
-	return (ch >= "0" && ch <= "9") || (ch >= "٠" && ch <= "٩")
+	return ch >= "0" && ch <= "9"
+}
+
+func (l *Lexer) isExponent() bool {
+	ch := l.current()
+	return ch == "e" || ch == "E"
+}
+
+func (l *Lexer) isSign() bool {
+	ch := l.current()
+	return ch == "+" || ch == "-"
+}
+
+func (l *Lexer) advanceAndAppend(buf *string) {
+	*buf += l.current()
+	l.increasePosition(1)
+}
+
+func (l *Lexer) consumeDecimalDigits(buf *string, sawDigit *bool, lastWasSep *bool) {
+	for !l.isEOF() {
+		switch {
+		case l.isDigit():
+			l.advanceAndAppend(buf)
+			*sawDigit = true
+			*lastWasSep = false
+
+		case l.current() == "_" && *sawDigit && !*lastWasSep:
+			l.advanceAndAppend(buf)
+			*lastWasSep = true
+
+		default:
+			return
+		}
+	}
+}
+
+func (l *Lexer) lexDecimalLiteral() *Token {
+	start := l.position
+	number := ""
+	sawDigit := false
+	lastWasSep := false
+
+	// integer part
+	l.consumeDecimalDigits(&number, &sawDigit, &lastWasSep)
+
+	// fractional part
+	if l.current() == "." && !lastWasSep {
+		l.advanceAndAppend(&number)
+		lastWasSep = false
+
+		l.consumeDecimalDigits(&number, &sawDigit, &lastWasSep)
+	}
+
+	// exponent part
+	if l.isExponent() && !lastWasSep {
+		l.advanceAndAppend(&number)
+
+		if l.isSign() {
+			l.advanceAndAppend(&number)
+		}
+
+		expDigit := false
+		lastWasSep = false
+
+		l.consumeDecimalDigits(&number, &expDigit, &lastWasSep)
+
+		if !expDigit || lastWasSep {
+			number = ""
+		}
+	}
+
+	// final validation
+	if !sawDigit || lastWasSep {
+		number = ""
+	}
+
+	if len(number) > 0 {
+		return &Token{
+			Type:     Decimal,
+			Value:    number,
+			Position: start,
+		}
+	}
+
+	return nil
 }
 
 func (l *Lexer) Peek() Token {
@@ -556,13 +640,9 @@ func (l *Lexer) nextToken() Token {
 		return Token{Type: Identifier, Value: identifier, Position: l.position - len(identifier)}
 	}
 
-	number := ""
-	for !l.isEOF() && l.isDigit() {
-		number += l.current()
-		l.increasePosition(1)
-	}
-	if len(number) > 0 {
-		return Token{Type: Decimal, Value: number, Position: l.position - len(number)}
+	token := l.lexDecimalLiteral()
+	if token != nil {
+		return *token
 	}
 
 	return Token{Type: Invalid, Value: l.current(), Position: l.position}
