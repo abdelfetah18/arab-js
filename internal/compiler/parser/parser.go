@@ -1377,39 +1377,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 func (p *Parser) parseFunctionType() *ast.FunctionType {
 	p.markStartPosition()
 
-	p.expected(lexer.LeftParenthesis)
-
-	params := []*ast.Node{}
-
-	token := p.lexer.Peek()
-	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightParenthesis && (token.Type == lexer.Identifier || token.Type == lexer.TripleDots) {
-		pos := uint(p.lexer.Position())
-		if p.optional(lexer.TripleDots) {
-			identifier := p.parseIdentifier(false)
-			p.expected(lexer.Colon)
-			typeAnnotation := p.parseTypeAnnotation()
-			params = append(params,
-				ast.NewNode(
-					ast.NewRestElement(identifier, typeAnnotation),
-					ast.Location{
-						Pos: pos,
-						End: p.getEndPosition(),
-					},
-				).AsNode(),
-			)
-		} else {
-			params = append(params, p.parseIdentifier(true).AsNode())
-		}
-
-		token = p.lexer.Peek()
-		if token.Type != lexer.RightParenthesis {
-			p.expected(lexer.Comma)
-		}
-
-		token = p.lexer.Peek()
-	}
-
-	p.expected(lexer.RightParenthesis)
+	params := p.parseParameters()
 	p.expected(lexer.EqualRightArrow)
 
 	typeAnnotation := p.parseTypeAnnotation()

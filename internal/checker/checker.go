@@ -180,10 +180,11 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 
 	if restType != nil {
 		for index := restIndex; index < len(callExpression.Args); index++ {
-			param := objectType.signature.parameters[index]
+			param := objectType.signature.parameters[restIndex]
+			restElementType := param.Type.AsArrayType().ElementType
 			arg := callExpression.Args[index]
 			_type := c.checkExpression(arg)
-			if !c.TypeResolver.areTypesCompatible(param.Type, _type) {
+			if !c.TypeResolver.areTypesCompatible(restElementType, _type) {
 				c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
 				return nil
 			}

@@ -293,15 +293,15 @@ func (t *TypeResolver) resolveSignature(node *ast.Node) *Signature {
 			isRest := false
 			name := ""
 			if param.Type == ast.NodeTypeParameter {
-				param := param.AsParameter()
-				if param.Name != nil {
-					switch param.Name.Type {
+				parameter := param.AsParameter()
+				if parameter.Name != nil {
+					switch parameter.Name.Type {
 					case ast.NodeTypeIdentifier:
-						name = param.Name.AsIdentifier().Name
+						name = parameter.Name.AsIdentifier().Name
 					}
 				}
 
-				isRest = param.Rest
+				isRest = parameter.Rest
 				if isRest {
 					flags |= SignatureFlagsHasRestParameter
 				}
