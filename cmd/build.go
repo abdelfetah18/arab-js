@@ -81,7 +81,7 @@ func buildProject(projectPath string, outputPath string) error {
 
 	}
 
-	err = program.WriteSourceFiles(outputPath)
+	err = program.EmitSourceFiles(outputPath)
 	if err != nil {
 		return err
 	}

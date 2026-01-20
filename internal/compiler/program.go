@@ -41,8 +41,11 @@ func NewProgram() *Program {
 func (p *Program) SourceFiles() []*ast.SourceFile { return p.sourceFiles }
 
 func (p *Program) ParseSourceFiles(sourceFilesPaths []string) error {
-	p.sourceFiles = append(p.sourceFiles, parser.ParseSourceFile(bundled.ReadLibFile(bundled.LibNameDom)))
-	p.sourceFiles = append(p.sourceFiles, parser.ParseSourceFile(bundled.ReadLibFile(bundled.LibNameES5)))
+	libDom := parser.ParseSourceFile(bundled.ReadLibFile(bundled.LibNameDom))
+	libES5 := parser.ParseSourceFile(bundled.ReadLibFile(bundled.LibNameES5))
+	libDom.IsDeclarationFile = true
+	libES5.IsDeclarationFile = true
+	p.sourceFiles = append(p.sourceFiles, libDom, libES5)
 
 	for _, filePath := range sourceFilesPaths {
 		data, err := os.ReadFile(filePath)
@@ -82,8 +85,12 @@ func (p *Program) TransformSourceFiles() {
 	transformer.NewTransformer(p).Transform()
 }
 
-func (p *Program) WriteSourceFiles(outputDir string) error {
+func (p *Program) EmitSourceFiles(outputDir string) error {
 	for _, sourceFile := range p.SourceFiles() {
+		if sourceFile.IsDeclarationFile {
+			continue
+		}
+
 		outputFileName := fmt.Sprintf("%s.js", sourceFile.Name)
 		if p.ProgramOptions.Main == sourceFile.Name {
 			outputFileName = "index.js"
@@ -103,6 +110,9 @@ func (p *Program) WriteSourceFiles(outputDir string) error {
 
 func (p *Program) EmitSourceFile(filePath string) string {
 	sourceFile := p.filesByPath[filePath]
+	if sourceFile.IsDeclarationFile {
+		return ""
+	}
 
 	_emitter := printer.NewEmitter()
 	_emitter.Emit(sourceFile)
