@@ -1023,8 +1023,10 @@ func (p *Parser) parseIdentifierOrPattern() *ast.Node {
 		return p.parseObjectBindingPattern().AsNode()
 	case lexer.LeftSquareBracket:
 		return p.parseArrayBindingPattern().AsNode()
-	default:
+	case lexer.Identifier:
 		return p.parseIdentifier(false).AsNode()
+	default:
+		return nil
 	}
 }
 
