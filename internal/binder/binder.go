@@ -89,7 +89,7 @@ func (b *Binder) bindInterfaceDeclaration(interfaceDeclaration *ast.InterfaceDec
 func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
 	functionDeclaration.Symbol = b.container.Scope.AddVariable(
 		functionDeclaration.ID.Name,
-		nil,
+		functionDeclaration.ID.OriginalName,
 		functionDeclaration.AsNode(),
 	)
 
