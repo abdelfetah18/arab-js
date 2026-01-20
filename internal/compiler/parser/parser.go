@@ -40,7 +40,7 @@ func (p *Parser) Parse() *ast.SourceFile {
 	isDeclarationFile := strings.Contains(p.opts.FileName, ".d.") || strings.Contains(p.opts.FileName, ".تعريف.")
 	p.markStartPosition()
 
-	directives := p.parseDirectives()
+	directives := []*ast.Directive{} // p.parseDirectives()
 
 	statements := []*ast.Node{}
 	for p.lexer.Peek().Type != lexer.EOF && p.lexer.Peek().Type != lexer.Invalid {
