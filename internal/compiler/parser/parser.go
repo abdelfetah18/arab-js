@@ -1886,6 +1886,7 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 				p.optional(lexer.Comma)
 				token = p.lexer.Peek()
 			} else {
+				token = p.lexer.Peek()
 				if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
 					p.errorf(
 						ast.Location{
