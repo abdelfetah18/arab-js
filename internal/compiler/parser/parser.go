@@ -627,7 +627,19 @@ func (p *Parser) parseCallExpressionRest(expression *ast.Node) *ast.Node {
 
 			token := p.lexer.Peek()
 			for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightParenthesis {
-				argumentList = append(argumentList, p.parseAssignmentExpression())
+				pos := p.lexer.Position()
+				rest := p.optional(lexer.TripleDots)
+				argument := p.parseAssignmentExpression()
+				if rest {
+					argument = ast.NewNode(
+						ast.NewSpreadElement(argument),
+						ast.Location{
+							Pos: uint(pos),
+							End: argument.Location.End,
+						},
+					).AsNode()
+				}
+				argumentList = append(argumentList, argument)
 				token = p.lexer.Peek()
 				if token.Type == lexer.Comma {
 					token = p.lexer.Next()
