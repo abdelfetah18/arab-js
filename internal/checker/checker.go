@@ -211,6 +211,10 @@ func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) 
 		return nil
 	}
 
+	if objectType.ObjectFlags&ObjectFlagsEvolvingArray != 0 {
+		return objectType.AsArrayType().ElementType
+	}
+
 	propertyType := objectType.AsObjectType().members[propertyName]
 	if propertyType == nil {
 		c.errorf(memberExpression.AsNode().Location, PROPERTY_0_DOES_NOT_EXIST_ON_TYPE_1, propertyName, objectType.Data.Name())

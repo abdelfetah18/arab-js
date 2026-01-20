@@ -69,6 +69,9 @@ func (h *Handlers) flushChanges() {
 
 			projectPath, _ := findProjectPath(getPath(fileChange.uri))
 			projectFiles, _ := listFilesWithExt(projectPath, ".كود")
+			if len(projectFiles) == 0 {
+				projectFiles, _ = listFilesWithExt(projectPath, ".arts")
+			}
 
 			program.Diagnostics = []*ast.Diagnostic{}
 			program.ParseSourceFiles(projectFiles)
@@ -119,7 +122,7 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 		return nil, errors.New("could not locate the node")
 	}
 
-	keys := getCompletionData(node, h.Project.Program.Checker)
+	keys := getCompletionData(sourceFile, node, int(position), h.Project.Program.Checker)
 
 	return &keys, nil
 }

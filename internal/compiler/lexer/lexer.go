@@ -324,6 +324,7 @@ func NewLexer(input string) *Lexer {
 	return lexer
 }
 
+func (l *Lexer) Text() string                  { return l.input }
 func (l *Lexer) Position() int                 { return l.position }
 func (l *Lexer) StartPosition() int            { return l.startPosition }
 func (l *Lexer) BeforeWhitespacePosition() int { return l.beforeWhitespacePosition }
@@ -686,4 +687,12 @@ func (l *Lexer) ReScanSlashToken() Token {
 	}
 	l.startPosition = l.currentToken.Position
 	return l.currentToken
+}
+
+func NewLexerAtPosition(input string, position int) *Lexer {
+	lexer := &Lexer{input: input}
+	lexer.position = position
+	lexer.HasPrecedingOriginalNameDirective = false
+	lexer.currentToken = lexer.nextToken()
+	return lexer
 }

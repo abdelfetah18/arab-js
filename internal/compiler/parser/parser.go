@@ -48,7 +48,7 @@ func (p *Parser) Parse() *ast.SourceFile {
 		statements = append(statements, statement)
 	}
 
-	return ast.NewNode(ast.NewSourceFile(statements, directives, isDeclarationFile), ast.Location{Pos: p.startPositions.Pop(), End: uint(p.lexer.Position())})
+	return ast.NewNode(ast.NewSourceFile(p.lexer.Text(), statements, directives, isDeclarationFile), ast.Location{Pos: p.startPositions.Pop(), End: uint(p.lexer.Position())})
 }
 
 func (p *Parser) parseIfStatement() *ast.IfStatement {
@@ -1590,7 +1590,8 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 
 	identifierName := p.lexer.Peek().Value
 	if !p.expected(lexer.Identifier) {
-		pos := p.startPositions.Pop()
+		pos := uint(p.lexer.BeforeWhitespacePosition())
+		p.startPositions.Pop()
 		return ast.NewNode(
 			ast.NewIdentifier(identifierName, nil, false),
 			ast.Location{

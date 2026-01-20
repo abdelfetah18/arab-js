@@ -3,6 +3,8 @@ package lsp
 import (
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/lexer"
+	"math"
 
 	"github.com/TobiasYin/go-lsp/lsp/defines"
 )
@@ -12,10 +14,16 @@ func getNodeAtPosition(sourceFile *ast.SourceFile, position uint) *ast.Node {
 	var current *ast.Node = sourceFile.AsNode()
 	var next *ast.Node = nil
 
+	smallest := math.MaxInt
 	visitAll := func(n *ast.Node) bool {
-		if position >= n.Location.Pos && position <= n.Location.End {
+		distance := n.Location.End - n.Location.Pos
+		if position >= n.Location.Pos &&
+			position <= n.Location.End &&
+			distance != 0 &&
+			distance <= uint(smallest) {
 			next = n
-			return true
+			smallest = int(distance)
+			return false
 		}
 
 		return false
@@ -32,33 +40,32 @@ func getNodeAtPosition(sourceFile *ast.SourceFile, position uint) *ast.Node {
 		next = nil
 	}
 
-	if findNode != nil && findNode.Type == ast.NodeTypeMemberExpression {
-		memberExpression := findNode.AsMemberExpression()
-		propertyNode := memberExpression.Property
-		if position >= propertyNode.Location.Pos && position <= propertyNode.Location.End {
-			return propertyNode
-		}
-	}
-
 	return findNode
 }
 
-func getCompletionData(node *ast.Node, checker *checker.Checker) []defines.CompletionItem {
+func getPrecedingTokensAtPos(sourceFile *ast.SourceFile, startPos int, position int) (lexer.Token, lexer.Token) {
+	pos := startPos
+	tokens := []lexer.Token{}
+	lex := lexer.NewLexerAtPosition(sourceFile.Text, int(startPos))
+	for pos < position {
+		token := lex.Peek()
+		tokens = append(tokens, token)
+		pos = lex.Position()
+		lex.Next()
+	}
+
+	currentToken := tokens[len(tokens)-1]
+	if len(tokens) > 1 {
+		return tokens[len(tokens)-2], currentToken
+	}
+
+	return currentToken, currentToken
+}
+
+func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int, checker *checker.Checker) []defines.CompletionItem {
 	completions := []defines.CompletionItem{}
 
-	isPropertyAccess := node.Parent != nil && node.Parent.Type == ast.NodeTypeMemberExpression
-	if isPropertyAccess {
-		_type := checker.TypeResolver.ResolveTypeFromNode(node.Parent.AsMemberExpression().Object)
-		objectType := _type.AsObjectType()
-		for name := range objectType.Members() {
-			d := defines.CompletionItemKindText
-			completions = append(completions, defines.CompletionItem{
-				Label:      name,
-				Kind:       &d,
-				InsertText: &name,
-			})
-		}
-	} else {
+	if node.Type == ast.NodeTypeSourceFile {
 		var currentScope *ast.Scope = node.GetPrentContainer()
 
 		for currentScope != nil {
@@ -94,6 +101,25 @@ func getCompletionData(node *ast.Node, checker *checker.Checker) []defines.Compl
 			})
 		}
 
+		return completions
+	}
+
+	_, currentToken := getPrecedingTokensAtPos(sourceFile, int(node.Location.Pos), position)
+
+	isRightOfDot := currentToken.Type == lexer.Dot
+	if isRightOfDot {
+		if node.Type == ast.NodeTypeMemberExpression {
+			_type := checker.TypeResolver.ResolveTypeFromNode(node.AsMemberExpression().Object)
+			objectType := _type.AsObjectType()
+			for name := range objectType.Members() {
+				d := defines.CompletionItemKindText
+				completions = append(completions, defines.CompletionItem{
+					Label:      name,
+					Kind:       &d,
+					InsertText: &name,
+				})
+			}
+		}
 	}
 
 	return completions

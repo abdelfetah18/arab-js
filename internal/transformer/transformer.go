@@ -127,6 +127,9 @@ func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpr
 		objectType := t.TypeResolver.ResolveTypeFromNode(symbol.Node)
 		if objectType != nil {
 			if objectType.Flags&checker.TypeFlagsObject == checker.TypeFlagsObject {
+				if objectType.ObjectFlags&checker.ObjectFlagsEvolvingArray != 0 {
+					return
+				}
 				t.transformProperty(memberExpression.Property, objectType.AsObjectType(), memberExpression.Computed)
 			} else {
 				apparentType := t.TypeResolver.GetApparentType(objectType)

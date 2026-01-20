@@ -830,6 +830,8 @@ func (memberExpression *MemberExpression) PropertyName() string {
 	switch memberExpression.Property.Type {
 	case NodeTypeIdentifier:
 		return memberExpression.Property.AsIdentifier().Name
+	case NodeTypeDecimalLiteral:
+		return memberExpression.Property.AsDecimalLiteral().Value
 	default:
 		return ""
 	}
@@ -1284,10 +1286,12 @@ type SourceFile struct {
 	ExternalModuleIndicator *Node  `json:"-"`
 	Path                    string `json:"-"`
 	IsDeclarationFile       bool   `json:"-"`
+
+	Text string `json:"-"`
 }
 
-func NewSourceFile(body []*Node, directives []*Directive, isDeclarationFile bool) *SourceFile {
-	return &SourceFile{Name: "", Body: body, Directives: directives, IsDeclarationFile: isDeclarationFile}
+func NewSourceFile(text string, body []*Node, directives []*Directive, isDeclarationFile bool) *SourceFile {
+	return &SourceFile{Text: text, Name: "", Body: body, Directives: directives, IsDeclarationFile: isDeclarationFile}
 }
 
 func (sourceFile *SourceFile) MarshalJSON() ([]byte, error) {
