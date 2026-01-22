@@ -183,6 +183,8 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		return c.checkObjectExpression(expression.AsObjectExpression())
 	case ast.NodeTypeFunctionExpression:
 		return c.checkFunctionExpression(expression.AsFunctionExpression())
+	case ast.NodeTypeMemberExpression:
+		return c.checkMemberExpression(expression.AsMemberExpression())
 	case ast.NodeTypeAssignmentExpression:
 		assignmentExpression := expression.AsAssignmentExpression()
 		leftType := c.checkExpression(assignmentExpression.Left)
@@ -203,9 +205,6 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	case ast.NodeTypeCallExpression:
 		callExpression := expression.AsCallExpression()
 		return c.checkCallExpression(callExpression)
-	case ast.NodeTypeMemberExpression:
-		memberExpression := expression.AsMemberExpression()
-		return c.checkMemberExpression(memberExpression)
 	}
 
 	return nil
@@ -289,24 +288,13 @@ func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) 
 	if objectType == nil {
 		return nil
 	}
-
 	propertyName := memberExpression.PropertyName()
-
-	if objectType.Flags&TypeFlagsObject != TypeFlagsObject {
-		// FIXME: in JavaScript everything is object
-		return nil
-	}
-
-	if objectType.ObjectFlags&ObjectFlagsEvolvingArray != 0 {
-		return objectType.AsArrayType().ElementType
-	}
-
-	propertyType := objectType.AsObjectType().members[propertyName]
+	propertyType := c.TypeResolver.getPropertyOfType(objectType, propertyName)
 	if propertyType == nil {
 		c.errorf(memberExpression.AsNode().Location, PROPERTY_0_DOES_NOT_EXIST_ON_TYPE_1, propertyName, objectType.Data.Name())
 		return nil
 	}
-	return propertyType.Type
+	return propertyType
 }
 
 func (c *Checker) checkIdentifier(identifier *ast.Identifier) *Type {

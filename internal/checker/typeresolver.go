@@ -432,3 +432,16 @@ func (t *TypeResolver) areTypesCompatible(leftType *Type, rightType *Type) bool 
 
 	return false
 }
+
+func (t *TypeResolver) getPropertyOfType(_type *Type, name string) *Type {
+	switch {
+	case _type.Flags&TypeFlagsObject != 0:
+		propertyType, ok := _type.AsObjectType().members[name]
+		if ok {
+			return propertyType.Type
+		}
+		return nil
+	default:
+		return nil
+	}
+}
