@@ -144,6 +144,8 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		return c.TypeResolver.ResolveTypeFromNode(expression)
 	case ast.NodeTypeArrayExpression:
 		return c.checkArrayExpression(expression.AsArrayExpression())
+	case ast.NodeTypeObjectExpression:
+		return c.checkObjectExpression(expression.AsObjectExpression())
 	case ast.NodeTypeAssignmentExpression:
 		assignmentExpression := expression.AsAssignmentExpression()
 		leftType := c.checkExpression(assignmentExpression.Left)
@@ -164,9 +166,6 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	case ast.NodeTypeCallExpression:
 		callExpression := expression.AsCallExpression()
 		return c.checkCallExpression(callExpression)
-	case ast.NodeTypeObjectExpression:
-		objectExpression := expression.AsObjectExpression()
-		return c.checkObjectExpression(objectExpression)
 	case ast.NodeTypeMemberExpression:
 		memberExpression := expression.AsMemberExpression()
 		return c.checkMemberExpression(memberExpression)
@@ -233,7 +232,19 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 }
 
 func (c *Checker) checkObjectExpression(objectExpression *ast.ObjectExpression) *Type {
-	return c.TypeResolver.inferTypeFromNode(objectExpression.AsNode())
+	members := map[string]*ObjectTypeMember{}
+	for _, property := range objectExpression.Properties {
+		switch property.Type {
+		case ast.NodeTypeObjectProperty:
+			objectProperty := property.AsObjectProperty()
+			propertyName := objectProperty.Name()
+			members[propertyName] = &ObjectTypeMember{
+				Type:         c.checkExpression(objectProperty.Value),
+				OriginalName: nil,
+			}
+		}
+	}
+	return c.TypeResolver.newObjectLiteralType(members)
 }
 
 func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) *Type {
