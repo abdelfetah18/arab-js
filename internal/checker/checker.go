@@ -80,6 +80,22 @@ func (c *Checker) checkStatement(node *ast.Node) {
 		c.checkExpression(node.AsExpressionStatement().Expression)
 	case ast.NodeTypeBlockStatement:
 		c.checkBlockStatement(node.AsBlockStatement())
+	case ast.NodeTypeIfStatement:
+		c.checkIfStatement(node.AsIfStatement())
+	case ast.NodeTypeReturnStatement:
+		c.checkReturnStatement(node.AsReturnStatement())
+	}
+}
+
+func (c *Checker) checkReturnStatement(returnStatement *ast.ReturnStatement) {
+	c.checkExpression(returnStatement.Argument)
+}
+
+func (c *Checker) checkIfStatement(ifStatement *ast.IfStatement) {
+	c.checkExpression(ifStatement.TestExpression)
+	c.checkStatement(ifStatement.ConsequentStatement)
+	if ifStatement.AlternateStatement != nil {
+		c.checkStatement(ifStatement.AlternateStatement)
 	}
 }
 
