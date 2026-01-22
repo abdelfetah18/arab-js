@@ -132,6 +132,41 @@ func (c *Checker) checkArrayExpression(arrayExpression *ast.ArrayExpression) *Ty
 	return c.TypeResolver.newType(TypeFlagsObject, ObjectFlagsArrayLiteral, NewArrayType(elementType))
 }
 
+func (c *Checker) checkFunctionExpression(functionExpression *ast.FunctionExpression) *Type {
+	parameters := []*SignatureParameter{}
+	flags := SignatureFlagsNone
+	for _, param := range functionExpression.Params {
+		isRest := false
+		name := ""
+		if param.Type == ast.NodeTypeParameter {
+			parameter := param.AsParameter()
+			if parameter.Name != nil {
+				switch parameter.Name.Type {
+				case ast.NodeTypeIdentifier:
+					name = parameter.Name.AsIdentifier().Name
+				}
+			}
+
+			isRest = parameter.Rest
+			if isRest {
+				flags |= SignatureFlagsHasRestParameter
+			}
+
+		}
+
+		paramType := c.checkExpression(param)
+		parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, isRest: isRest})
+	}
+	c.checkBlockStatement(functionExpression.Body)
+	return c.TypeResolver.newFunctionType(
+		c.TypeResolver.newSignature(
+			flags,
+			parameters,
+			c.TypeResolver.ResolveTypeAnnotation(functionExpression.TypeAnnotation),
+		),
+	)
+}
+
 func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	switch expression.Type {
 	case ast.NodeTypeIdentifier:
@@ -146,6 +181,8 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		return c.checkArrayExpression(expression.AsArrayExpression())
 	case ast.NodeTypeObjectExpression:
 		return c.checkObjectExpression(expression.AsObjectExpression())
+	case ast.NodeTypeFunctionExpression:
+		return c.checkFunctionExpression(expression.AsFunctionExpression())
 	case ast.NodeTypeAssignmentExpression:
 		assignmentExpression := expression.AsAssignmentExpression()
 		leftType := c.checkExpression(assignmentExpression.Left)
