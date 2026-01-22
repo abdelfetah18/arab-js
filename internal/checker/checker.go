@@ -122,6 +122,16 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 	}
 }
 
+func (c *Checker) checkArrayExpression(arrayExpression *ast.ArrayExpression) *Type {
+	elementTypes := []*Type{}
+	for _, element := range arrayExpression.Elements {
+		elementTypes = append(elementTypes, c.checkExpression(element))
+	}
+	elementType := c.TypeResolver.newUnionType(elementTypes)
+
+	return c.TypeResolver.newType(TypeFlagsObject, ObjectFlagsArrayLiteral, NewArrayType(elementType))
+}
+
 func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	switch expression.Type {
 	case ast.NodeTypeIdentifier:
@@ -132,6 +142,8 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		ast.NodeTypeBooleanLiteral,
 		ast.NodeTypeNullLiteral:
 		return c.TypeResolver.ResolveTypeFromNode(expression)
+	case ast.NodeTypeArrayExpression:
+		return c.checkArrayExpression(expression.AsArrayExpression())
 	case ast.NodeTypeAssignmentExpression:
 		assignmentExpression := expression.AsAssignmentExpression()
 		leftType := c.checkExpression(assignmentExpression.Left)
