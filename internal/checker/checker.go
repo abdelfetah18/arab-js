@@ -58,10 +58,18 @@ func (c *Checker) errorf(location ast.Location, format string, a ...any) {
 func (c *Checker) Check() {
 	for _, sourceFile := range c.program.SourceFiles() {
 		c.currentSourceFile = sourceFile
-		for _, node := range sourceFile.Body {
-			c.checkStatement(node)
-		}
+		c.checkStatementList(sourceFile.Body)
 	}
+}
+
+func (c *Checker) checkStatementList(nodes []*ast.Node) {
+	for _, node := range nodes {
+		c.checkStatement(node)
+	}
+}
+
+func (c *Checker) checkBlockStatement(blockStatement *ast.BlockStatement) {
+	c.checkStatementList(blockStatement.Body)
 }
 
 func (c *Checker) checkStatement(node *ast.Node) {
@@ -70,6 +78,8 @@ func (c *Checker) checkStatement(node *ast.Node) {
 		c.checkVariableDeclaration(node.AsVariableDeclaration())
 	case ast.NodeTypeExpressionStatement:
 		c.checkExpression(node.AsExpressionStatement().Expression)
+	case ast.NodeTypeBlockStatement:
+		c.checkBlockStatement(node.AsBlockStatement())
 	}
 }
 
