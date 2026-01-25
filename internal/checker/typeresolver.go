@@ -157,7 +157,7 @@ func (t *TypeResolver) ResolveTypeNode(typeNode *ast.Node) *Type {
 		return t.newFunctionType(t.resolveSignature(typeNode))
 	case ast.NodeTypeArrayType:
 		arrayTypeNode := typeNode.AsArrayType()
-		return t.newType(TypeFlagsObject, ObjectFlagsEvolvingArray, NewArrayType(t.ResolveTypeNode(arrayTypeNode.ElementType)))
+		return t.newType(TypeFlagsObject, ObjectFlagsArrayLiteral, NewArrayType(t.ResolveTypeNode(arrayTypeNode.ElementType)))
 	case ast.NodeTypeUnionType:
 		unionTypeNode := typeNode.AsUnionType()
 		types := []*Type{}
@@ -373,61 +373,39 @@ func (t *TypeResolver) inferTypeFromNode(node *ast.Node) *Type {
 	return nil
 }
 
-func (t *TypeResolver) areTypesCompatible(leftType *Type, rightType *Type) bool {
-	if leftType == nil || rightType == nil {
+func (t *TypeResolver) isTypeRelatedTo(target *Type, source *Type) bool {
+	if t.isSimpleTypeRelatedTo(target, source) {
+		return true
+	}
+
+	// TODO: handle objects relations
+
+	return false
+}
+
+func (t *TypeResolver) isSimpleTypeRelatedTo(target *Type, source *Type) bool {
+	if target == nil || source == nil {
 		return false
 	}
 
-	if leftType.Flags == TypeFlagsAny || rightType.Flags == TypeFlagsAny {
+	if target.Flags == TypeFlagsAny {
 		return true
 	}
 
-	if leftType.Flags == rightType.Flags {
-		switch leftType.Flags {
-		case TypeFlagsString, TypeFlagsNumber, TypeFlagsBoolean, TypeFlagsNull:
-			return true
-		}
-	}
-
-	if leftType.Flags == TypeFlagsObject && rightType.Flags == TypeFlagsObject {
-		leftObj := leftType.AsObjectType()
-		rightObj := rightType.AsObjectType()
-
-		for name, rightType := range rightObj.members {
-			leftType, ok := leftObj.members[name]
-			if !ok {
-				return false
-			}
-			if !t.areTypesCompatible(leftType.Type, rightType.Type) {
-				return false
-			}
-		}
+	if target.Flags&TypeFlagsString != 0 && source.Flags&TypeFlagsString != 0 {
 		return true
 	}
 
-	if (leftType.Flags == TypeFlagsObject && leftType.AsObjectType().signature != nil) &&
-		(rightType.Flags == TypeFlagsObject && rightType.AsObjectType().signature != nil) {
-		leftFn := leftType.AsObjectType()
-		rightFn := rightType.AsObjectType()
+	if target.Flags&TypeFlagsNumber != 0 && source.Flags&TypeFlagsNumber != 0 {
+		return true
+	}
 
-		// NOTE: Now we only support a single signature by function so this is correct.
-		leftFnSignature := leftFn.signature
-		rightFnSignature := rightFn.signature
+	if target.Flags&TypeFlagsBoolean != 0 && source.Flags&TypeFlagsBoolean != 0 {
+		return true
+	}
 
-		if len(leftFnSignature.parameters) != len(rightFnSignature.parameters) {
-			return false
-		}
-
-		for i := range leftFnSignature.parameters {
-			if !t.areTypesCompatible(
-				leftFnSignature.parameters[i].Type,
-				rightFnSignature.parameters[i].Type,
-			) {
-				return false
-			}
-		}
-
-		return t.areTypesCompatible(leftFnSignature.returnType, rightFnSignature.returnType)
+	if target.Flags&TypeFlagsNull != 0 && source.Flags&TypeFlagsNull != 0 {
+		return true
 	}
 
 	return false
@@ -436,6 +414,9 @@ func (t *TypeResolver) areTypesCompatible(leftType *Type, rightType *Type) bool 
 func (t *TypeResolver) getPropertyOfType(_type *Type, name string) *Type {
 	switch {
 	case _type.Flags&TypeFlagsObject != 0:
+		if _type.ObjectFlags&ObjectFlagsArrayLiteral != 0 {
+			return _type.AsArrayType().ElementType
+		}
 		propertyType, ok := _type.AsObjectType().members[name]
 		if ok {
 			return propertyType.Type

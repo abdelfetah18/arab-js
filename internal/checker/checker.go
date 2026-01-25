@@ -116,7 +116,7 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 		return
 	}
 
-	if !c.TypeResolver.areTypesCompatible(identifierType, initializerType) {
+	if !c.TypeResolver.isTypeRelatedTo(identifierType, initializerType) {
 		c.errorf(variableDeclaration.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, identifierType.Data.Name(), initializerType.Data.Name())
 		return
 	}
@@ -127,7 +127,10 @@ func (c *Checker) checkArrayExpression(arrayExpression *ast.ArrayExpression) *Ty
 	for _, element := range arrayExpression.Elements {
 		elementTypes = append(elementTypes, c.checkExpression(element))
 	}
-	elementType := c.TypeResolver.newUnionType(elementTypes)
+	var elementType *Type = nil
+	if len(elementTypes) > 0 {
+		elementType = c.TypeResolver.newUnionType(elementTypes)
+	}
 
 	return c.TypeResolver.newType(TypeFlagsObject, ObjectFlagsArrayLiteral, NewArrayType(elementType))
 }
@@ -168,6 +171,10 @@ func (c *Checker) checkFunctionExpression(functionExpression *ast.FunctionExpres
 }
 
 func (c *Checker) checkExpression(expression *ast.Node) *Type {
+	if expression == nil {
+		return nil
+	}
+
 	switch expression.Type {
 	case ast.NodeTypeIdentifier:
 		return c.checkIdentifier(expression.AsIdentifier())
@@ -197,7 +204,7 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 			return nil
 		}
 
-		if !c.TypeResolver.areTypesCompatible(leftType, rightType) {
+		if !c.TypeResolver.isTypeRelatedTo(leftType, rightType) {
 			c.errorf(assignmentExpression.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, leftType.Data.Name(), rightType.Data.Name())
 			return nil
 		}
@@ -245,7 +252,7 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 
 		arg := callExpression.Args[index]
 		_type := c.checkExpression(arg)
-		if !c.TypeResolver.areTypesCompatible(param.Type, _type) {
+		if !c.TypeResolver.isTypeRelatedTo(param.Type, _type) {
 			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
 			return nil
 		}
@@ -257,7 +264,7 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 			restElementType := param.Type.AsArrayType().ElementType
 			arg := callExpression.Args[index]
 			_type := c.checkExpression(arg)
-			if !c.TypeResolver.areTypesCompatible(restElementType, _type) {
+			if !c.TypeResolver.isTypeRelatedTo(restElementType, _type) {
 				c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
 				return nil
 			}
