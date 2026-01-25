@@ -132,7 +132,7 @@ func (c *Checker) checkArrayExpression(arrayExpression *ast.ArrayExpression) *Ty
 		elementType = c.TypeResolver.newUnionType(elementTypes)
 	}
 
-	return c.TypeResolver.newType(TypeFlagsObject, ObjectFlagsArrayLiteral, NewArrayType(elementType))
+	return c.TypeResolver.newArrayType(elementType)
 }
 
 func (c *Checker) checkFunctionExpression(functionExpression *ast.FunctionExpression) *Type {
@@ -261,7 +261,7 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 	if restType != nil {
 		for index := restIndex; index < len(callExpression.Args); index++ {
 			param := objectType.signature.parameters[restIndex]
-			restElementType := param.Type.AsArrayType().ElementType
+			restElementType := param.Type.AsObjectType().indexInfos[0].valueType
 			arg := callExpression.Args[index]
 			_type := c.checkExpression(arg)
 			if !c.TypeResolver.isTypeRelatedTo(restElementType, _type) {

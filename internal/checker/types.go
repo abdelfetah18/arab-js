@@ -82,7 +82,6 @@ type TypeData interface {
 func (t *Type) AsType() *Type                   { return t }
 func (t *Type) AsIntrinsicType() *IntrinsicType { return t.Data.(*IntrinsicType) }
 func (t *Type) AsObjectType() *ObjectType       { return t.Data.(*ObjectType) }
-func (t *Type) AsArrayType() *ArrayType         { return t.Data.(*ArrayType) }
 
 type IntrinsicType struct {
 	Type
@@ -121,14 +120,6 @@ type ObjectType struct {
 func (t *ObjectType) Name() string               { return "object" }
 func (t *ObjectType) Members() ObjectTypeMembers { return t.members }
 func (t *ObjectType) Signature() *Signature      { return t.signature }
-
-type ArrayType struct {
-	ObjectType
-	ElementType *Type
-}
-
-func NewArrayType(elementType *Type) *ArrayType { return &ArrayType{ElementType: elementType} }
-func (t *ArrayType) Name() string               { return "array" }
 
 type UnionType struct {
 	Type

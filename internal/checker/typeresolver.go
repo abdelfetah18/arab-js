@@ -15,6 +15,8 @@ type TypeResolver struct {
 	booleanType *Type
 	nullType    *Type
 	anyType     *Type
+
+	globalArrayType *Type
 }
 
 func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
@@ -29,6 +31,8 @@ func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
 	t.trueType = t.newLiteralType(TypeFlagsBoolean, "true")
 	t.falseType = t.newLiteralType(TypeFlagsBoolean, "false")
 	t.booleanType = t.newUnionType([]*Type{t.trueType, t.falseType})
+
+	t.globalArrayType = t.Resolve("المصفوفة")
 
 	return t
 }
@@ -157,7 +161,7 @@ func (t *TypeResolver) ResolveTypeNode(typeNode *ast.Node) *Type {
 		return t.newFunctionType(t.resolveSignature(typeNode))
 	case ast.NodeTypeArrayType:
 		arrayTypeNode := typeNode.AsArrayType()
-		return t.newType(TypeFlagsObject, ObjectFlagsArrayLiteral, NewArrayType(t.ResolveTypeNode(arrayTypeNode.ElementType)))
+		return t.newArrayType(t.ResolveTypeNode(arrayTypeNode.ElementType))
 	case ast.NodeTypeUnionType:
 		unionTypeNode := typeNode.AsUnionType()
 		types := []*Type{}
@@ -315,6 +319,15 @@ func (t *TypeResolver) newObjectType(objectFlags ObjectFlags) *Type {
 	}
 	_type := t.newType(TypeFlagsObject, objectFlags, data)
 	return _type
+}
+
+func (t *TypeResolver) newArrayType(elementType *Type) *Type {
+	symbol := t.NameResolver.Resolve("المصفوفة", nil)
+	if symbol == nil {
+		return nil
+	}
+
+	return t.ResolveTypeFromTypeDeclaration(symbol.Node, []*Type{elementType})
 }
 
 func (t *TypeResolver) newObjectLiteralType(members ObjectTypeMembers) *Type {
@@ -486,9 +499,6 @@ func (t *TypeResolver) isSimpleTypeRelatedTo(target *Type, source *Type) bool {
 func (t *TypeResolver) getPropertyOfType(_type *Type, name string) *Type {
 	switch {
 	case _type.Flags&TypeFlagsObject != 0:
-		if _type.ObjectFlags&ObjectFlagsArrayLiteral != 0 {
-			return _type.AsArrayType().ElementType
-		}
 		propertyType, ok := _type.AsObjectType().members[name]
 		if ok {
 			return propertyType.Type
