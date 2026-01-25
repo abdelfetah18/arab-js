@@ -1957,7 +1957,7 @@ func (p *Parser) parseAnyKeyword() *ast.AnyKeyword {
 	)
 }
 
-func (p *Parser) parseTypeReference() *ast.TypeReference {
+func (p *Parser) parseTypeReference() *ast.TypeReferenceNode {
 	p.markStartPosition()
 
 	identifier := p.parseIdentifier(false)
@@ -1968,7 +1968,7 @@ func (p *Parser) parseTypeReference() *ast.TypeReference {
 	}
 
 	return ast.NewNode(
-		ast.NewTypeReference(identifier, typeParameters),
+		ast.NewTypeReferenceNode(identifier, typeParameters),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),

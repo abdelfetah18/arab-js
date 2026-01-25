@@ -152,7 +152,7 @@ func (t *TypeResolver) ResolveTypeNode(typeNode *ast.Node) *Type {
 		}
 		return t.newObjectLiteralType(members)
 	case ast.NodeTypeTypeReference:
-		return t.ResolveTypeFromTypeReference(typeNode.AsTypeReference())
+		return t.ResolveTypeFromTypeReference(typeNode.AsTypeReferenceNode())
 	case ast.NodeTypeFunctionType:
 		return t.newFunctionType(t.resolveSignature(typeNode))
 	case ast.NodeTypeArrayType:
@@ -170,7 +170,7 @@ func (t *TypeResolver) ResolveTypeNode(typeNode *ast.Node) *Type {
 	return nil
 }
 
-func (t *TypeResolver) ResolveTypeFromTypeReference(typeReference *ast.TypeReference) *Type {
+func (t *TypeResolver) ResolveTypeFromTypeReference(typeReference *ast.TypeReferenceNode) *Type {
 	symbol := t.NameResolver.Resolve(typeReference.TypeName.Name, typeReference.TypeName.AsNode())
 	if symbol == nil {
 		return nil

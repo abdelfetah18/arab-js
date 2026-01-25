@@ -144,8 +144,8 @@ func (node *Node) AsPropertySignature() *PropertySignature {
 	return node.Data.(*PropertySignature)
 }
 
-func (node *Node) AsTypeReference() *TypeReference {
-	return node.Data.(*TypeReference)
+func (node *Node) AsTypeReferenceNode() *TypeReferenceNode {
+	return node.Data.(*TypeReferenceNode)
 }
 
 func (node *Node) AsTypeLiteral() *TypeLiteral {
@@ -1536,32 +1536,32 @@ func (typeLiteral *TypeLiteral) ForEachChild(v Visitor) bool {
 	return visitNodes(v, typeLiteral.Members)
 }
 
-type TypeReference struct {
+type TypeReferenceNode struct {
 	NodeBase
 	TypeName       *Identifier                 `json:"type_name,omitempty"`
 	TypeParameters *TypeParameterInstantiation `json:"type_parameters,omitempty"`
 }
 
-func NewTypeReference(TypeName *Identifier, typeParameters *TypeParameterInstantiation) *TypeReference {
-	return &TypeReference{TypeName: TypeName, TypeParameters: typeParameters}
+func NewTypeReferenceNode(TypeName *Identifier, typeParameters *TypeParameterInstantiation) *TypeReferenceNode {
+	return &TypeReferenceNode{TypeName: TypeName, TypeParameters: typeParameters}
 }
 
-func (typeReference *TypeReference) MarshalJSON() ([]byte, error) {
-	type Alias TypeReference
+func (typeReferenceNode *TypeReferenceNode) MarshalJSON() ([]byte, error) {
+	type Alias TypeReferenceNode
 	return json.Marshal(
 		wrapNode(
-			*typeReference.AsNode(),
-			(*Alias)(typeReference),
+			*typeReferenceNode.AsNode(),
+			(*Alias)(typeReferenceNode),
 		),
 	)
 }
 
-func (typeReference *TypeReference) NodeType() NodeType {
+func (typeReferenceNode *TypeReferenceNode) NodeType() NodeType {
 	return NodeTypeTypeReference
 }
 
-func (typeReference *TypeReference) ForEachChild(v Visitor) bool {
-	return visit(v, typeReference.TypeName.AsNode())
+func (typeReferenceNode *TypeReferenceNode) ForEachChild(v Visitor) bool {
+	return visit(v, typeReferenceNode.TypeName.AsNode())
 }
 
 type ArrayType struct {

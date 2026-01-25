@@ -46,6 +46,7 @@ const (
 	ObjectFlagsObjectLiteral ObjectFlags = 1 << 3 // Originates in an object literal
 	ObjectFlagsEvolvingArray ObjectFlags = 1 << 4 // Evolving array type
 	ObjectFlagsArrayLiteral  ObjectFlags = 1 << 5 // Originates in an array literal
+	ObjectFlagsReference     ObjectFlags = 1 << 6 // Generic type reference
 )
 
 func (o ObjectFlags) String() string {
