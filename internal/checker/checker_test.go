@@ -200,3 +200,45 @@ func TestCheckMemberExpression(t *testing.T) {
 		}
 	})
 }
+
+func TestInterfaceDeclaration_IndexSignature(t *testing.T) {
+	input := "واجهة مصفوفة_أعداد { [مؤشر: عدد]: عدد }"
+
+	sourceFile := parser.ParseSourceFile(input)
+	checker := NewChecker(&ProgramStub{
+		sourceFiles: []*ast.SourceFile{sourceFile},
+	})
+
+	checker.Check()
+
+	if len(checker.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics reported: %v", checker.Diagnostics)
+	}
+
+	resolvedType := checker.TypeResolver.Resolve("مصفوفة_أعداد")
+	if resolvedType == nil {
+		t.Fatalf("failed to resolve interface type 'مصفوفة_أعداد'")
+	}
+
+	objectType := resolvedType.AsObjectType()
+	if objectType == nil {
+		t.Fatalf("resolved type 'مصفوفة_أعداد' is not an object type")
+	}
+
+	if len(objectType.indexInfos) != 1 {
+		t.Fatalf(
+			"expected exactly one index signature, got %d",
+			len(objectType.indexInfos),
+		)
+	}
+
+	indexInfo := objectType.indexInfos[0]
+
+	if indexInfo.keyType.Flags&TypeFlagsNumber == 0 {
+		t.Errorf("expected index key type to be 'عدد'")
+	}
+
+	if indexInfo.valueType.Flags&TypeFlagsNumber == 0 {
+		t.Errorf("expected index value type to be 'عدد'")
+	}
+}

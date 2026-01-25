@@ -189,14 +189,23 @@ func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node)
 		interfaceDeclaration := typeDeclaration.AsInterfaceDeclaration()
 		interfaceType := t.newObjectType(ObjectFlagsInterface).AsObjectType()
 		for _, member := range interfaceDeclaration.Body.Body {
-			propertySignature := member.AsPropertySignature()
-			switch propertySignature.Key.Type {
-			case ast.NodeTypeIdentifier:
-				identifier := propertySignature.Key.AsIdentifier()
-				interfaceType.members[identifier.Name] = &ObjectTypeMember{
-					Type:         t.ResolveTypeNode(propertySignature.TypeNode()),
-					OriginalName: identifier.OriginalName,
+			switch member.Type {
+			case ast.NodeTypePropertySignature:
+				propertySignature := member.AsPropertySignature()
+				switch propertySignature.Key.Type {
+				case ast.NodeTypeIdentifier:
+					identifier := propertySignature.Key.AsIdentifier()
+					interfaceType.members[identifier.Name] = &ObjectTypeMember{
+						Type:         t.ResolveTypeNode(propertySignature.TypeNode()),
+						OriginalName: identifier.OriginalName,
+					}
 				}
+			case ast.NodeTypeIndexSignatureDeclaration:
+				indexSignatureDeclaration := member.AsIndexSignatureDeclaration()
+				keyType := t.ResolveTypeAnnotation(indexSignatureDeclaration.Index.AsIdentifier().TypeAnnotation)
+				valueType := t.ResolveTypeNode(indexSignatureDeclaration.Type)
+				interfaceType.indexInfos = append(interfaceType.indexInfos, &IndexInfo{keyType: keyType, valueType: valueType})
+
 			}
 		}
 		return interfaceType.AsType()
@@ -267,12 +276,14 @@ func (t *TypeResolver) newObjectType(objectFlags ObjectFlags) *Type {
 	case objectFlags&ObjectFlagsInterface != 0:
 		data = &ObjectType{
 			members:       map[string]*ObjectTypeMember{},
+			indexInfos:    []*IndexInfo{},
 			typeArguments: []*Type{},
 			signature:     nil,
 		}
 	case objectFlags&ObjectFlagsAnonymous != 0:
 		data = &ObjectType{
 			members:       map[string]*ObjectTypeMember{},
+			indexInfos:    []*IndexInfo{},
 			typeArguments: []*Type{},
 			signature:     nil,
 		}

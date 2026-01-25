@@ -104,12 +104,18 @@ type ObjectTypeMember struct {
 	OriginalName *string
 }
 
+type IndexInfo struct {
+	keyType   *Type
+	valueType *Type
+}
+
 type ObjectTypeMembers = map[string]*ObjectTypeMember
 type ObjectType struct {
 	Type
 	members       ObjectTypeMembers
 	signature     *Signature
 	typeArguments []*Type
+	indexInfos    []*IndexInfo
 }
 
 func (t *ObjectType) Name() string               { return "object" }

@@ -144,6 +144,10 @@ func (node *Node) AsPropertySignature() *PropertySignature {
 	return node.Data.(*PropertySignature)
 }
 
+func (node *Node) AsIndexSignatureDeclaration() *IndexSignatureDeclaration {
+	return node.Data.(*IndexSignatureDeclaration)
+}
+
 func (node *Node) AsTypeReferenceNode() *TypeReferenceNode {
 	return node.Data.(*TypeReferenceNode)
 }
