@@ -5,12 +5,13 @@ import (
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/compiler/parser"
-	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 type ProgramStub struct {
@@ -70,8 +71,8 @@ func TestTransformer(t *testing.T) {
 				t.Fatalf("failed to marshal AST: %v", err)
 			}
 
-			if !bytes.Equal(outputBytes, data) {
-				t.Errorf("AST mismatch for %s\nGot:\n%s\nWant:\n%s", entry.Name(), data, outputBytes)
+			if diff := cmp.Diff(outputBytes, data); diff != "" {
+				t.Errorf("AST mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

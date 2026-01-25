@@ -1,12 +1,13 @@
 package parser
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestParser(t *testing.T) {
@@ -47,8 +48,8 @@ func TestParser(t *testing.T) {
 				t.Fatalf("failed to marshal AST: %v", err)
 			}
 
-			if !bytes.Equal(outputBytes, data) {
-				t.Errorf("AST mismatch for %s\nGot:\n%s\nWant:\n%s", entry.Name(), data, outputBytes)
+			if diff := cmp.Diff(outputBytes, data); diff != "" {
+				t.Errorf("AST mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
