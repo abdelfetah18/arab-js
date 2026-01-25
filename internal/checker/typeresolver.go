@@ -331,7 +331,12 @@ func (t *TypeResolver) newArrayType(elementType *Type) *Type {
 }
 
 func (t *TypeResolver) newObjectLiteralType(members ObjectTypeMembers) *Type {
-	return t.newType(TypeFlagsObject, ObjectFlagsObjectLiteral, &ObjectType{members: members})
+	return t.newType(TypeFlagsObject, ObjectFlagsObjectLiteral, &ObjectType{
+		members:       members,
+		signature:     nil,
+		typeArguments: map[string]*Type{},
+		indexInfos:    []*IndexInfo{},
+	})
 }
 
 func (t *TypeResolver) newFunctionType(signature *Signature) *Type {
@@ -463,6 +468,8 @@ func (t *TypeResolver) isTypeRelatedTo(target *Type, source *Type) bool {
 				return false
 			}
 		}
+
+		return true
 	}
 
 	return false
