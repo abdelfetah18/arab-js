@@ -176,7 +176,11 @@ func (t *TypeResolver) ResolveTypeFromTypeReference(typeReference *ast.TypeRefer
 		return nil
 	}
 
-	return t.ResolveTypeFromTypeDeclaration(symbol.Node)
+	_type := t.ResolveTypeFromTypeDeclaration(symbol.Node)
+	for _, typeParam := range typeReference.TypeParameters.Params {
+		_type.AsObjectType().typeArguments = append(_type.AsObjectType().typeArguments, t.ResolveTypeNode(typeParam))
+	}
+	return _type
 }
 
 func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node) *Type {
@@ -262,11 +266,15 @@ func (t *TypeResolver) newObjectType(objectFlags ObjectFlags) *Type {
 	switch {
 	case objectFlags&ObjectFlagsInterface != 0:
 		data = &ObjectType{
-			members: map[string]*ObjectTypeMember{},
+			members:       map[string]*ObjectTypeMember{},
+			typeArguments: []*Type{},
+			signature:     nil,
 		}
 	case objectFlags&ObjectFlagsAnonymous != 0:
 		data = &ObjectType{
-			members: map[string]*ObjectTypeMember{},
+			members:       map[string]*ObjectTypeMember{},
+			typeArguments: []*Type{},
+			signature:     nil,
 		}
 	default:
 		panic("Unhandled case in newObjectType")
@@ -378,7 +386,37 @@ func (t *TypeResolver) isTypeRelatedTo(target *Type, source *Type) bool {
 		return true
 	}
 
-	// TODO: handle objects relations
+	if target.Flags&TypeFlagsObject != 0 && source.Flags&TypeFlagsObject != 0 {
+		targetType := target.AsObjectType()
+		sourceType := source.AsObjectType()
+
+		// FIXME: When adding optional members this will not be correct
+		if len(targetType.members) != len(sourceType.members) {
+			return false
+		}
+
+		for targetKey, targetMember := range targetType.members {
+			sourceMember, ok := sourceType.members[targetKey]
+			if !ok {
+				return false
+			}
+
+			if !t.isTypeRelatedTo(targetMember.Type, sourceMember.Type) {
+				return false
+			}
+		}
+
+		if len(targetType.typeArguments) != len(sourceType.typeArguments) {
+			return false
+		}
+
+		for index, targetTypeArgument := range targetType.typeArguments {
+			sourceTypeArgument := sourceType.typeArguments[index]
+			if !t.isTypeRelatedTo(targetTypeArgument, sourceTypeArgument) {
+				return false
+			}
+		}
+	}
 
 	return false
 }

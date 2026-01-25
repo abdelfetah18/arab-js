@@ -107,8 +107,9 @@ type ObjectTypeMember struct {
 type ObjectTypeMembers = map[string]*ObjectTypeMember
 type ObjectType struct {
 	Type
-	members   ObjectTypeMembers
-	signature *Signature
+	members       ObjectTypeMembers
+	signature     *Signature
+	typeArguments []*Type
 }
 
 func (t *ObjectType) Name() string               { return "object" }
