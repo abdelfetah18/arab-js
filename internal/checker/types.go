@@ -114,7 +114,7 @@ type ObjectType struct {
 	Type
 	members       ObjectTypeMembers
 	signature     *Signature
-	typeArguments []*Type
+	typeArguments map[string]*Type
 	indexInfos    []*IndexInfo
 }
 

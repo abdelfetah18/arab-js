@@ -78,12 +78,33 @@ func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 	b.container = saveContainer
 }
 
+func (b *Binder) bindTypeParam(typeParameter *ast.TypeParameter) {
+	b.container.Scope.AddVariable(
+		typeParameter.Name,
+		nil,
+		typeParameter.AsNode(),
+	)
+}
+
 func (b *Binder) bindInterfaceDeclaration(interfaceDeclaration *ast.InterfaceDeclaration) {
 	interfaceDeclaration.Symbol = b.container.Scope.AddVariable(
 		interfaceDeclaration.Id.Name,
 		nil,
 		interfaceDeclaration.AsNode(),
 	)
+
+	saveContainer := b.container
+	interfaceDeclaration.Scope = &ast.Scope{}
+	interfaceDeclaration.Scope.Parent = b.container.Scope
+	b.container = interfaceDeclaration.ContainerBaseData()
+
+	if interfaceDeclaration.TypeParameters != nil {
+		for _, param := range interfaceDeclaration.TypeParameters.Params {
+			b.bindTypeParam(param)
+		}
+	}
+
+	b.container = saveContainer
 }
 
 func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {

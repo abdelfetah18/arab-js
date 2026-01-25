@@ -176,18 +176,40 @@ func (t *TypeResolver) ResolveTypeFromTypeReference(typeReference *ast.TypeRefer
 		return nil
 	}
 
-	_type := t.ResolveTypeFromTypeDeclaration(symbol.Node)
-	for _, typeParam := range typeReference.TypeParameters.Params {
-		_type.AsObjectType().typeArguments = append(_type.AsObjectType().typeArguments, t.ResolveTypeNode(typeParam))
+	typeArguments := []*Type{}
+	if typeReference.TypeParameters != nil {
+		for _, typeParam := range typeReference.TypeParameters.Params {
+			typeArguments = append(typeArguments, t.ResolveTypeNode(typeParam))
+
+		}
 	}
-	return _type
+
+	return t.ResolveTypeFromTypeDeclaration(symbol.Node, typeArguments)
 }
 
-func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node) *Type {
+func (t *TypeResolver) ResolveProperty(typeNode *ast.Node, objectType *ObjectType) *Type {
+	if typeNode.Type == ast.NodeTypeTypeReference {
+		typeReference := typeNode.AsTypeReferenceNode()
+		if _type, ok := objectType.typeArguments[typeReference.TypeName.Name]; ok {
+			return _type
+		}
+		return t.ResolveTypeFromTypeReference(typeReference)
+	}
+	return t.ResolveTypeNode(typeNode)
+}
+
+func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node, typesArguments []*Type) *Type {
 	switch typeDeclaration.Type {
 	case ast.NodeTypeInterfaceDeclaration:
 		interfaceDeclaration := typeDeclaration.AsInterfaceDeclaration()
 		interfaceType := t.newObjectType(ObjectFlagsInterface).AsObjectType()
+
+		if interfaceDeclaration.TypeParameters != nil {
+			for index, typeParameter := range interfaceDeclaration.TypeParameters.Params {
+				interfaceType.typeArguments[typeParameter.Name] = typesArguments[index]
+			}
+		}
+
 		for _, member := range interfaceDeclaration.Body.Body {
 			switch member.Type {
 			case ast.NodeTypePropertySignature:
@@ -196,7 +218,7 @@ func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node)
 				case ast.NodeTypeIdentifier:
 					identifier := propertySignature.Key.AsIdentifier()
 					interfaceType.members[identifier.Name] = &ObjectTypeMember{
-						Type:         t.ResolveTypeNode(propertySignature.TypeNode()),
+						Type:         t.ResolveProperty(propertySignature.TypeNode(), interfaceType),
 						OriginalName: identifier.OriginalName,
 					}
 				}
@@ -208,6 +230,7 @@ func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node)
 
 			}
 		}
+
 		return interfaceType.AsType()
 	case ast.NodeTypeTypeAliasDeclaration:
 		typeAliasDeclaration := typeDeclaration.AsTypeAliasDeclaration()
@@ -221,7 +244,7 @@ func (t *TypeResolver) Resolve(name string) *Type {
 	symbol := t.NameResolver.Resolve(name, nil)
 
 	if symbol != nil {
-		return t.ResolveTypeFromTypeDeclaration(symbol.Node)
+		return t.ResolveTypeFromTypeDeclaration(symbol.Node, []*Type{})
 	}
 	return nil
 }
@@ -277,14 +300,14 @@ func (t *TypeResolver) newObjectType(objectFlags ObjectFlags) *Type {
 		data = &ObjectType{
 			members:       map[string]*ObjectTypeMember{},
 			indexInfos:    []*IndexInfo{},
-			typeArguments: []*Type{},
+			typeArguments: map[string]*Type{},
 			signature:     nil,
 		}
 	case objectFlags&ObjectFlagsAnonymous != 0:
 		data = &ObjectType{
 			members:       map[string]*ObjectTypeMember{},
 			indexInfos:    []*IndexInfo{},
-			typeArguments: []*Type{},
+			typeArguments: map[string]*Type{},
 			signature:     nil,
 		}
 	default:

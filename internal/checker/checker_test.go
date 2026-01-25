@@ -242,3 +242,18 @@ func TestInterfaceDeclaration_IndexSignature(t *testing.T) {
 		t.Errorf("expected index value type to be 'عدد'")
 	}
 }
+
+func TestInterfaceDeclaration_TypeParameter(t *testing.T) {
+	input := "واجهة المستخدم<النوع> { معرف: النوع }\nمتغير مستخدم: المستخدم<عدد>؛\nمستخدم.معرف = 1؛"
+
+	sourceFile := parser.ParseSourceFile(input)
+	checker := NewChecker(&ProgramStub{
+		sourceFiles: []*ast.SourceFile{sourceFile},
+	})
+
+	checker.Check()
+
+	if len(checker.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics reported: %v", checker.Diagnostics)
+	}
+}

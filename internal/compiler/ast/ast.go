@@ -136,6 +136,10 @@ func (node *Node) AsInterfaceDeclaration() *InterfaceDeclaration {
 	return node.Data.(*InterfaceDeclaration)
 }
 
+func (node *Node) AsTypeParameter() *TypeParameter {
+	return node.Data.(*TypeParameter)
+}
+
 func (node *Node) AsInterfaceBody() *InterfaceBody {
 	return node.Data.(*InterfaceBody)
 }
@@ -1328,6 +1332,7 @@ func (sourceFile *SourceFile) ContainerBaseData() *ContainerBase {
 type InterfaceDeclaration struct {
 	NodeBase
 	DeclarationBase `json:"-"`
+	ContainerBase   `json:"-"`
 	Id              *Identifier                `json:"id,omitempty"`
 	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
 	Body            *InterfaceBody             `json:"body,omitempty"`
@@ -1358,7 +1363,13 @@ func (interfaceDeclaration *InterfaceDeclaration) NodeType() NodeType {
 }
 
 func (interfaceDeclaration *InterfaceDeclaration) ForEachChild(v Visitor) bool {
-	return visit(v, interfaceDeclaration.Id.AsNode()) || visit(v, interfaceDeclaration.Body.AsNode())
+	return visit(v, interfaceDeclaration.Id.AsNode()) ||
+		(interfaceDeclaration.TypeParameters != nil && visit(v, interfaceDeclaration.TypeParameters.AsNode())) ||
+		visit(v, interfaceDeclaration.Body.AsNode())
+}
+
+func (interfaceDeclaration *InterfaceDeclaration) ContainerBaseData() *ContainerBase {
+	return &interfaceDeclaration.ContainerBase
 }
 
 type InterfaceBody struct {
