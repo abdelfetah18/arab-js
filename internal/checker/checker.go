@@ -127,7 +127,7 @@ func (c *Checker) checkArrayExpression(arrayExpression *ast.ArrayExpression) *Ty
 	for _, element := range arrayExpression.Elements {
 		elementTypes = append(elementTypes, c.checkExpression(element))
 	}
-	var elementType *Type = nil
+	var elementType *Type = c.TypeResolver.anyType
 	if len(elementTypes) > 0 {
 		elementType = c.TypeResolver.newUnionType(elementTypes)
 	}
@@ -296,7 +296,12 @@ func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) 
 		return nil
 	}
 	propertyName := memberExpression.PropertyName()
-	propertyType := c.TypeResolver.getPropertyOfType(objectType, propertyName)
+	var propertyType *Type = nil
+	if memberExpression.Computed {
+		propertyType = c.TypeResolver.getIndexType(objectType, c.checkExpression(memberExpression.Property))
+	} else {
+		propertyType = c.TypeResolver.getPropertyOfType(objectType, propertyName)
+	}
 	if propertyType == nil {
 		c.errorf(memberExpression.AsNode().Location, PROPERTY_0_DOES_NOT_EXIST_ON_TYPE_1, propertyName, objectType.Data.Name())
 		return nil

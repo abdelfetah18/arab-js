@@ -15,8 +15,6 @@ type TypeResolver struct {
 	booleanType *Type
 	nullType    *Type
 	anyType     *Type
-
-	globalArrayType *Type
 }
 
 func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
@@ -31,8 +29,6 @@ func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
 	t.trueType = t.newLiteralType(TypeFlagsBoolean, "true")
 	t.falseType = t.newLiteralType(TypeFlagsBoolean, "false")
 	t.booleanType = t.newUnionType([]*Type{t.trueType, t.falseType})
-
-	t.globalArrayType = t.Resolve("المصفوفة")
 
 	return t
 }
@@ -229,7 +225,7 @@ func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node,
 			case ast.NodeTypeIndexSignatureDeclaration:
 				indexSignatureDeclaration := member.AsIndexSignatureDeclaration()
 				keyType := t.ResolveTypeAnnotation(indexSignatureDeclaration.Index.AsIdentifier().TypeAnnotation)
-				valueType := t.ResolveTypeNode(indexSignatureDeclaration.Type)
+				valueType := t.ResolveProperty(indexSignatureDeclaration.Type, interfaceType)
 				interfaceType.indexInfos = append(interfaceType.indexInfos, &IndexInfo{keyType: keyType, valueType: valueType})
 
 			}
@@ -326,7 +322,6 @@ func (t *TypeResolver) newArrayType(elementType *Type) *Type {
 	if symbol == nil {
 		return nil
 	}
-
 	return t.ResolveTypeFromTypeDeclaration(symbol.Node, []*Type{elementType})
 }
 
@@ -484,6 +479,11 @@ func (t *TypeResolver) isSimpleTypeRelatedTo(target *Type, source *Type) bool {
 		return true
 	}
 
+	// FIXME: Valid only for assignable relations
+	if source.Flags == TypeFlagsAny {
+		return true
+	}
+
 	if target.Flags&TypeFlagsString != 0 && source.Flags&TypeFlagsString != 0 {
 		return true
 	}
@@ -509,6 +509,20 @@ func (t *TypeResolver) getPropertyOfType(_type *Type, name string) *Type {
 		propertyType, ok := _type.AsObjectType().members[name]
 		if ok {
 			return propertyType.Type
+		}
+		return nil
+	default:
+		return nil
+	}
+}
+
+func (t *TypeResolver) getIndexType(objectType *Type, keyType *Type) *Type {
+	switch {
+	case objectType.Flags&TypeFlagsObject != 0:
+		for _, indexInfo := range objectType.AsObjectType().indexInfos {
+			if t.isTypeRelatedTo(indexInfo.keyType, keyType) {
+				return indexInfo.valueType
+			}
 		}
 		return nil
 	default:

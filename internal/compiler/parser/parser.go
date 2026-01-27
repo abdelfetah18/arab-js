@@ -562,10 +562,13 @@ func (p *Parser) parseVariableDeclaration(modifierList *ast.ModifierList) *ast.V
 		name = p.parseObjectBindingPattern().AsNode()
 	}
 
-	p.expected(lexer.Equal)
+	isAmbien := modifierList != nil && modifierList.ModifierFlags&ast.ModifierFlagsAmbient != 0
+	if !isAmbien {
+		p.expected(lexer.Equal)
+	}
 
 	var initializer *ast.Initializer = nil
-	if !p.optional(lexer.Semicolon) {
+	if !p.optional(lexer.Semicolon) && !isAmbien {
 		assignmentExpression := p.parseAssignmentExpression()
 		initializer = ast.NewNode(
 			ast.NewInitializer(assignmentExpression),
