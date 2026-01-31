@@ -252,7 +252,6 @@ var OneCharTokens = map[string]TokenType{
 	"/": Slash,
 	"%": Percent,
 	":": Colon,
-	"؟": Question,
 }
 
 var TwoCharTokens = map[string]TokenType{
@@ -264,7 +263,6 @@ var TwoCharTokens = map[string]TokenType{
 	">>": DoubleRightArrow,
 	"**": DoubleStar,
 	"=>": EqualRightArrow,
-	"؛":  Semicolon, // Unicode character
 	"++": DoublePlus,
 	"--": DoubleMinus,
 	"*=": StarEqual,
@@ -275,6 +273,10 @@ var TwoCharTokens = map[string]TokenType{
 	"&=": BitwiseAndEqual,
 	"^=": BitwiseXorEqual,
 	"|=": BitwiseOrEqual,
+
+	// Unicode characters
+	"؛": Semicolon,
+	"؟": Question,
 }
 
 var ThreeCharTokens = map[string]TokenType{

@@ -1043,6 +1043,8 @@ func (p *Parser) parseParameter() *ast.Node {
 		return nil
 	}
 
+	isOptionalParameter := p.optional(lexer.Question)
+
 	var typeAnnotation *ast.TypeAnnotation = nil
 	if p.optional(lexer.Colon) {
 		typeAnnotation = p.parseTypeAnnotation()
@@ -1059,7 +1061,7 @@ func (p *Parser) parseParameter() *ast.Node {
 	}
 
 	return ast.NewNode(
-		ast.NewParameter(element.AsNode(), rest, typeAnnotation, initializer),
+		ast.NewParameter(element.AsNode(), rest, isOptionalParameter, typeAnnotation, initializer),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),

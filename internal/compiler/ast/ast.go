@@ -2098,14 +2098,16 @@ type Parameter struct {
 	DeclarationBase `json:"-"`
 	Name            *Node           `json:"name,omitempty"`
 	Rest            bool            `json:"rest,omitempty"`
+	Optional        bool            `json:"optional,omitempty"`
 	TypeAnnotation  *TypeAnnotation `json:"type_annotation,omitempty"`
 	Initializer     *Initializer    `json:"initializer,omitempty"`
 }
 
-func NewParameter(name *Node, rest bool, typeAnnotation *TypeAnnotation, initializer *Initializer) *Parameter {
+func NewParameter(name *Node, rest bool, optional bool, typeAnnotation *TypeAnnotation, initializer *Initializer) *Parameter {
 	return &Parameter{
 		Name:           name,
 		Rest:           rest,
+		Optional:       optional,
 		TypeAnnotation: typeAnnotation,
 		Initializer:    initializer,
 	}
