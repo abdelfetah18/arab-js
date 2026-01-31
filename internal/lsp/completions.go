@@ -5,6 +5,7 @@ import (
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/compiler/lexer"
 	"math"
+	"slices"
 
 	"github.com/TobiasYin/go-lsp/lsp/defines"
 )
@@ -19,7 +20,6 @@ func getNodeAtPosition(sourceFile *ast.SourceFile, position uint) *ast.Node {
 		distance := n.Location.End - n.Location.Pos
 		if position >= n.Location.Pos &&
 			position <= n.Location.End &&
-			distance != 0 &&
 			distance <= uint(smallest) {
 			next = n
 			smallest = int(distance)
@@ -43,7 +43,7 @@ func getNodeAtPosition(sourceFile *ast.SourceFile, position uint) *ast.Node {
 	return findNode
 }
 
-func getPrecedingTokensAtPos(sourceFile *ast.SourceFile, startPos int, position int) (lexer.Token, lexer.Token) {
+func getPrecedingTokensAtPos(sourceFile *ast.SourceFile, startPos int, position int) (contextToken lexer.Token, previousToken lexer.Token) {
 	pos := startPos
 	tokens := []lexer.Token{}
 	lex := lexer.NewLexerAtPosition(sourceFile.Text, int(startPos))
@@ -54,39 +54,21 @@ func getPrecedingTokensAtPos(sourceFile *ast.SourceFile, startPos int, position 
 		lex.Next()
 	}
 
-	currentToken := tokens[len(tokens)-1]
-	if len(tokens) > 1 {
-		return tokens[len(tokens)-2], currentToken
+	previousToken = tokens[len(tokens)-1]
+	if len(tokens) > 1 && previousToken.Type == lexer.Identifier {
+		contextToken = tokens[len(tokens)-2]
+		return contextToken, previousToken
 	}
 
-	return currentToken, currentToken
+	return previousToken, previousToken
 }
 
-func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int, _checker *checker.Checker) []defines.CompletionItem {
+func getCompletionsFromSourceFile(sourceFile *ast.SourceFile, _checker *checker.Checker) []defines.CompletionItem {
 	completions := []defines.CompletionItem{}
+	var currentScope *ast.Scope = sourceFile.GetPrentContainer()
 
-	if node.Type == ast.NodeTypeSourceFile {
-		var currentScope *ast.Scope = node.GetPrentContainer()
-
-		for currentScope != nil {
-			for k, symbol := range currentScope.Locals {
-				d := defines.CompletionItemKindText
-				switch symbol.Node.Type {
-				case ast.NodeTypeFunctionDeclaration:
-					d = defines.CompletionItemKindFunction
-				case ast.NodeTypeVariableDeclaration:
-					d = defines.CompletionItemKindVariable
-				}
-				completions = append(completions, defines.CompletionItem{
-					Label:      k,
-					Kind:       &d,
-					InsertText: &k,
-				})
-			}
-			currentScope = currentScope.Parent
-		}
-
-		for k, symbol := range _checker.NameResolver.Globals.Locals {
+	for currentScope != nil {
+		for k, symbol := range currentScope.Locals {
 			d := defines.CompletionItemKindText
 			switch symbol.Node.Type {
 			case ast.NodeTypeFunctionDeclaration:
@@ -100,28 +82,70 @@ func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int,
 				InsertText: &k,
 			})
 		}
-
-		return completions
+		currentScope = currentScope.Parent
 	}
 
-	_, currentToken := getPrecedingTokensAtPos(sourceFile, int(node.Location.Pos), position)
+	for k, symbol := range _checker.NameResolver.Globals.Locals {
+		d := defines.CompletionItemKindText
+		switch symbol.Node.Type {
+		case ast.NodeTypeFunctionDeclaration:
+			d = defines.CompletionItemKindFunction
+		case ast.NodeTypeVariableDeclaration:
+			d = defines.CompletionItemKindVariable
+		}
+		completions = append(completions, defines.CompletionItem{
+			Label:      k,
+			Kind:       &d,
+			InsertText: &k,
+		})
+	}
 
-	isRightOfDot := currentToken.Type == lexer.Dot
-	if isRightOfDot {
-		if node.Type == ast.NodeTypeMemberExpression {
-			_type := _checker.TypeResolver.ResolveTypeFromNode(node.AsMemberExpression().Object)
-			objectType := _type.AsObjectType()
-			for name, members := range objectType.Members() {
-				d := defines.CompletionItemKindField
-				if members.Type.ObjectFlags&checker.ObjectFlagsAnonymous != 0 && members.Type.AsObjectType().Signature() != nil {
-					d = defines.CompletionItemKindMethod
-				}
-				completions = append(completions, defines.CompletionItem{
-					Label:      name,
-					Kind:       &d,
-					InsertText: &name,
-				})
-			}
+	return completions
+}
+
+func getCompletionsFromType(_type *checker.Type, propertiesToExclude []string) []defines.CompletionItem {
+	completions := []defines.CompletionItem{}
+	objectType := _type.AsObjectType()
+	for name, members := range objectType.Members() {
+		if slices.Contains(propertiesToExclude, name) {
+			continue
+		}
+		d := defines.CompletionItemKindField
+		if members.Type.ObjectFlags&checker.ObjectFlagsAnonymous != 0 && members.Type.AsObjectType().Signature() != nil {
+			d = defines.CompletionItemKindMethod
+		}
+		completions = append(completions, defines.CompletionItem{
+			Label:      name,
+			Kind:       &d,
+			InsertText: &name,
+		})
+	}
+	return completions
+}
+
+func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int, _checker *checker.Checker) []defines.CompletionItem {
+	contextNode := node.Parent
+	completions := []defines.CompletionItem{}
+
+	if node.Type == ast.NodeTypeSourceFile {
+		return getCompletionsFromSourceFile(sourceFile, _checker)
+	}
+
+	getCompletions := func(node *ast.Node, propertiesToExclude []string) []defines.CompletionItem {
+		return getCompletionsFromType(_checker.TypeResolver.ResolveTypeFromNode(node), propertiesToExclude)
+	}
+
+	if contextNode.Type == ast.NodeTypeMemberExpression {
+		return getCompletions(contextNode.AsMemberExpression().Object, []string{})
+	}
+
+	if node.Type == ast.NodeTypeObjectExpression {
+		properties := node.AsObjectExpression().PropertiesNames()
+		if contextNode.Type == ast.NodeTypeAssignmentExpression {
+			return getCompletions(contextNode.AsAssignmentExpression().Left, properties)
+		}
+		if contextNode.Type == ast.NodeTypeInitializer {
+			return getCompletions(contextNode.AsInitializer().Parent, properties)
 		}
 	}
 

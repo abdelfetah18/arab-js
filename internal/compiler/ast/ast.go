@@ -123,6 +123,7 @@ func (node *Node) AsAssignmentExpression() *AssignmentExpression {
 }
 func (node *Node) AsFunctionExpression() *FunctionExpression { return node.Data.(*FunctionExpression) }
 
+func (node *Node) AsInitializer() *Initializer         { return node.Data.(*Initializer) }
 func (node *Node) AsIfStatement() *IfStatement         { return node.Data.(*IfStatement) }
 func (node *Node) AsForStatement() *ForStatement       { return node.Data.(*ForStatement) }
 func (node *Node) AsBlockStatement() *BlockStatement   { return node.Data.(*BlockStatement) }
@@ -1232,6 +1233,17 @@ func (objectExpression *ObjectExpression) NodeType() NodeType {
 
 func (objectExpression *ObjectExpression) ForEachChild(v Visitor) bool {
 	return visitNodes(v, objectExpression.Properties)
+}
+
+func (objectExpression *ObjectExpression) PropertiesNames() []string {
+	properties := []string{}
+	for _, property := range objectExpression.Properties {
+		if property.Type == NodeTypeObjectProperty {
+			objectProperty := property.AsObjectProperty()
+			properties = append(properties, objectProperty.Name())
+		}
+	}
+	return properties
 }
 
 type DirectiveLiteral struct {
