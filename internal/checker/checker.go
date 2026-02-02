@@ -158,7 +158,7 @@ func (c *Checker) checkFunctionExpression(functionExpression *ast.FunctionExpres
 		}
 
 		paramType := c.checkExpression(param)
-		parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, isRest: isRest})
+		parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, Rest: isRest})
 	}
 	c.checkBlockStatement(functionExpression.Body)
 	return c.TypeResolver.newFunctionType(
@@ -244,7 +244,7 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 	var restType *Type = nil
 	var restIndex = -1
 	for index, param := range objectType.signature.parameters {
-		if param.isRest {
+		if param.Rest {
 			restIndex = index
 			restType = param.Type
 			break

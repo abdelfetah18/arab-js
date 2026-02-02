@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/url"
@@ -166,6 +167,106 @@ func (h *Handlers) OnDidChangeTextDocument(ctx context.Context, req *defines.Did
 	)
 
 	return nil
+}
+
+func (h *Handlers) OnSignatureHelpHandler(ctx context.Context, req *defines.SignatureHelpParams) (result *defines.SignatureHelp, err error) {
+	h.flushChanges()
+
+	filePath := getPath(req.TextDocument.Uri)
+	sourceFile := h.Project.Program.GetSourceFile(filePath)
+
+	if sourceFile == nil {
+		return nil, errors.New("sourceFile not found")
+	}
+
+	position, err := h.snapshots[req.TextDocument.Uri].PositionToIndex(req.Position)
+	if err != nil {
+		return nil, err
+	}
+
+	node := getNodeAtPosition(sourceFile, position)
+	if node == nil {
+		return nil, errors.New("could not locate the node")
+	}
+
+	var callExpression *ast.CallExpression = nil
+	n := node
+	for {
+		if n.Type == ast.NodeTypeCallExpression {
+			callExpression = n.AsCallExpression()
+			break
+		}
+
+		if n.Parent == nil {
+			break
+		}
+
+		n = n.Parent
+	}
+
+	if callExpression == nil {
+		return nil, errors.New("no call expression found.")
+	}
+
+	_checker := h.Project.Program.Checker
+	_type := _checker.TypeResolver.ResolveTypeFromNode(callExpression.Callee)
+	if _type == nil {
+		return nil, errors.New("no type found.")
+	}
+
+	objectType := _type.AsObjectType()
+	signature := objectType.Signature()
+	if signature == nil {
+		return nil, errors.New("no signature found.")
+	}
+
+	var activeSignature uint = 0
+	var activeParameter uint = 0
+
+	currentIndex := 0
+	for _, param := range signature.Parameters() {
+		if !param.Rest {
+			currentIndex += 1
+		}
+
+		if currentIndex < len(callExpression.Args) {
+			arg := callExpression.Args[currentIndex]
+			if position >= arg.Location.Pos && position <= arg.Location.End {
+				activeParameter = uint(currentIndex)
+			}
+		}
+	}
+
+	parameters := []defines.ParameterInformation{}
+	label := "("
+	for index, param := range signature.Parameters() {
+		parameterLabel := ""
+		if param.Rest {
+			parameterLabel += "..."
+		}
+
+		parameterLabel += fmt.Sprintf("%s: %s", param.Name, param.Type.Data.Name())
+		label += parameterLabel
+		parameters = append(parameters, defines.ParameterInformation{
+			Label: parameterLabel,
+		})
+		if index != (len(signature.Parameters()) - 1) {
+			label += ", "
+		}
+	}
+	label += fmt.Sprintf(") : %s", signature.ReturnType().Data.Name())
+
+	return &defines.SignatureHelp{
+		ActiveSignature: &activeSignature,
+		ActiveParameter: &activeParameter,
+		Signatures: []defines.SignatureInformation{
+			{
+				Label:           label,
+				ActiveParameter: &activeParameter,
+				Parameters:      &parameters,
+			},
+		},
+	}, nil
 }
 
 func (h *Handlers) reportDiagnosticErrors(program *compiler.Program, uri defines.DocumentUri) bool {

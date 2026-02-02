@@ -138,9 +138,9 @@ const (
 )
 
 type SignatureParameter struct {
-	Name   string
-	Type   *Type
-	isRest bool
+	Name string
+	Type *Type
+	Rest bool
 }
 
 type Signature struct {
@@ -148,3 +148,7 @@ type Signature struct {
 	parameters []*SignatureParameter
 	returnType *Type
 }
+
+func (s *Signature) Flags() SignatureFlags             { return s.flags }
+func (s *Signature) Parameters() []*SignatureParameter { return s.parameters }
+func (s *Signature) ReturnType() *Type                 { return s.returnType }

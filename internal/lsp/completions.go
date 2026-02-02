@@ -127,7 +127,7 @@ func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int,
 	contextNode := node.Parent
 	completions := []defines.CompletionItem{}
 
-	if node.Type == ast.NodeTypeSourceFile {
+	if (node.Type == ast.NodeTypeSourceFile) || (node.Type == ast.NodeTypeIdentifier && contextNode.Type == ast.NodeTypeExpressionStatement) {
 		return getCompletionsFromSourceFile(sourceFile, _checker)
 	}
 

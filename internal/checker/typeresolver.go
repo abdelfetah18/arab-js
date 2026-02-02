@@ -364,7 +364,7 @@ func (t *TypeResolver) resolveSignature(node *ast.Node) *Signature {
 			}
 
 			paramType := t.ResolveTypeFromNode(param)
-			parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, isRest: isRest})
+			parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, Rest: isRest})
 		}
 		return t.newSignature(flags, parameters, t.ResolveTypeAnnotation(functionType.TypeAnnotation))
 	case ast.NodeTypeFunctionDeclaration:
@@ -391,7 +391,7 @@ func (t *TypeResolver) resolveSignature(node *ast.Node) *Signature {
 			}
 
 			paramType := t.ResolveTypeFromNode(param)
-			parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, isRest: isRest})
+			parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, Rest: isRest})
 		}
 		return t.newSignature(flags, parameters, t.ResolveTypeAnnotation(functionDeclaration.TypeAnnotation))
 	}
