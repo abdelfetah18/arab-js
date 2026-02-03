@@ -29,7 +29,7 @@ func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
 	t.numberType = t.newIntrinsicType(TypeFlagsNumber, "number")
 	t.trueType = t.newLiteralType(TypeFlagsBoolean, "true")
 	t.falseType = t.newLiteralType(TypeFlagsBoolean, "false")
-	t.booleanType = t.newUnionType([]*Type{t.trueType, t.falseType})
+	t.booleanType = t.newBooleanUnionType()
 
 	return t
 }
@@ -297,6 +297,12 @@ func (t *TypeResolver) newLiteralType(flags TypeFlags, value string) *Type {
 	data.value = value
 	data.regularType = data.AsType()
 	return t.newType(flags, ObjectFlagsNone, data)
+}
+
+func (t *TypeResolver) newBooleanUnionType() *Type {
+	unionType := t.newUnionType([]*Type{t.trueType, t.falseType})
+	unionType.Flags |= TypeFlagsBoolean
+	return unionType
 }
 
 func (t *TypeResolver) newUnionType(types []*Type) *Type {
