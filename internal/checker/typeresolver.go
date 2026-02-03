@@ -3,6 +3,7 @@ package checker
 import (
 	"arab_js/internal/binder"
 	"arab_js/internal/compiler/ast"
+	"slices"
 )
 
 type TypeResolver struct {
@@ -77,6 +78,17 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 
 		if objectType.Flags&TypeFlagsObject == 0 {
 			return nil
+		}
+
+		if memberExpression.Computed && memberExpression.Property.Type == ast.NodeTypeDecimalLiteral {
+			index := slices.IndexFunc(objectType.AsObjectType().indexInfos, func(indexInfo *IndexInfo) bool {
+				return indexInfo.keyType.Flags&TypeFlagsNumber != 0
+			})
+			if index == -1 {
+				return nil
+			}
+
+			return objectType.AsObjectType().indexInfos[index].valueType
 		}
 
 		return objectType.AsObjectType().members[memberExpression.PropertyName()].Type
