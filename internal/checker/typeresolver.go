@@ -479,6 +479,16 @@ func (t *TypeResolver) isTypeRelatedTo(target *Type, source *Type) bool {
 		return true
 	}
 
+	if target.Flags&TypeFlagsUnion != 0 {
+		unionType := target.AsUnionType()
+		for _, targetType := range unionType.types {
+			if t.isTypeRelatedTo(targetType, source) {
+				return true
+			}
+		}
+		return false
+	}
+
 	return false
 }
 
