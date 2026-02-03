@@ -1235,11 +1235,50 @@ func (p *Parser) parseInterfaceDeclaration() *ast.InterfaceDeclaration {
 	}
 
 	body := p.parseInterfaceBody()
-
 	p.optional(lexer.Semicolon)
 
 	return ast.NewNode(
 		ast.NewInterfaceDeclaration(identifier, typeParameters, body, extends),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parsePropertySignature() *ast.PropertySignature {
+	p.markStartPosition()
+
+	var key *ast.Node = nil
+	hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
+	originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
+
+	var modifierList *ast.ModifierList = nil
+	if p.optionalTypeKeyword(lexer.TypeKeywordReadOnly) {
+		modifierList = ast.NewModifierList(ast.ModifierFlagsReadonly)
+	}
+
+	switch p.lexer.Peek().Type {
+	case lexer.Identifier:
+		identifier := p.parseIdentifier(false)
+		if hasPrecedingOriginalNameDirective {
+			identifier.OriginalName = &originalNameDirectiveValue
+		}
+
+		key = identifier.AsNode()
+	case lexer.DoubleQuoteString, lexer.SingleQuoteString:
+		key = p.parseStringLiteral().AsNode()
+	case lexer.Decimal:
+		key = p.parseDecimalLiteral().AsNode()
+	}
+
+	var typeAnnotation *ast.TypeAnnotation = nil
+	if p.optional(lexer.Colon) {
+		typeAnnotation = p.parseTypeAnnotation()
+	}
+
+	return ast.NewNode(
+		ast.NewPropertySignature(key, typeAnnotation, modifierList),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1254,91 +1293,22 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 
 	body := []*ast.Node{}
 
-	token := p.lexer.Peek()
-	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
-		hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
-		originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
-
-		var key *ast.Node
-		var modifierList *ast.ModifierList = nil
-		if p.optionalTypeKeyword(lexer.TypeKeywordReadOnly) {
-			modifierList = ast.NewModifierList(ast.ModifierFlagsReadonly)
+	for {
+		token := p.lexer.Peek()
+		if token.Type == lexer.EOF || token.Type == lexer.Invalid || token.Type == lexer.RightCurlyBrace {
+			break
 		}
 
 		switch token.Type {
-		case lexer.Identifier:
-			identifier := p.parseIdentifier(false)
-			if hasPrecedingOriginalNameDirective {
-				identifier.OriginalName = &originalNameDirectiveValue
-			}
-
-			key = identifier.AsNode()
-		case lexer.DoubleQuoteString, lexer.SingleQuoteString:
-			key = p.parseStringLiteral().AsNode()
-		case lexer.Decimal:
-			key = p.parseDecimalLiteral().AsNode()
+		case lexer.Identifier, lexer.DoubleQuoteString, lexer.SingleQuoteString, lexer.Decimal:
+			body = append(body, p.parsePropertySignature().AsNode())
 		case lexer.LeftSquareBracket:
 			body = append(body, p.parseIndexSignatureDeclaration().AsNode())
-			p.optional(lexer.Comma)
-			token = p.lexer.Peek()
+		}
+
+		if p.optional(lexer.Semicolon) || p.optional(lexer.Comma) {
 			continue
-		default:
-			p.errorf(
-				ast.Location{
-					Pos: p.startPositions.Pop(),
-					End: p.getEndPosition(),
-				},
-				"Expected a valid key but got %s\n", token.Value)
-			return nil
 		}
-
-		if p.optional(lexer.Colon) {
-			body = append(body,
-				ast.NewNode(
-					ast.NewPropertySignature(key, p.parseTypeAnnotation(), modifierList),
-					ast.Location{
-						Pos: key.Location.Pos,
-						End: p.getEndPosition(),
-					},
-				).AsNode(),
-			)
-
-			p.optional(lexer.Comma)
-			token = p.lexer.Peek()
-		} else {
-			if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
-				p.errorf(
-					ast.Location{
-						Pos: p.startPositions.Pop(),
-						End: p.getEndPosition(),
-					},
-					"Expected '{' but got %s\n", token.Value)
-				return nil
-			}
-
-			p.optional(lexer.Comma)
-			if key.Type == ast.NodeTypeIdentifier {
-				body = append(body,
-					ast.NewNode(
-						ast.NewPropertySignature(key, p.parseTypeAnnotation(), modifierList),
-						ast.Location{
-							Pos: key.Location.Pos,
-							End: p.getEndPosition(),
-						},
-					).AsNode(),
-				)
-			} else {
-				p.errorf(
-					ast.Location{
-						Pos: p.startPositions.Pop(),
-						End: p.getEndPosition(),
-					},
-					"Expected Identifier but got %s\n", token.Value)
-				return nil
-			}
-		}
-
-		token = p.lexer.Peek()
 	}
 
 	p.expected(lexer.RightCurlyBrace)

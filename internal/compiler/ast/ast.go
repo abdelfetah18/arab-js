@@ -1441,7 +1441,8 @@ func (propertySignature *PropertySignature) NodeType() NodeType {
 }
 
 func (propertySignature *PropertySignature) ForEachChild(v Visitor) bool {
-	return visit(v, propertySignature.Key) || visit(v, propertySignature.TypeAnnotation.AsNode())
+	return visit(v, propertySignature.Key) ||
+		(propertySignature.TypeAnnotation != nil && visit(v, propertySignature.TypeAnnotation.AsNode()))
 }
 
 type ReturnStatement struct {
