@@ -749,6 +749,24 @@ func (p *Parser) parseUpdateExpression() *ast.Node {
 }
 
 func (p *Parser) parseUnaryExpression() *ast.Node {
+	p.markStartPosition()
+
+	isPrefixUnaryExpression := func() (string, bool) {
+		return p.lexer.Peek().Value, (p.optional(lexer.Plus) || p.optional(lexer.Minus))
+	}
+
+	if operator, ok := isPrefixUnaryExpression(); ok {
+		return ast.NewNode(
+			ast.NewPrefixUnaryExpression(operator, p.parseUnaryExpression()),
+			ast.Location{
+				Pos: p.startPositions.Pop(),
+				End: p.getEndPosition(),
+			},
+		).AsNode()
+	}
+
+	p.startPositions.Pop()
+
 	return p.parseUpdateExpression()
 }
 

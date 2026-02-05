@@ -2275,3 +2275,34 @@ func (computedProperty *ComputedProperty) NodeType() NodeType {
 func (computedProperty *ComputedProperty) ForEachChild(v Visitor) bool {
 	return visit(v, computedProperty.Name)
 }
+
+type PrefixUnaryExpression struct {
+	NodeBase
+	Operator string `json:"operator,omitempty"`
+	Argument *Node  `json:"argument,omitempty"`
+}
+
+func NewPrefixUnaryExpression(operator string, argument *Node) *PrefixUnaryExpression {
+	return &PrefixUnaryExpression{
+		Operator: operator,
+		Argument: argument,
+	}
+}
+
+func (prefixUnaryExpression *PrefixUnaryExpression) MarshalJSON() ([]byte, error) {
+	type Alias PrefixUnaryExpression
+	return json.Marshal(
+		wrapNode(
+			*prefixUnaryExpression.AsNode(),
+			(*Alias)(prefixUnaryExpression),
+		),
+	)
+}
+
+func (prefixUnaryExpression *PrefixUnaryExpression) NodeType() NodeType {
+	return NodeTypeUpdateExpression
+}
+
+func (prefixUnaryExpression *PrefixUnaryExpression) ForEachChild(v Visitor) bool {
+	return visit(v, prefixUnaryExpression.Argument)
+}
