@@ -1175,14 +1175,29 @@ func (objectProperty *ObjectProperty) Name() string {
 
 type ObjectMethod struct {
 	NodeBase
-	Kind   string          `json:"kind,omitempty"`
-	Key    *Node           `json:"key,omitempty"`
-	Params []*Identifier   `json:"Params,omitempty"`
-	Body   *BlockStatement `json:"body,omitempty"`
+	ContainerBase  `json:"-"`
+	ModifiersBase  `json:"-"`
+	ID             *Identifier                `json:"id,omitempty"`
+	TypeParameters *TypeParametersDeclaration `json:"type_parameters,omitempty"`
+	Params         []*Node                    `json:"params,omitempty"`
+	Body           *BlockStatement            `json:"body,omitempty"`
+	TypeAnnotation *TypeAnnotation            `json:"type_annotation,omitempty"`
 }
 
-func NewObjectMethod(kind string, key *Node, params []*Identifier, body *BlockStatement) *ObjectMethod {
-	return &ObjectMethod{Kind: kind, Key: key, Params: params, Body: body}
+func NewObjectMethod(
+	id *Identifier,
+	typeParameters *TypeParametersDeclaration,
+	params []*Node,
+	body *BlockStatement,
+	typeAnnotation *TypeAnnotation,
+) *ObjectMethod {
+	return &ObjectMethod{
+		ID:             id,
+		TypeParameters: typeParameters,
+		Params:         params,
+		Body:           body,
+		TypeAnnotation: typeAnnotation,
+	}
 }
 
 func (objectMethod *ObjectMethod) MarshalJSON() ([]byte, error) {
@@ -1199,13 +1214,15 @@ func (objectMethod *ObjectMethod) NodeType() NodeType {
 	return NodeTypeObjectMethod
 }
 
-func (objectMethod *ObjectMethod) ForEachChild(v Visitor) bool {
-	params := []*Node{}
-	for _, param := range objectMethod.Params {
-		params = append(params, param.AsNode())
-	}
+func (objectMethod *ObjectMethod) ContainerBaseData() *ContainerBase {
+	return &objectMethod.ContainerBase
+}
 
-	return visit(v, objectMethod.Key) || visitNodes(v, params) || visit(v, objectMethod.Body.AsNode())
+func (objectMethod *ObjectMethod) ForEachChild(v Visitor) bool {
+	return visit(v, objectMethod.ID.AsNode()) ||
+		visitNodes(v, objectMethod.Params) ||
+		(objectMethod.Body != nil && visit(v, objectMethod.Body.AsNode())) ||
+		(objectMethod.TypeAnnotation != nil && visit(v, objectMethod.TypeAnnotation.AsNode()))
 }
 
 type ObjectExpression struct {

@@ -1761,6 +1761,68 @@ func (p *Parser) parseArrayExpression() *ast.ArrayExpression {
 		},
 	)
 }
+func (p *Parser) parseObjectPropertyOrMethod() *ast.Node {
+	p.markStartPosition()
+
+	var key *ast.Node = nil
+	var value *ast.Node = nil
+	switch p.lexer.Peek().Type {
+	case lexer.DoubleQuoteString, lexer.SingleQuoteString:
+		key = p.parseStringLiteral().AsNode()
+	case lexer.Decimal:
+		key = p.parseDecimalLiteral().AsNode()
+	default:
+		if !p.isIdentifierName() {
+			break
+		}
+
+		identifier := p.parseIdentifierName()
+		if p.lexer.Peek().Type == lexer.LeftParenthesis || p.lexer.Peek().Type == lexer.LeftArrow {
+			var typeParameters *ast.TypeParametersDeclaration = nil
+			if p.lexer.Peek().Type == lexer.LeftArrow {
+				typeParameters = p.parseTypeParametersDeclaration()
+			}
+
+			params := p.parseParameters()
+
+			var typeAnnotation *ast.TypeAnnotation = nil
+			if p.optional(lexer.Colon) {
+				typeAnnotation = p.parseTypeAnnotation()
+			}
+
+			var body *ast.BlockStatement = nil
+			if !p.optional(lexer.Semicolon) {
+				body = p.parseBlockStatement()
+			}
+
+			return ast.NewNode(
+				ast.NewObjectMethod(identifier, typeParameters, params, body, typeAnnotation),
+				ast.Location{
+					Pos: p.startPositions.Pop(),
+					End: p.getEndPosition(),
+				},
+			).AsNode()
+		}
+
+		key = identifier.AsNode()
+	}
+
+	if p.optional(lexer.Colon) {
+		value = p.parseAssignmentExpression()
+	} else {
+		if p.lexer.Peek().Type == lexer.Comma {
+			value = key
+		}
+	}
+
+	return ast.NewNode(
+		ast.NewObjectProperty(key, value),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	).AsNode()
+}
 
 func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 	p.markStartPosition()
@@ -1769,102 +1831,45 @@ func (p *Parser) parseObjectExpression() *ast.ObjectExpression {
 
 	properties := []*ast.Node{}
 
-	token := p.lexer.Peek()
-	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
-		if p.optional(lexer.TripleDots) {
-			pos := uint(p.lexer.Position())
+	for {
+		doBreak := false
+		token := p.lexer.Peek()
+		switch token.Type {
+		case lexer.EOF, lexer.Invalid, lexer.RightCurlyBrace:
+			doBreak = true
+		case lexer.TripleDots:
+			p.optional(lexer.TripleDots)
 			properties = append(properties,
 				ast.NewNode(
 					ast.NewSpreadElement(p.parseAssignmentExpression()),
 					ast.Location{
-						Pos: pos,
+						Pos: uint(p.lexer.Position()),
 						End: p.getEndPosition(),
 					},
 				).AsNode(),
 			)
-
-			token = p.lexer.Peek()
-			if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
-				p.errorf(
-					ast.Location{
-						Pos: p.startPositions.Pop(),
-						End: p.getEndPosition(),
-					},
-					"Expected '{' but got %s\n", token.Value)
-				return nil
-			}
-
-			p.optional(lexer.Comma)
-			token = p.lexer.Peek()
-		} else {
-			var key *ast.Node
-			switch token.Type {
-			case lexer.DoubleQuoteString, lexer.SingleQuoteString:
-				key = p.parseStringLiteral().AsNode()
-			case lexer.Decimal:
-				key = p.parseDecimalLiteral().AsNode()
-			default:
-				if !p.isIdentifierName() {
-					p.errorf(
-						ast.Location{
-							Pos: p.startPositions.Pop(),
-							End: p.getEndPosition(),
-						},
-						"Expected a valid key but got %s\n", token.Value)
-					return nil
-				}
-				key = p.parseIdentifierName().AsNode()
-			}
-
-			if p.optional(lexer.Colon) {
-				properties = append(properties,
-					ast.NewNode(
-						ast.NewObjectProperty(key, p.parseAssignmentExpression()),
-						ast.Location{
-							Pos: key.Location.Pos,
-							End: p.getEndPosition(),
-						},
-					).AsNode(),
-				)
-
-				p.optional(lexer.Comma)
-				token = p.lexer.Peek()
-			} else {
-				token = p.lexer.Peek()
-				if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
-					p.errorf(
-						ast.Location{
-							Pos: p.startPositions.Pop(),
-							End: p.getEndPosition(),
-						},
-						"A Expected '{' but got %s\n", token.Value)
-					return nil
-				}
-
-				p.optional(lexer.Comma)
-				if key.Type == ast.NodeTypeIdentifier {
-					properties = append(properties,
-						ast.NewNode(
-							ast.NewObjectProperty(key, key),
-							ast.Location{
-								Pos: key.Location.Pos,
-								End: p.getEndPosition(),
-							},
-						).AsNode(),
-					)
-				} else {
-					p.errorf(
-						ast.Location{
-							Pos: p.startPositions.Pop(),
-							End: p.getEndPosition(),
-						},
-						"Expected Identifier but got %s\n", token.Value)
-					return nil
-				}
-			}
+		default:
+			properties = append(properties, p.parseObjectPropertyOrMethod())
 		}
+
+		if doBreak {
+			break
+		}
+
 		token = p.lexer.Peek()
+		if token.Type != lexer.Comma && token.Type != lexer.RightCurlyBrace {
+			p.errorf(
+				ast.Location{
+					Pos: p.startPositions.Pop(),
+					End: p.getEndPosition(),
+				},
+				"Expected '{' but got %s\n", token.Value)
+			return nil
+		}
+
+		p.optional(lexer.Comma)
 	}
+
 	p.expected(lexer.RightCurlyBrace)
 
 	return ast.NewNode(
