@@ -37,6 +37,7 @@ const (
 	NodeTypeArrayExpression
 	NodeTypeObjectProperty
 	NodeTypeObjectMethod
+	NodeTypeShorthandPropertyAssignment
 	NodeTypeObjectExpression
 	NodeTypeDirectiveLiteral
 	NodeTypeDirective
@@ -200,6 +201,8 @@ func (t NodeType) String() string {
 		return "BindingElement"
 	case NodeTypeComputedProperty:
 		return "ComputedProperty"
+	case NodeTypeShorthandPropertyAssignment:
+		return "ShorthandPropertyAssignment"
 	default:
 		return "Unknown"
 	}

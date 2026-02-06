@@ -2306,3 +2306,32 @@ func (prefixUnaryExpression *PrefixUnaryExpression) NodeType() NodeType {
 func (prefixUnaryExpression *PrefixUnaryExpression) ForEachChild(v Visitor) bool {
 	return visit(v, prefixUnaryExpression.Argument)
 }
+
+type ShorthandPropertyAssignment struct {
+	NodeBase
+	Name        *Node        `json:"name,omitempty"`
+	Initializer *Initializer `json:"initializer,omitempty"`
+}
+
+func NewShorthandPropertyAssignment(name *Node, initializer *Initializer) *ShorthandPropertyAssignment {
+	return &ShorthandPropertyAssignment{Name: name, Initializer: initializer}
+}
+
+func (shorthandPropertyAssignment *ShorthandPropertyAssignment) MarshalJSON() ([]byte, error) {
+	type Alias ShorthandPropertyAssignment
+	return json.Marshal(
+		wrapNode(
+			*shorthandPropertyAssignment.AsNode(),
+			(*Alias)(shorthandPropertyAssignment),
+		),
+	)
+}
+
+func (shorthandPropertyAssignment *ShorthandPropertyAssignment) NodeType() NodeType {
+	return NodeTypeShorthandPropertyAssignment
+}
+
+func (shorthandPropertyAssignment *ShorthandPropertyAssignment) ForEachChild(v Visitor) bool {
+	return visit(v, shorthandPropertyAssignment.Name) ||
+		(shorthandPropertyAssignment.Initializer != nil && visit(v, shorthandPropertyAssignment.Initializer.AsNode()))
+}

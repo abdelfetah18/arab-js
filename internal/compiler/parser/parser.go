@@ -1822,6 +1822,21 @@ func (p *Parser) parseObjectPropertyOrMethod() *ast.Node {
 			).AsNode()
 		}
 
+		if p.optional(lexer.Equal) {
+			assignmentExpression := p.parseAssignmentExpression()
+			initializer := ast.NewNode(
+				ast.NewInitializer(assignmentExpression),
+				assignmentExpression.Location,
+			)
+			return ast.NewNode(
+				ast.NewShorthandPropertyAssignment(identifier.AsNode(), initializer),
+				ast.Location{
+					Pos: p.startPositions.Pop(),
+					End: p.getEndPosition(),
+				},
+			).AsNode()
+		}
+
 		key = identifier.AsNode()
 	}
 
