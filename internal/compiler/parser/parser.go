@@ -1751,6 +1751,10 @@ func (p *Parser) parseArrayExpression() *ast.ArrayExpression {
 		for p.optional(lexer.Comma) {
 		}
 
+		if p.lexer.Peek().Type == lexer.RightSquareBracket {
+			break
+		}
+
 		pos := uint(p.lexer.Position())
 		if p.optional(lexer.TripleDots) {
 			elements = append(elements,
