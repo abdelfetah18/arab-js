@@ -418,6 +418,11 @@ func (l *Lexer) isDigit() bool {
 	return ch >= "0" && ch <= "9"
 }
 
+func (l *Lexer) isOctalDigit() bool {
+	ch := l.current()
+	return ch >= "0" && ch <= "7"
+}
+
 func (l *Lexer) isExponent() bool {
 	ch := l.current()
 	return ch == "e" || ch == "E"
@@ -457,38 +462,61 @@ func (l *Lexer) lexDecimalLiteral() *Token {
 	sawDigit := false
 	lastWasSep := false
 
-	// integer part
-	l.consumeDecimalDigits(&number, &sawDigit, &lastWasSep)
+	if l.match("0o") || l.match("0O") {
+		l.advanceAndAppend(&number) // 0
+		l.advanceAndAppend(&number) // o or O
 
-	// fractional part
-	if l.current() == "." && !lastWasSep {
-		l.advanceAndAppend(&number)
-		lastWasSep = false
-
-		l.consumeDecimalDigits(&number, &sawDigit, &lastWasSep)
-	}
-
-	// exponent part
-	if l.isExponent() && !lastWasSep {
-		l.advanceAndAppend(&number)
-
-		if l.isSign() {
-			l.advanceAndAppend(&number)
+		sawOctalDigit := false
+		for !l.isEOF() {
+			if l.isOctalDigit() {
+				l.advanceAndAppend(&number)
+				sawOctalDigit = true
+				lastWasSep = false
+			} else if l.current() == "_" && sawOctalDigit && !lastWasSep {
+				l.advanceAndAppend(&number)
+				lastWasSep = true
+			} else {
+				break
+			}
 		}
 
-		expDigit := false
-		lastWasSep = false
-
-		l.consumeDecimalDigits(&number, &expDigit, &lastWasSep)
-
-		if !expDigit || lastWasSep {
+		if !sawOctalDigit || lastWasSep {
 			number = ""
 		}
-	}
+	} else {
+		// integer part
+		l.consumeDecimalDigits(&number, &sawDigit, &lastWasSep)
 
-	// final validation
-	if !sawDigit || lastWasSep {
-		number = ""
+		// fractional part
+		if l.current() == "." && !lastWasSep {
+			l.advanceAndAppend(&number)
+			lastWasSep = false
+
+			l.consumeDecimalDigits(&number, &sawDigit, &lastWasSep)
+		}
+
+		// exponent part
+		if l.isExponent() && !lastWasSep {
+			l.advanceAndAppend(&number)
+
+			if l.isSign() {
+				l.advanceAndAppend(&number)
+			}
+
+			expDigit := false
+			lastWasSep = false
+
+			l.consumeDecimalDigits(&number, &expDigit, &lastWasSep)
+
+			if !expDigit || lastWasSep {
+				number = ""
+			}
+		}
+
+		// final validation
+		if !sawDigit || lastWasSep {
+			number = ""
+		}
 	}
 
 	if len(number) > 0 {
