@@ -286,11 +286,9 @@ func (emitter *Emitter) emitMemberExpression(memberExpression *ast.MemberExpress
 	}
 }
 
-func (emitter *Emitter) emitFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
-	emitter.Writer.Write("function ")
-	emitter.Writer.Write(functionDeclaration.ID.Name)
+func (emitter *Emitter) emitParameters(params []*ast.Node) {
 	emitter.Writer.Write("(")
-	for index, param := range functionDeclaration.Params {
+	for index, param := range params {
 		if param.Type == ast.NodeTypeParameter {
 			parameter := param.AsParameter()
 			if parameter.Rest {
@@ -305,11 +303,17 @@ func (emitter *Emitter) emitFunctionDeclaration(functionDeclaration *ast.Functio
 			}
 		}
 
-		if index < len(functionDeclaration.Params)-1 {
+		if index < len(params)-1 {
 			emitter.Writer.Write(", ")
 		}
 	}
 	emitter.Writer.Write(") ")
+}
+
+func (emitter *Emitter) emitFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
+	emitter.Writer.Write("function ")
+	emitter.Writer.Write(functionDeclaration.ID.Name)
+	emitter.emitParameters(functionDeclaration.Params)
 	emitter.emitBlockStatement(functionDeclaration.Body)
 }
 
@@ -344,20 +348,6 @@ func (emitter *Emitter) emitFunctionExpression(functionExpression *ast.FunctionE
 	if functionExpression.ID != nil {
 		emitter.Writer.Write(functionExpression.ID.Name)
 	}
-	emitter.Writer.Write("(")
-	for index, param := range functionExpression.Params {
-		switch param.Type {
-		case ast.NodeTypeRestElement:
-			emitter.Writer.Write("...")
-			emitter.Writer.Write(param.AsRestElement().Argument.Name)
-		case ast.NodeTypeIdentifier:
-			emitter.Writer.Write(param.AsIdentifier().Name)
-		}
-
-		if index < len(functionExpression.Params)-1 {
-			emitter.Writer.Write(", ")
-		}
-	}
-	emitter.Writer.Write(") ")
+	emitter.emitParameters(functionExpression.Params)
 	emitter.emitBlockStatement(functionExpression.Body)
 }
