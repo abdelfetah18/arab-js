@@ -1790,6 +1790,7 @@ func (p *Parser) parseObjectPropertyOrMethod() *ast.Node {
 	case lexer.Decimal:
 		key = p.parseDecimalLiteral().AsNode()
 	default:
+		generator := p.optional(lexer.Star)
 		if !p.isIdentifierName() {
 			break
 		}
@@ -1814,7 +1815,7 @@ func (p *Parser) parseObjectPropertyOrMethod() *ast.Node {
 			}
 
 			return ast.NewNode(
-				ast.NewObjectMethod(identifier, typeParameters, params, body, typeAnnotation),
+				ast.NewObjectMethod(identifier, typeParameters, params, body, typeAnnotation, generator),
 				ast.Location{
 					Pos: p.startPositions.Pop(),
 					End: p.getEndPosition(),

@@ -1182,6 +1182,7 @@ type ObjectMethod struct {
 	Params         []*Node                    `json:"params,omitempty"`
 	Body           *BlockStatement            `json:"body,omitempty"`
 	TypeAnnotation *TypeAnnotation            `json:"type_annotation,omitempty"`
+	Generator      bool                       `json:"generator,omitempty"`
 }
 
 func NewObjectMethod(
@@ -1190,6 +1191,7 @@ func NewObjectMethod(
 	params []*Node,
 	body *BlockStatement,
 	typeAnnotation *TypeAnnotation,
+	generator bool,
 ) *ObjectMethod {
 	return &ObjectMethod{
 		ID:             id,
@@ -1197,6 +1199,7 @@ func NewObjectMethod(
 		Params:         params,
 		Body:           body,
 		TypeAnnotation: typeAnnotation,
+		Generator:      generator,
 	}
 }
 
