@@ -2389,7 +2389,9 @@ type VariableDeclarationList struct {
 }
 
 func NewVariableDeclarationList(declarations []*Node) *VariableDeclarationList {
-	return &VariableDeclarationList{Declarations: declarations}
+	return &VariableDeclarationList{
+		Declarations: declarations,
+	}
 }
 
 func (variableDeclarationList *VariableDeclarationList) MarshalJSON() ([]byte, error) {
@@ -2410,18 +2412,29 @@ func (variableDeclarationList *VariableDeclarationList) ForEachChild(v Visitor) 
 	return visitNodes(v, variableDeclarationList.Declarations)
 }
 
+type DeclarationType uint32
+
+const (
+	DeclarationTypeNone                  = 0
+	DeclarationTypeConst DeclarationType = 1 << 0
+	DeclarationTypeVar   DeclarationType = 1 << 1
+	DeclarationTypeLet   DeclarationType = 1 << 2
+)
+
 type VariableStatement struct {
 	NodeBase
 	ModifiersBase   `json:"-"`
-	DeclarationList *Node `json:"declaration_list,omitempty"`
+	DeclarationList *Node           `json:"declaration_list,omitempty"`
+	DeclarationType DeclarationType `json:"declaration_type,omitempty"`
 }
 
-func NewVariableStatement(declarationList *Node, modifiers *ModifierList) *VariableStatement {
+func NewVariableStatement(declarationType DeclarationType, declarationList *Node, modifiers *ModifierList) *VariableStatement {
 	return &VariableStatement{
 		DeclarationList: declarationList,
 		ModifiersBase: ModifiersBase{
 			modifiers: modifiers,
 		},
+		DeclarationType: declarationType,
 	}
 }
 

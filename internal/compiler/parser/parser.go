@@ -91,7 +91,7 @@ func (p *Parser) parseStatement() *ast.Node {
 		switch token.Value {
 		case lexer.KeywordIf:
 			return p.parseIfStatement().AsNode()
-		case lexer.KeywordLet:
+		case lexer.KeywordLet, lexer.KeywordConst:
 			return p.parseVariableStatement(nil).AsNode()
 		case lexer.KeywordFunction:
 			return p.parseFunctionDeclaration(nil).AsNode()
@@ -124,7 +124,7 @@ func (p *Parser) parseStatement() *ast.Node {
 			switch token.Type {
 			case lexer.KeywordToken:
 				switch token.Value {
-				case lexer.KeywordLet:
+				case lexer.KeywordLet, lexer.KeywordConst:
 					return p.parseVariableStatement(modifierList).AsNode()
 				case lexer.KeywordFunction:
 					functionDeclaration := p.parseFunctionDeclaration(modifierList)
@@ -562,11 +562,17 @@ func (p *Parser) parseTypeNode() *ast.Node {
 func (p *Parser) parseVariableStatement(modifierList *ast.ModifierList) *ast.VariableStatement {
 	p.markStartPosition()
 
-	p.expectedKeyword(lexer.KeywordLet)
+	var declarationType ast.DeclarationType = ast.DeclarationTypeNone
+	switch {
+	case p.optionalKeyword(lexer.KeywordLet):
+		declarationType = ast.DeclarationTypeLet
+	case p.optionalKeyword(lexer.KeywordConst):
+		declarationType = ast.DeclarationTypeConst
+	}
 	variableDeclarationList := p.parseVariableDeclarationList(modifierList)
 
 	return ast.NewNode(
-		ast.NewVariableStatement(variableDeclarationList.AsNode(), modifierList),
+		ast.NewVariableStatement(declarationType, variableDeclarationList.AsNode(), modifierList),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1582,7 +1588,7 @@ func (p *Parser) parseForStatement() *ast.ForStatement {
 
 	var init *ast.Node = nil
 	token := p.lexer.Peek()
-	if token.Type == lexer.KeywordToken && token.Value == lexer.KeywordLet {
+	if token.Type == lexer.KeywordToken && (token.Value == lexer.KeywordLet || token.Value == lexer.KeywordConst) {
 		init = p.parseVariableStatement(nil).AsNode()
 	} else {
 		init = p.parseExpression()
@@ -2080,7 +2086,7 @@ func (p *Parser) parseModuleBlock() *ast.ModuleBlock {
 		switch token.Type {
 		case lexer.KeywordToken:
 			switch token.Value {
-			case lexer.KeywordLet:
+			case lexer.KeywordLet, lexer.KeywordConst:
 				body = append(body, p.parseVariableStatement(nil).AsNode())
 			case lexer.KeywordFunction:
 				body = append(body, p.parseFunctionDeclaration(nil).AsNode())
