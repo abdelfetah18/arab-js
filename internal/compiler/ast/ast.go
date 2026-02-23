@@ -315,18 +315,14 @@ func (expressionStatement *ExpressionStatement) ForEachChild(v Visitor) bool {
 type VariableDeclaration struct {
 	NodeBase
 	DeclarationBase `json:"-"`
-	ModifiersBase   `json:"-"`
 	Name            *Node        `json:"name,omitempty"`
 	Initializer     *Initializer `json:"initializer,omitempty"`
 }
 
-func NewVariableDeclaration(name *Node, initializer *Initializer, modifiers *ModifierList) *VariableDeclaration {
+func NewVariableDeclaration(name *Node, initializer *Initializer) *VariableDeclaration {
 	return &VariableDeclaration{
 		Name:        name,
 		Initializer: initializer,
-		ModifiersBase: ModifiersBase{
-			modifiers: modifiers,
-		},
 	}
 }
 

@@ -29,18 +29,6 @@ func TestVariableDeclaration(t *testing.T) {
 			t.Errorf("\nExpected:\n%s\nGot:\n%s\n", expected, output)
 		}
 	})
-
-	t.Run("should throw on VariableDeclaration missing semicolon", func(t *testing.T) {
-		input := "متغير عدد = 100"
-
-		parser := parser.NewParser(lexer.NewLexer(input), ast.SourceFileParseOptions{})
-		sourceFile := parser.Parse()
-		EmitSourceFile(sourceFile)
-
-		if len(parser.Diagnostics) == 0 {
-			t.Errorf("\nExpected errors for missing semicolon")
-		}
-	})
 }
 
 func TestStringLiteral(t *testing.T) {

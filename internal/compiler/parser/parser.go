@@ -583,7 +583,10 @@ func (p *Parser) parseVariableStatement(modifierList *ast.ModifierList) *ast.Var
 	case p.optionalKeyword(lexer.KeywordConst):
 		declarationType = ast.DeclarationTypeConst
 	}
-	variableDeclarationList := p.parseVariableDeclarationList(modifierList)
+
+	variableDeclarationList := p.parseVariableDeclarationList()
+
+	p.optional(lexer.Semicolon)
 
 	return ast.NewNode(
 		ast.NewVariableStatement(declarationType, variableDeclarationList.AsNode(), modifierList),
@@ -594,12 +597,12 @@ func (p *Parser) parseVariableStatement(modifierList *ast.ModifierList) *ast.Var
 	)
 }
 
-func (p *Parser) parseVariableDeclarationList(modifierList *ast.ModifierList) *ast.VariableDeclarationList {
+func (p *Parser) parseVariableDeclarationList() *ast.VariableDeclarationList {
 	p.markStartPosition()
 
 	declarations := []*ast.Node{}
 
-	variableDeclaration := p.parseVariableDeclaration(modifierList)
+	variableDeclaration := p.parseVariableDeclaration()
 	declarations = append(declarations, variableDeclaration.AsNode())
 	if p.hasPrecedingOriginalNameDirective {
 		if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
@@ -610,7 +613,7 @@ func (p *Parser) parseVariableDeclarationList(modifierList *ast.ModifierList) *a
 	for p.optional(lexer.Comma) {
 		p.hasPrecedingOriginalNameDirective = p.lexer.HasPrecedingOriginalNameDirective
 		p.originalNameDirectiveValue = p.lexer.OriginalNameDirectiveValue
-		variableDeclaration := p.parseVariableDeclaration(modifierList)
+		variableDeclaration := p.parseVariableDeclaration()
 		declarations = append(declarations, variableDeclaration.AsNode())
 		if p.hasPrecedingOriginalNameDirective {
 			if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
@@ -628,7 +631,7 @@ func (p *Parser) parseVariableDeclarationList(modifierList *ast.ModifierList) *a
 	)
 }
 
-func (p *Parser) parseVariableDeclaration(modifierList *ast.ModifierList) *ast.VariableDeclaration {
+func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 	p.markStartPosition()
 
 	var name *ast.Node = nil
@@ -641,23 +644,17 @@ func (p *Parser) parseVariableDeclaration(modifierList *ast.ModifierList) *ast.V
 		name = p.parseObjectBindingPattern().AsNode()
 	}
 
-	isAmbien := modifierList != nil && modifierList.ModifierFlags&ast.ModifierFlagsAmbient != 0
-	if !isAmbien {
-		p.expected(lexer.Equal)
-	}
-
 	var initializer *ast.Initializer = nil
-	if !p.optional(lexer.Semicolon) && !isAmbien {
+	if p.optional(lexer.Equal) {
 		assignmentExpression := p.parseAssignmentExpression()
 		initializer = ast.NewNode(
 			ast.NewInitializer(assignmentExpression),
 			assignmentExpression.Location,
 		)
-		p.expected(lexer.Semicolon)
 	}
 
 	return ast.NewNode(
-		ast.NewVariableDeclaration(name, initializer, modifierList),
+		ast.NewVariableDeclaration(name, initializer),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
