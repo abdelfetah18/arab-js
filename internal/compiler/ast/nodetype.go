@@ -7,7 +7,9 @@ type NodeType int16
 const (
 	NodeTypeUnknown NodeType = iota
 	NodeTypeExpressionStatement
+	NodeTypeVariableStatement
 	NodeTypeVariableDeclaration
+	NodeTypeVariableDeclarationList
 	NodeTypeIdentifier
 	NodeTypeInitializer
 	NodeTypeStringLiteral
@@ -81,6 +83,10 @@ func (t NodeType) String() string {
 		return "ExpressionStatement"
 	case NodeTypeVariableDeclaration:
 		return "VariableDeclaration"
+	case NodeTypeVariableDeclarationList:
+		return "VariableDeclarationList"
+	case NodeTypeVariableStatement:
+		return "VariableStatement"
 	case NodeTypeIdentifier:
 		return "Identifier"
 	case NodeTypeInitializer:

@@ -21,6 +21,9 @@ type Parser struct {
 	Diagnostics []*ast.Diagnostic
 
 	opts ast.SourceFileParseOptions
+
+	hasPrecedingOriginalNameDirective bool
+	originalNameDirectiveValue        string
 }
 
 func NewParser(lexer *lexer.Lexer, opts ast.SourceFileParseOptions) *Parser {
@@ -89,7 +92,7 @@ func (p *Parser) parseStatement() *ast.Node {
 		case lexer.KeywordIf:
 			return p.parseIfStatement().AsNode()
 		case lexer.KeywordLet:
-			return p.parseVariableDeclaration(nil).AsNode()
+			return p.parseVariableStatement(nil).AsNode()
 		case lexer.KeywordFunction:
 			return p.parseFunctionDeclaration(nil).AsNode()
 		case lexer.KeywordImport:
@@ -113,8 +116,8 @@ func (p *Parser) parseStatement() *ast.Node {
 			modifierList := ast.NewModifierList(ast.ModifierFlagsAmbient)
 			p.markStartPosition()
 
-			hasPrecedingOriginalNameDirective := p.lexer.HasPrecedingOriginalNameDirective
-			originalNameDirectiveValue := p.lexer.OriginalNameDirectiveValue
+			p.hasPrecedingOriginalNameDirective = p.lexer.HasPrecedingOriginalNameDirective
+			p.originalNameDirectiveValue = p.lexer.OriginalNameDirectiveValue
 			p.expectedTypeKeyword(lexer.TypeKeywordDeclare)
 
 			token := p.lexer.Peek()
@@ -122,17 +125,11 @@ func (p *Parser) parseStatement() *ast.Node {
 			case lexer.KeywordToken:
 				switch token.Value {
 				case lexer.KeywordLet:
-					variableDeclaration := p.parseVariableDeclaration(modifierList)
-					if hasPrecedingOriginalNameDirective {
-						if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
-							variableDeclaration.Name.AsIdentifier().OriginalName = &originalNameDirectiveValue
-						}
-					}
-					return variableDeclaration.AsNode()
+					return p.parseVariableStatement(modifierList).AsNode()
 				case lexer.KeywordFunction:
 					functionDeclaration := p.parseFunctionDeclaration(modifierList)
-					if hasPrecedingOriginalNameDirective {
-						functionDeclaration.ID.OriginalName = &originalNameDirectiveValue
+					if p.hasPrecedingOriginalNameDirective {
+						functionDeclaration.ID.OriginalName = &p.originalNameDirectiveValue
 					}
 					return functionDeclaration.AsNode()
 				}
@@ -140,8 +137,8 @@ func (p *Parser) parseStatement() *ast.Node {
 				switch token.Value {
 				case lexer.TypeKeywordModule:
 					moduleDeclaration := p.parseModuleDeclaration()
-					if hasPrecedingOriginalNameDirective {
-						moduleDeclaration.OriginalName = &originalNameDirectiveValue
+					if p.hasPrecedingOriginalNameDirective {
+						moduleDeclaration.OriginalName = &p.originalNameDirectiveValue
 					}
 					return moduleDeclaration.AsNode()
 				}
@@ -343,7 +340,7 @@ func (p *Parser) parseDeclarationOnly() *ast.Node {
 		case lexer.KeywordFunction:
 			return p.parseFunctionDeclaration(nil).AsNode()
 		case lexer.KeywordLet, lexer.KeywordConst:
-			return p.parseVariableDeclaration(nil).AsNode()
+			return p.parseVariableStatement(nil).AsNode()
 		}
 	}
 
@@ -547,10 +544,57 @@ func (p *Parser) parseTypeNode() *ast.Node {
 	}
 }
 
-func (p *Parser) parseVariableDeclaration(modifierList *ast.ModifierList) *ast.VariableDeclaration {
+func (p *Parser) parseVariableStatement(modifierList *ast.ModifierList) *ast.VariableStatement {
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordLet)
+	variableDeclarationList := p.parseVariableDeclarationList(modifierList)
+
+	return ast.NewNode(
+		ast.NewVariableStatement(variableDeclarationList.AsNode(), modifierList),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseVariableDeclarationList(modifierList *ast.ModifierList) *ast.VariableDeclarationList {
+	p.markStartPosition()
+
+	declarations := []*ast.Node{}
+
+	variableDeclaration := p.parseVariableDeclaration(modifierList)
+	declarations = append(declarations, variableDeclaration.AsNode())
+	if p.hasPrecedingOriginalNameDirective {
+		if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
+			variableDeclaration.Name.AsIdentifier().OriginalName = &p.originalNameDirectiveValue
+		}
+	}
+
+	for p.optional(lexer.Comma) {
+		p.hasPrecedingOriginalNameDirective = p.lexer.HasPrecedingOriginalNameDirective
+		p.originalNameDirectiveValue = p.lexer.OriginalNameDirectiveValue
+		variableDeclaration := p.parseVariableDeclaration(modifierList)
+		declarations = append(declarations, variableDeclaration.AsNode())
+		if p.hasPrecedingOriginalNameDirective {
+			if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
+				variableDeclaration.Name.AsIdentifier().OriginalName = &p.originalNameDirectiveValue
+			}
+		}
+	}
+
+	return ast.NewNode(
+		ast.NewVariableDeclarationList(declarations),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseVariableDeclaration(modifierList *ast.ModifierList) *ast.VariableDeclaration {
+	p.markStartPosition()
 
 	var name *ast.Node = nil
 	switch p.lexer.Peek().Type {
@@ -1524,7 +1568,7 @@ func (p *Parser) parseForStatement() *ast.ForStatement {
 	var init *ast.Node = nil
 	token := p.lexer.Peek()
 	if token.Type == lexer.KeywordToken && token.Value == lexer.KeywordLet {
-		init = p.parseVariableDeclaration(nil).AsNode()
+		init = p.parseVariableStatement(nil).AsNode()
 	} else {
 		init = p.parseExpression()
 		p.expected(lexer.Semicolon)
@@ -2022,7 +2066,7 @@ func (p *Parser) parseModuleBlock() *ast.ModuleBlock {
 		case lexer.KeywordToken:
 			switch token.Value {
 			case lexer.KeywordLet:
-				body = append(body, p.parseVariableDeclaration(nil).AsNode())
+				body = append(body, p.parseVariableStatement(nil).AsNode())
 			case lexer.KeywordFunction:
 				body = append(body, p.parseFunctionDeclaration(nil).AsNode())
 			}

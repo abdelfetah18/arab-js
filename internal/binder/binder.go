@@ -41,14 +41,24 @@ func (b *Binder) bindStatement(node *ast.Node) {
 		}
 	case ast.NodeTypeBlockStatement:
 		b.bindBlockStatement(node.AsBlockStatement())
-	case ast.NodeTypeVariableDeclaration:
-		b.bindVariableDeclaration(node.AsVariableDeclaration())
+	case ast.NodeTypeVariableStatement:
+		b.bindVariableStatement(node.AsVariableStatement())
 	case ast.NodeTypeInterfaceDeclaration:
 		b.bindInterfaceDeclaration(node.AsInterfaceDeclaration())
 	case ast.NodeTypeFunctionDeclaration:
 		b.bindFunctionDeclaration(node.AsFunctionDeclaration())
 	case ast.NodeTypeForStatement:
 		b.bindForStatement(node.AsForStatement())
+	}
+}
+
+func (b *Binder) bindVariableStatement(variableStatement *ast.VariableStatement) {
+	b.bindVariableDeclarationList(variableStatement.DeclarationList.AsVariableDeclarationList())
+}
+
+func (b *Binder) bindVariableDeclarationList(variableDeclarationList *ast.VariableDeclarationList) {
+	for _, variableDeclaration := range variableDeclarationList.Declarations {
+		b.bindVariableDeclaration(variableDeclaration.AsVariableDeclaration())
 	}
 }
 
@@ -157,8 +167,8 @@ func (b *Binder) bindForStatement(forStatement *ast.ForStatement) {
 	b.container = forStatement.ContainerBaseData()
 
 	switch forStatement.Init.Type {
-	case ast.NodeTypeVariableDeclaration:
-		b.bindVariableDeclaration(forStatement.Init.AsVariableDeclaration())
+	case ast.NodeTypeVariableStatement:
+		b.bindVariableStatement(forStatement.Init.AsVariableStatement())
 	}
 
 	b.bindStatement(forStatement.Body)

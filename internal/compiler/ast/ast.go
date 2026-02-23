@@ -94,8 +94,14 @@ func NewNode[T NodeData](nodeData T, location Location) T {
 
 func (node *Node) AsNode() *Node { return node }
 
+func (node *Node) AsVariableStatement() *VariableStatement {
+	return node.Data.(*VariableStatement)
+}
 func (node *Node) AsVariableDeclaration() *VariableDeclaration {
 	return node.Data.(*VariableDeclaration)
+}
+func (node *Node) AsVariableDeclarationList() *VariableDeclarationList {
+	return node.Data.(*VariableDeclarationList)
 }
 func (node *Node) AsFunctionDeclaration() *FunctionDeclaration {
 	return node.Data.(*FunctionDeclaration)
@@ -312,7 +318,6 @@ type VariableDeclaration struct {
 	ModifiersBase   `json:"-"`
 	Name            *Node        `json:"name,omitempty"`
 	Initializer     *Initializer `json:"initializer,omitempty"`
-	Declare         bool         `json:"declare,omitempty"`
 }
 
 func NewVariableDeclaration(name *Node, initializer *Initializer, modifiers *ModifierList) *VariableDeclaration {
@@ -2337,4 +2342,64 @@ func (shorthandPropertyAssignment *ShorthandPropertyAssignment) NodeType() NodeT
 func (shorthandPropertyAssignment *ShorthandPropertyAssignment) ForEachChild(v Visitor) bool {
 	return visit(v, shorthandPropertyAssignment.Name) ||
 		(shorthandPropertyAssignment.Initializer != nil && visit(v, shorthandPropertyAssignment.Initializer.AsNode()))
+}
+
+type VariableDeclarationList struct {
+	NodeBase
+	Declarations []*Node `json:"declarations,omitempty"`
+}
+
+func NewVariableDeclarationList(declarations []*Node) *VariableDeclarationList {
+	return &VariableDeclarationList{Declarations: declarations}
+}
+
+func (variableDeclarationList *VariableDeclarationList) MarshalJSON() ([]byte, error) {
+	type Alias VariableDeclarationList
+	return json.Marshal(
+		wrapNode(
+			*variableDeclarationList.AsNode(),
+			(*Alias)(variableDeclarationList),
+		),
+	)
+}
+
+func (variableDeclarationList *VariableDeclarationList) NodeType() NodeType {
+	return NodeTypeVariableDeclarationList
+}
+
+func (variableDeclarationList *VariableDeclarationList) ForEachChild(v Visitor) bool {
+	return visitNodes(v, variableDeclarationList.Declarations)
+}
+
+type VariableStatement struct {
+	NodeBase
+	ModifiersBase   `json:"-"`
+	DeclarationList *Node `json:"declaration_list,omitempty"`
+}
+
+func NewVariableStatement(declarationList *Node, modifiers *ModifierList) *VariableStatement {
+	return &VariableStatement{
+		DeclarationList: declarationList,
+		ModifiersBase: ModifiersBase{
+			modifiers: modifiers,
+		},
+	}
+}
+
+func (variableStatement *VariableStatement) MarshalJSON() ([]byte, error) {
+	type Alias VariableStatement
+	return json.Marshal(
+		wrapNode(
+			*variableStatement.AsNode(),
+			(*Alias)(variableStatement),
+		),
+	)
+}
+
+func (variableStatement *VariableStatement) NodeType() NodeType {
+	return NodeTypeVariableStatement
+}
+
+func (variableStatement *VariableStatement) ForEachChild(v Visitor) bool {
+	return visit(v, variableStatement.DeclarationList)
 }

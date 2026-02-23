@@ -74,8 +74,8 @@ func (c *Checker) checkBlockStatement(blockStatement *ast.BlockStatement) {
 
 func (c *Checker) checkStatement(node *ast.Node) {
 	switch node.Type {
-	case ast.NodeTypeVariableDeclaration:
-		c.checkVariableDeclaration(node.AsVariableDeclaration())
+	case ast.NodeTypeVariableStatement:
+		c.checkVariableStatement(node.AsVariableStatement())
 	case ast.NodeTypeExpressionStatement:
 		c.checkExpression(node.AsExpressionStatement().Expression)
 	case ast.NodeTypeBlockStatement:
@@ -96,6 +96,12 @@ func (c *Checker) checkIfStatement(ifStatement *ast.IfStatement) {
 	c.checkStatement(ifStatement.ConsequentStatement)
 	if ifStatement.AlternateStatement != nil {
 		c.checkStatement(ifStatement.AlternateStatement)
+	}
+}
+
+func (c *Checker) checkVariableStatement(variableStatement *ast.VariableStatement) {
+	for _, declaration := range variableStatement.DeclarationList.AsVariableDeclarationList().Declarations {
+		c.checkVariableDeclaration(declaration.AsVariableDeclaration())
 	}
 }
 

@@ -47,8 +47,8 @@ func (emitter *Emitter) emitStatementList(statementList []*ast.Node) {
 func (emitter *Emitter) emitStatement(statement *ast.Node) {
 	emitter.emitIndent()
 	switch statement.Type {
-	case ast.NodeTypeVariableDeclaration:
-		emitter.emitVariableDeclaration(statement.AsVariableDeclaration())
+	case ast.NodeTypeVariableStatement:
+		emitter.emitVariableStatement(statement.AsVariableStatement())
 		emitter.Writer.Write(";")
 	case ast.NodeTypeIfStatement:
 		emitter.emitIfStatement(statement.AsIfStatement())
@@ -101,12 +101,25 @@ func (emitter *Emitter) emitExpressionStatement(expressionStatement *ast.Express
 	emitter.Writer.Write(";")
 }
 
-func (emitter *Emitter) emitVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
-	if variableDeclaration.Declare {
+func (emitter *Emitter) emitVariableStatement(variableStatement *ast.VariableStatement) {
+	if variableStatement.Modifiers() != nil && variableStatement.Modifiers().ModifierFlags&ast.ModifierFlagsAmbient != 0 {
 		return
 	}
 
 	emitter.Writer.Write("let ")
+	emitter.emitVariableDeclarationList(variableStatement.DeclarationList.AsVariableDeclarationList())
+}
+
+func (emitter *Emitter) emitVariableDeclarationList(variableDeclarationList *ast.VariableDeclarationList) {
+	for index, declaration := range variableDeclarationList.Declarations {
+		emitter.emitVariableDeclaration(declaration.AsVariableDeclaration())
+		if index != len(variableDeclarationList.Declarations)-1 {
+			emitter.Writer.Write(", ")
+		}
+	}
+}
+
+func (emitter *Emitter) emitVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
 	switch variableDeclaration.Name.Type {
 	case ast.NodeTypeIdentifier:
 		emitter.Writer.Write(variableDeclaration.Name.AsIdentifier().Name)
@@ -324,8 +337,8 @@ func (emitter *Emitter) emitReturnStatement(returnStatement *ast.ReturnStatement
 
 func (emitter *Emitter) emitForStatement(forStatement *ast.ForStatement) {
 	emitter.Writer.Write("for (")
-	if forStatement.Init.Type == ast.NodeTypeVariableDeclaration {
-		emitter.emitVariableDeclaration(forStatement.Init.AsVariableDeclaration())
+	if forStatement.Init.Type == ast.NodeTypeVariableStatement {
+		emitter.emitVariableStatement(forStatement.Init.AsVariableStatement())
 	} else {
 		emitter.emitExpression(forStatement.Init)
 	}

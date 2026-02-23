@@ -41,11 +41,8 @@ func (t *Transformer) transformStatement(node *ast.Node) {
 	switch node.Type {
 	case ast.NodeTypeFunctionDeclaration:
 		t.transformFunctionDeclaration(node.AsFunctionDeclaration())
-	case ast.NodeTypeVariableDeclaration:
-		variableDeclaration := node.AsVariableDeclaration()
-		if variableDeclaration.Initializer != nil {
-			t.transformExpression(variableDeclaration.Initializer.Expression)
-		}
+	case ast.NodeTypeVariableStatement:
+		t.transformVariableStatement(node.AsVariableStatement())
 	case ast.NodeTypeExpressionStatement:
 		t.transformExpression(node.AsExpressionStatement().Expression)
 	case ast.NodeTypeIfStatement:
@@ -59,8 +56,8 @@ func (t *Transformer) transformStatement(node *ast.Node) {
 		t.transformBlockStatement(node.AsBlockStatement())
 	case ast.NodeTypeForStatement:
 		forStatement := node.AsForStatement()
-		if forStatement.Init.Type == ast.NodeTypeVariableDeclaration {
-			t.transformExpression(forStatement.Init.AsVariableDeclaration().Initializer.Expression)
+		if forStatement.Init.Type == ast.NodeTypeVariableStatement {
+			t.transformVariableStatement(forStatement.Init.AsVariableStatement())
 		} else {
 			t.transformExpression(forStatement.Init)
 		}
@@ -189,6 +186,16 @@ func (t *Transformer) transformObjectExpression(objectExpression *ast.ObjectExpr
 
 			}
 			t.transformExpression(objectProperty.Value)
+		}
+	}
+}
+
+func (t *Transformer) transformVariableStatement(variableStatement *ast.VariableStatement) {
+	variableDeclarationList := variableStatement.DeclarationList.AsVariableDeclarationList()
+	for _, declaration := range variableDeclarationList.Declarations {
+		variableDeclaration := declaration.AsVariableDeclaration()
+		if variableDeclaration.Initializer != nil {
+			t.transformExpression(variableDeclaration.Initializer.Expression)
 		}
 	}
 }
