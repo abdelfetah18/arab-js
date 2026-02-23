@@ -2193,11 +2193,11 @@ type ArrowFunction struct {
 	DeclarationBase `json:"-"`
 	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
 	Params          []*Node                    `json:"params,omitempty"`
-	Body            *BlockStatement            `json:"body,omitempty"`
+	Body            *Node                      `json:"body,omitempty"`
 	TypeAnnotation  *TypeAnnotation            `json:"type_annotation,omitempty"`
 }
 
-func NewArrowFunction(typeParameters *TypeParametersDeclaration, params []*Node, body *BlockStatement, typeAnnotation *TypeAnnotation) *ArrowFunction {
+func NewArrowFunction(typeParameters *TypeParametersDeclaration, params []*Node, body *Node, typeAnnotation *TypeAnnotation) *ArrowFunction {
 	return &ArrowFunction{
 		TypeParameters: typeParameters,
 		Params:         params,

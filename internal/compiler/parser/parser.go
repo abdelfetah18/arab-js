@@ -1033,6 +1033,18 @@ func (p *Parser) parseConditionalExpression() *ast.Node {
 	return p.parseShortCircuitExpression()
 }
 
+func (p *Parser) tryParseParenthesizedArrowFunction() *ast.ArrowFunction {
+	state := p.mark()
+	p.expected(lexer.LeftParenthesis)
+	arrowFunctionExpression := p.tryParseArrowFunction()
+	if arrowFunctionExpression == nil {
+		p.rewind(state)
+		return nil
+	}
+	p.expected(lexer.RightParenthesis)
+	return arrowFunctionExpression
+}
+
 func (p *Parser) tryParseArrowFunction() *ast.ArrowFunction {
 	p.markStartPosition()
 	state := p.mark()
@@ -1048,7 +1060,12 @@ func (p *Parser) tryParseArrowFunction() *ast.ArrowFunction {
 		typeAnnotation = p.parseTypeAnnotation()
 	}
 
-	body := p.parseBlockStatement()
+	var body *ast.Node = nil
+	if p.lexer.Peek().Type == lexer.LeftCurlyBrace {
+		body = p.parseBlockStatement().AsNode()
+	} else {
+		body = p.parseAssignmentExpression()
+	}
 
 	return ast.NewNode(
 		ast.NewArrowFunction(nil, params, body, typeAnnotation),
@@ -1236,6 +1253,11 @@ func (p *Parser) parseArrayBindingPattern() *ast.ArrayBindingPattern {
 
 func (p *Parser) parseAssignmentExpression() *ast.Node {
 	if p.lexer.Peek().Type == lexer.LeftParenthesis {
+		parenthesizedArrowFunction := p.tryParseParenthesizedArrowFunction()
+		if parenthesizedArrowFunction != nil {
+			return parenthesizedArrowFunction.AsNode()
+		}
+
 		arrowFunctionExpression := p.tryParseArrowFunction()
 		if arrowFunctionExpression != nil {
 			return arrowFunctionExpression.AsNode()
