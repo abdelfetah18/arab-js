@@ -98,7 +98,7 @@ func (p *Parser) parseStatement() *ast.Node {
 		case lexer.KeywordImport:
 			return p.parseImportDeclaration().AsNode()
 		case lexer.KeywordExport:
-			return p.parseExportDeclaration()
+			return p.parseExportDeclarationOrExportAssignment()
 		case lexer.KeywordReturn:
 			return p.parseReturnStatement().AsNode()
 		case lexer.KeywordFor:
@@ -278,10 +278,10 @@ func (p *Parser) parseImportSpecifier() *ast.ImportSpecifier {
 	var name *ast.Node = nil
 	var propertyName *ast.Node = nil
 
-	name = p.parseIdentifier(false).AsNode()
+	name = p.parseIdentifierName().AsNode()
 	if p.optionalKeyword(lexer.KeywordAs) {
 		propertyName = name
-		name = p.parseIdentifier(false).AsNode()
+		name = p.parseIdentifierName().AsNode()
 	}
 
 	return ast.NewNode(
@@ -293,40 +293,76 @@ func (p *Parser) parseImportSpecifier() *ast.ImportSpecifier {
 	)
 }
 
-func (p *Parser) parseExportNamedDeclaration() *ast.ExportNamedDeclaration {
-	var declaration *ast.Node = nil
-	specifiers := []*ast.ExportSpecifier{}
-	var source *ast.StringLiteral = nil
-	if p.optional(lexer.LeftCurlyBrace) {
-		token := p.lexer.Peek()
-		for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
-			identifier := p.parseIdentifier(false)
-			specifiers = append(specifiers,
-				ast.NewNode(
-					ast.NewExportSpecifier(identifier, identifier.AsNode()),
-					identifier.Location,
-				),
-			)
+func (p *Parser) parseModuleExportName() *ast.Node {
+	switch {
+	case p.isIdentifierName():
+		return p.parseIdentifierName().AsNode()
+	case p.lexer.Peek().Type == lexer.DoubleQuoteString || p.lexer.Peek().Type == lexer.SingleQuoteString:
+		return p.parseStringLiteral().AsNode()
+	default:
+		return nil
+	}
+}
 
-			if p.optional(lexer.Comma) {
-				token = p.lexer.Peek()
-			} else {
-				p.expected(lexer.RightCurlyBrace)
-			}
-		}
+func (p *Parser) parseExportSpecifier() *ast.ExportSpecifier {
+	p.markStartPosition()
 
-		p.expected(lexer.RightCurlyBrace)
+	var name *ast.Node = nil
+	var propertyName *ast.Node = nil
 
-		if p.optionalKeyword(lexer.KeywordFrom) {
-			source = p.parseStringLiteral()
-		}
-		p.expected(lexer.Semicolon)
-	} else {
-		declaration = p.parseDeclarationOnly()
+	name = p.parseModuleExportName()
+	if p.optionalKeyword(lexer.KeywordAs) {
+		propertyName = name
+		name = p.parseModuleExportName()
 	}
 
 	return ast.NewNode(
-		ast.NewExportNamedDeclaration(declaration, specifiers, source),
+		ast.NewExportSpecifier(name, propertyName),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseNamespaceExport() *ast.NamespaceExport {
+	p.markStartPosition()
+
+	p.expected(lexer.Star)
+
+	if !p.optionalKeyword(lexer.KeywordAs) {
+		p.startPositions.Pop()
+		return nil
+	}
+
+	name := p.parseModuleExportName()
+
+	return ast.NewNode(
+		ast.NewNamespaceExport(name),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseNamedExports() *ast.NamedExports {
+	p.markStartPosition()
+
+	p.expected(lexer.LeftCurlyBrace)
+
+	elements := []*ast.Node{}
+	if p.lexer.Peek().Type != lexer.RightCurlyBrace {
+		elements = append(elements, p.parseExportSpecifier().AsNode())
+		for p.optional(lexer.Comma) {
+			elements = append(elements, p.parseExportSpecifier().AsNode())
+		}
+	}
+
+	p.expected(lexer.RightCurlyBrace)
+
+	return ast.NewNode(
+		ast.NewNamedExports(elements),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -344,28 +380,6 @@ func (p *Parser) parseExportDefaultDeclaration() *ast.ExportDefaultDeclaration {
 			End: p.getEndPosition(),
 		},
 	)
-}
-
-func (p *Parser) parseDeclarationOnly() *ast.Node {
-	token := p.lexer.Peek()
-
-	switch token.Type {
-	case lexer.KeywordToken:
-		switch token.Value {
-		case lexer.KeywordFunction:
-			return p.parseFunctionDeclaration(nil).AsNode()
-		case lexer.KeywordLet, lexer.KeywordConst:
-			return p.parseVariableStatement(nil).AsNode()
-		}
-	}
-
-	p.errorf(
-		ast.Location{
-			Pos: p.startPositions.Peek(),
-			End: p.getEndPosition(),
-		},
-		"Unexpected token in export declaration: %s\n", token.Value)
-	return nil
 }
 
 func (p *Parser) parseFunctionDeclarationOrExpression() *ast.Node {
@@ -1750,16 +1764,65 @@ func (p *Parser) parseBooleanLiteral() *ast.BooleanLiteral {
 	)
 }
 
-func (p *Parser) parseExportDeclaration() *ast.Node {
+func (p *Parser) parseExportClause() *ast.Node {
+	switch p.lexer.Peek().Type {
+	case lexer.LeftCurlyBrace:
+		return p.parseNamedExports().AsNode()
+	case lexer.Star:
+		namespaceExport := p.parseNamespaceExport()
+		if namespaceExport != nil {
+			return namespaceExport.AsNode()
+		}
+		return nil
+	default:
+		return nil
+	}
+}
+
+func (p *Parser) parseExportDeclarationOrExportAssignment() *ast.Node {
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordExport)
 
 	if p.optionalKeyword(lexer.KeywordDefault) {
-		return p.parseExportDefaultDeclaration().AsNode()
+		assignmentExpression := p.parseAssignmentExpression()
+		p.optional(lexer.Semicolon)
+		return ast.NewNode(
+			ast.NewExportAssignment(assignmentExpression),
+			ast.Location{
+				Pos: p.startPositions.Pop(),
+				End: p.getEndPosition(),
+			},
+		).AsNode()
 	}
 
-	return p.parseExportNamedDeclaration().AsNode()
+	switch p.lexer.Peek().Type {
+	case lexer.KeywordToken:
+		switch p.lexer.Peek().Value {
+		case lexer.KeywordLet, lexer.KeywordConst:
+			p.startPositions.Pop()
+			return p.parseVariableStatement(&ast.ModifierList{ModifierFlags: ast.ModifierFlagsExport}).AsNode()
+		case lexer.KeywordFunction:
+			p.startPositions.Pop()
+			return p.parseFunctionDeclaration(&ast.ModifierList{ModifierFlags: ast.ModifierFlagsExport}).AsNode()
+		}
+	}
+
+	exportClause := p.parseExportClause()
+	var moduleSpecifier *ast.StringLiteral = nil
+	if p.optionalKeyword(lexer.KeywordFrom) {
+		moduleSpecifier = p.parseStringLiteral()
+	}
+
+	p.optional(lexer.Semicolon)
+
+	return ast.NewNode(
+		ast.NewExportDeclaration(exportClause, moduleSpecifier),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	).AsNode()
 }
 
 func (p *Parser) parseDirective() *ast.Directive {

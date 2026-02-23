@@ -32,7 +32,10 @@ const (
 	NodeTypeImportClause
 	NodeTypeNamedImports
 	NodeTypeNamespaceImport
-	NodeTypeExportNamedDeclaration
+	NodeTypeExportDeclaration
+	NodeTypeExportAssignment
+	NodeTypeNamedExports
+	NodeTypeNamespaceExport
 	NodeTypeExportDefaultDeclaration
 	NodeTypeExportSpecifier
 	NodeTypeBinaryExpression
@@ -128,8 +131,12 @@ func (t NodeType) String() string {
 		return "NamedImports"
 	case NodeTypeNamespaceImport:
 		return "NamespaceImport"
-	case NodeTypeExportNamedDeclaration:
-		return "ExportNamedDeclaration"
+	case NodeTypeExportDeclaration:
+		return "ExportDeclaration"
+	case NodeTypeNamedExports:
+		return "NamedExports"
+	case NodeTypeNamespaceExport:
+		return "NamespaceExport"
 	case NodeTypeExportDefaultDeclaration:
 		return "ExportDefaultDeclaration"
 	case NodeTypeExportSpecifier:

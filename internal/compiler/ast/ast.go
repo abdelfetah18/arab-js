@@ -1000,40 +1000,113 @@ func (namespaceImport *NamespaceImport) ForEachChild(v Visitor) bool {
 	return visit(v, namespaceImport.Name)
 }
 
-type ExportNamedDeclaration struct {
+type ExportDeclaration struct {
 	NodeBase
-	Declaration *Node              `json:"declaration,omitempty"`
-	Specifiers  []*ExportSpecifier `json:"specifiers,omitempty"`
-	Source      *StringLiteral     `json:"source,omitempty"`
+	ExportClause    *Node          `json:"export_clause,omitempty"`
+	ModuleSpecifier *StringLiteral `json:"module_specifier,omitempty"`
 }
 
-func NewExportNamedDeclaration(declaration *Node, specifiers []*ExportSpecifier, source *StringLiteral) *ExportNamedDeclaration {
-	return &ExportNamedDeclaration{Declaration: declaration, Specifiers: specifiers, Source: source}
+func NewExportDeclaration(exportClause *Node, moduleSpecifier *StringLiteral) *ExportDeclaration {
+	return &ExportDeclaration{ExportClause: exportClause, ModuleSpecifier: moduleSpecifier}
 }
 
-func (exportNamedDeclaration *ExportNamedDeclaration) MarshalJSON() ([]byte, error) {
-	type Alias ExportNamedDeclaration
+func (exportDeclaration *ExportDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias ExportDeclaration
 	return json.Marshal(
 		wrapNode(
-			*exportNamedDeclaration.AsNode(),
-			(*Alias)(exportNamedDeclaration),
+			*exportDeclaration.AsNode(),
+			(*Alias)(exportDeclaration),
 		),
 	)
 }
 
-func (exportNamedDeclaration *ExportNamedDeclaration) NodeType() NodeType {
-	return NodeTypeExportNamedDeclaration
+func (exportDeclaration *ExportDeclaration) NodeType() NodeType {
+	return NodeTypeExportDeclaration
 }
 
-func (exportNamedDeclaration *ExportNamedDeclaration) ForEachChild(v Visitor) bool {
-	_specifiers := []*Node{}
-	for _, specifier := range exportNamedDeclaration.Specifiers {
-		_specifiers = append(_specifiers, specifier.AsNode())
-	}
+func (exportDeclaration *ExportDeclaration) ForEachChild(v Visitor) bool {
+	return visit(v, exportDeclaration.ExportClause) || (exportDeclaration.ModuleSpecifier != nil && visit(v, exportDeclaration.ModuleSpecifier.AsNode()))
+}
 
-	return visit(v, exportNamedDeclaration.Declaration) ||
-		visitNodes(v, _specifiers) ||
-		(exportNamedDeclaration.Source != nil && visit(v, exportNamedDeclaration.Source.AsNode()))
+type ExportAssignment struct {
+	NodeBase
+	Expression *Node `json:"expression,omitempty"`
+}
+
+func NewExportAssignment(expression *Node) *ExportAssignment {
+	return &ExportAssignment{Expression: expression}
+}
+
+func (exportAssignment *ExportAssignment) MarshalJSON() ([]byte, error) {
+	type Alias ExportAssignment
+	return json.Marshal(
+		wrapNode(
+			*exportAssignment.AsNode(),
+			(*Alias)(exportAssignment),
+		),
+	)
+}
+
+func (exportAssignment *ExportAssignment) NodeType() NodeType {
+	return NodeTypeExportAssignment
+}
+
+func (exportAssignment *ExportAssignment) ForEachChild(v Visitor) bool {
+	return visit(v, exportAssignment.Expression)
+}
+
+type NamedExports struct {
+	NodeBase
+	Elements []*Node `json:"elements,omitempty"`
+}
+
+func NewNamedExports(elements []*Node) *NamedExports {
+	return &NamedExports{Elements: elements}
+}
+
+func (namedExports *NamedExports) MarshalJSON() ([]byte, error) {
+	type Alias NamedExports
+	return json.Marshal(
+		wrapNode(
+			*namedExports.AsNode(),
+			(*Alias)(namedExports),
+		),
+	)
+}
+
+func (namedExports *NamedExports) NodeType() NodeType {
+	return NodeTypeNamedExports
+}
+
+func (namedExports *NamedExports) ForEachChild(v Visitor) bool {
+	return visitNodes(v, namedExports.Elements)
+}
+
+type NamespaceExport struct {
+	NodeBase
+	Name *Node `json:"name,omitempty"`
+}
+
+func NewNamespaceExport(name *Node) *NamespaceExport {
+	return &NamespaceExport{Name: name}
+}
+
+func (namespaceExport *NamespaceExport) MarshalJSON() ([]byte, error) {
+	type Alias NamespaceExport
+	return json.Marshal(
+		wrapNode(
+			*namespaceExport.AsNode(),
+			(*Alias)(namespaceExport),
+		),
+	)
+}
+
+func (namespaceExport *NamespaceExport) NodeType() NodeType {
+	return NodeTypeNamespaceExport
+}
+
+func (namespaceExport *NamespaceExport) ForEachChild(v Visitor) bool {
+	return visit(v, namespaceExport.Name)
 }
 
 type ExportDefaultDeclaration struct {
@@ -1065,12 +1138,15 @@ func (exportDefaultDeclaration *ExportDefaultDeclaration) ForEachChild(v Visitor
 
 type ExportSpecifier struct {
 	NodeBase
-	Local    *Identifier `json:"local,omitempty"`
-	Exported *Node       `json:"exported,omitempty"`
+	Name         *Node `json:"name,omitempty"`
+	PropertyName *Node `json:"property_name,omitempty"`
 }
 
-func NewExportSpecifier(local *Identifier, exported *Node) *ExportSpecifier {
-	return &ExportSpecifier{Local: local, Exported: exported}
+func NewExportSpecifier(name *Node, propertyName *Node) *ExportSpecifier {
+	return &ExportSpecifier{
+		Name:         name,
+		PropertyName: propertyName,
+	}
 }
 
 func (exportSpecifier *ExportSpecifier) MarshalJSON() ([]byte, error) {
@@ -1088,7 +1164,7 @@ func (exportSpecifier *ExportSpecifier) NodeType() NodeType {
 }
 
 func (exportSpecifier *ExportSpecifier) ForEachChild(v Visitor) bool {
-	return visit(v, exportSpecifier.Local.AsNode()) || visit(v, exportSpecifier.Exported)
+	return visit(v, exportSpecifier.PropertyName) || visit(v, exportSpecifier.Name)
 }
 
 type BinaryExpression struct {
