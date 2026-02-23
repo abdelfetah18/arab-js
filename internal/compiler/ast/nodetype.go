@@ -28,9 +28,10 @@ const (
 	NodeTypeFunctionExpression
 	NodeTypeMemberExpression
 	NodeTypeImportSpecifier
-	NodeTypeImportDefaultSpecifier
-	NodeTypeImportNamespaceSpecifier
 	NodeTypeImportDeclaration
+	NodeTypeImportClause
+	NodeTypeNamedImports
+	NodeTypeNamespaceImport
 	NodeTypeExportNamedDeclaration
 	NodeTypeExportDefaultDeclaration
 	NodeTypeExportSpecifier
@@ -119,12 +120,14 @@ func (t NodeType) String() string {
 		return "MemberExpression"
 	case NodeTypeImportSpecifier:
 		return "ImportSpecifier"
-	case NodeTypeImportDefaultSpecifier:
-		return "ImportDefaultSpecifier"
-	case NodeTypeImportNamespaceSpecifier:
-		return "ImportNamespaceSpecifier"
 	case NodeTypeImportDeclaration:
 		return "ImportDeclaration"
+	case NodeTypeImportClause:
+		return "ImportClause"
+	case NodeTypeNamedImports:
+		return "NamedImports"
+	case NodeTypeNamespaceImport:
+		return "NamespaceImport"
 	case NodeTypeExportNamedDeclaration:
 		return "ExportNamedDeclaration"
 	case NodeTypeExportDefaultDeclaration:

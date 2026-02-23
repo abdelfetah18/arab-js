@@ -64,35 +64,7 @@ func (emitter *Emitter) emitStatement(statement *ast.Node) {
 	case ast.NodeTypeForStatement:
 		emitter.emitForStatement(statement.AsForStatement())
 	case ast.NodeTypeImportDeclaration:
-		importDeclaration := statement.AsImportDeclaration()
-		emitter.Writer.Write("import ")
-		didEmitOpenBracker := false
-		for index, specifier := range importDeclaration.Specifiers {
-			switch specifier.Type {
-			case ast.NodeTypeImportDefaultSpecifier:
-				emitter.Writer.Write(specifier.AsImportDefaultSpecifier().Local.Name)
-			case ast.NodeTypeImportSpecifier:
-				if !didEmitOpenBracker {
-					emitter.Writer.Write("{ ")
-					didEmitOpenBracker = true
-				}
-				emitter.Writer.Write(specifier.AsImportSpecifier().Local.Name)
-			case ast.NodeTypeImportNamespaceSpecifier:
-				emitter.Writer.Writef("* as %s", specifier.AsImportNamespaceSpecifier().Local.Name)
-			}
-
-			if index < len(importDeclaration.Specifiers)-1 {
-				emitter.Writer.Write(", ")
-			}
-		}
-
-		if didEmitOpenBracker {
-			emitter.Writer.Write(" }")
-		}
-
-		emitter.Writer.Write(" from ")
-		emitter.Writer.Writef("\"%s\"", importDeclaration.Source.Value)
-		emitter.Writer.Write(";")
+		emitter.emitImportDeclaration(statement.AsImportDeclaration())
 	}
 }
 
@@ -363,4 +335,48 @@ func (emitter *Emitter) emitFunctionExpression(functionExpression *ast.FunctionE
 	}
 	emitter.emitParameters(functionExpression.Params)
 	emitter.emitBlockStatement(functionExpression.Body)
+}
+
+func (emitter *Emitter) emitImportDeclaration(importDeclaration *ast.ImportDeclaration) {
+	emitter.Writer.Write("import ")
+	emitter.emitImportClause(importDeclaration.ImportClause)
+	emitter.Writer.Write(" from ")
+	emitter.Writer.Writef("\"%s\"", importDeclaration.ModuleSpecifier.AsStringLiteral().Value)
+	emitter.Writer.Write(";")
+}
+
+func (emitter *Emitter) emitImportSpecifier(importSpecifier *ast.ImportSpecifier) {
+	if importSpecifier.PropertyName != nil {
+		emitter.emitIdentifier(importSpecifier.PropertyName.AsIdentifier())
+		emitter.Writer.Write(" as ")
+	}
+	emitter.emitIdentifier(importSpecifier.Name.AsIdentifier())
+}
+
+func (emitter *Emitter) emitImportClause(importClause *ast.ImportClause) {
+	if importClause.Name != nil {
+		emitter.emitIdentifier(importClause.Name.AsIdentifier())
+		if importClause.NamedBindings != nil {
+			emitter.Writer.Write(", ")
+		}
+	}
+
+	if importClause.NamedBindings != nil {
+		switch importClause.NamedBindings.Type {
+		case ast.NodeTypeNamedImports:
+			emitter.Writer.Write("{ ")
+			namedImports := importClause.NamedBindings.AsNamedImports()
+			for index, element := range namedImports.Elements {
+				emitter.emitImportSpecifier(element.AsImportSpecifier())
+				if index != (len(namedImports.Elements) - 1) {
+					emitter.Writer.Write(", ")
+				}
+			}
+			emitter.Writer.Write(" }")
+		case ast.NodeTypeNamespaceImport:
+			namespaceImport := importClause.NamedBindings.AsNamespaceImport()
+			emitter.Writer.Write("* as ")
+			emitter.emitIdentifier(namespaceImport.Name.AsIdentifier())
+		}
+	}
 }

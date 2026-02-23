@@ -183,12 +183,12 @@ func (node *Node) AsImportDeclaration() *ImportDeclaration {
 	return node.Data.(*ImportDeclaration)
 }
 
-func (node *Node) AsImportDefaultSpecifier() *ImportDefaultSpecifier {
-	return node.Data.(*ImportDefaultSpecifier)
+func (node *Node) AsNamedImports() *NamedImports {
+	return node.Data.(*NamedImports)
 }
 
-func (node *Node) AsImportNamespaceSpecifier() *ImportNamespaceSpecifier {
-	return node.Data.(*ImportNamespaceSpecifier)
+func (node *Node) AsNamespaceImport() *NamespaceImport {
+	return node.Data.(*NamespaceImport)
 }
 
 func (node *Node) AsImportSpecifier() *ImportSpecifier {
@@ -853,12 +853,15 @@ func (memberExpression *MemberExpression) PropertyName() string {
 
 type ImportSpecifier struct {
 	NodeBase
-	Local    *Identifier `json:"local,omitempty"`
-	Imported *Node       `json:"imported,omitempty"`
+	Name         *Node `json:"name,omitempty"`
+	PropertyName *Node `json:"property_name,omitempty"`
 }
 
-func NewImportSpecifier(local *Identifier, imported *Node) *ImportSpecifier {
-	return &ImportSpecifier{Local: local, Imported: imported}
+func NewImportSpecifier(name *Node, propertyName *Node) *ImportSpecifier {
+	return &ImportSpecifier{
+		Name:         name,
+		PropertyName: propertyName,
+	}
 }
 
 func (importSpecifier *ImportSpecifier) MarshalJSON() ([]byte, error) {
@@ -876,71 +879,20 @@ func (importSpecifier *ImportSpecifier) NodeType() NodeType {
 }
 
 func (importSpecifier *ImportSpecifier) ForEachChild(v Visitor) bool {
-	return visit(v, importSpecifier.Local.AsNode()) || visit(v, importSpecifier.Imported)
-}
-
-type ImportDefaultSpecifier struct {
-	NodeBase
-	Local *Identifier `json:"local,omitempty"`
-}
-
-func NewImportDefaultSpecifier(local *Identifier) *ImportDefaultSpecifier {
-	return &ImportDefaultSpecifier{Local: local}
-}
-
-func (importDefaultSpecifier *ImportDefaultSpecifier) MarshalJSON() ([]byte, error) {
-	type Alias ImportDefaultSpecifier
-	return json.Marshal(
-		wrapNode(
-			*importDefaultSpecifier.AsNode(),
-			(*Alias)(importDefaultSpecifier),
-		),
-	)
-}
-
-func (importDefaultSpecifier *ImportDefaultSpecifier) NodeType() NodeType {
-	return NodeTypeImportDefaultSpecifier
-}
-
-func (importDefaultSpecifier *ImportDefaultSpecifier) ForEachChild(v Visitor) bool {
-	return visit(v, importDefaultSpecifier.Local.AsNode())
-}
-
-type ImportNamespaceSpecifier struct {
-	NodeBase
-	Local *Identifier `json:"local,omitempty"`
-}
-
-func NewImportNamespaceSpecifier(local *Identifier) *ImportNamespaceSpecifier {
-	return &ImportNamespaceSpecifier{Local: local}
-}
-
-func (importNamespaceSpecifier *ImportNamespaceSpecifier) MarshalJSON() ([]byte, error) {
-	type Alias ImportNamespaceSpecifier
-	return json.Marshal(
-		wrapNode(
-			*importNamespaceSpecifier.AsNode(),
-			(*Alias)(importNamespaceSpecifier),
-		),
-	)
-}
-
-func (importNamespaceSpecifier *ImportNamespaceSpecifier) NodeType() NodeType {
-	return NodeTypeImportNamespaceSpecifier
-}
-
-func (importNamespaceSpecifier *ImportNamespaceSpecifier) ForEachChild(v Visitor) bool {
-	return visit(v, importNamespaceSpecifier.Local.AsNode())
+	return visit(v, importSpecifier.Name) || visit(v, importSpecifier.PropertyName)
 }
 
 type ImportDeclaration struct {
 	NodeBase
-	Specifiers []*Node        `json:"specifiers,omitempty"`
-	Source     *StringLiteral `json:"source,omitempty"`
+	ImportClause    *ImportClause  `json:"import_clause,omitempty"`
+	ModuleSpecifier *StringLiteral `json:"module_specifier,omitempty"`
 }
 
-func NewImportDeclaration(specifiers []*Node, source *StringLiteral) *ImportDeclaration {
-	return &ImportDeclaration{Specifiers: specifiers, Source: source}
+func NewImportDeclaration(importClause *ImportClause, moduleSpecifier *StringLiteral) *ImportDeclaration {
+	return &ImportDeclaration{
+		ImportClause:    importClause,
+		ModuleSpecifier: moduleSpecifier,
+	}
 }
 
 func (importDeclaration *ImportDeclaration) MarshalJSON() ([]byte, error) {
@@ -958,7 +910,94 @@ func (importDeclaration *ImportDeclaration) NodeType() NodeType {
 }
 
 func (importDeclaration *ImportDeclaration) ForEachChild(v Visitor) bool {
-	return visitNodes(v, importDeclaration.Specifiers) || visit(v, importDeclaration.Source.AsNode())
+	return visit(v, importDeclaration.ImportClause.AsNode()) || visit(v, importDeclaration.ModuleSpecifier.AsNode())
+}
+
+type ImportClause struct {
+	NodeBase
+	Name          *Node `json:"name,omitempty"`
+	NamedBindings *Node `json:"named_bindings,omitempty"`
+}
+
+func NewImportClause(name *Node, namedBindings *Node) *ImportClause {
+	return &ImportClause{
+		Name:          name,
+		NamedBindings: namedBindings,
+	}
+}
+
+func (importClause *ImportClause) MarshalJSON() ([]byte, error) {
+	type Alias ImportClause
+	return json.Marshal(
+		wrapNode(
+			*importClause.AsNode(),
+			(*Alias)(importClause),
+		),
+	)
+}
+
+func (importClause *ImportClause) NodeType() NodeType {
+	return NodeTypeImportClause
+}
+
+func (importClause *ImportClause) ForEachChild(v Visitor) bool {
+	return visit(v, importClause.Name) || visit(v, importClause.NamedBindings)
+}
+
+type NamedImports struct {
+	NodeBase
+	Elements []*Node `json:"elements,omitempty"`
+}
+
+func NewNamedImports(elements []*Node) *NamedImports {
+	return &NamedImports{
+		Elements: elements,
+	}
+}
+
+func (namedImports *NamedImports) MarshalJSON() ([]byte, error) {
+	type Alias NamedImports
+	return json.Marshal(
+		wrapNode(
+			*namedImports.AsNode(),
+			(*Alias)(namedImports),
+		),
+	)
+}
+
+func (namedImports *NamedImports) NodeType() NodeType {
+	return NodeTypeNamedImports
+}
+
+func (namedImports *NamedImports) ForEachChild(v Visitor) bool {
+	return visitNodes(v, namedImports.Elements)
+}
+
+type NamespaceImport struct {
+	NodeBase
+	Name *Node `json:"name,omitempty"`
+}
+
+func NewNamespaceImport(name *Node) *NamespaceImport {
+	return &NamespaceImport{Name: name}
+}
+
+func (namespaceImport *NamespaceImport) MarshalJSON() ([]byte, error) {
+	type Alias NamespaceImport
+	return json.Marshal(
+		wrapNode(
+			*namespaceImport.AsNode(),
+			(*Alias)(namespaceImport),
+		),
+	)
+}
+
+func (namespaceImport *NamespaceImport) NodeType() NodeType {
+	return NodeTypeNamespaceImport
+}
+
+func (namespaceImport *NamespaceImport) ForEachChild(v Visitor) bool {
+	return visit(v, namespaceImport.Name)
 }
 
 type ExportNamedDeclaration struct {

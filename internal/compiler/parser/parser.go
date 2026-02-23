@@ -178,53 +178,52 @@ func (p *Parser) parseStatement() *ast.Node {
 	return nil
 }
 
+func (p *Parser) parseImportClause() *ast.ImportClause {
+	p.markStartPosition()
+
+	var name *ast.Node
+	var namedBindings *ast.Node
+
+	parseNamedBindings := func() *ast.Node {
+		switch p.lexer.Peek().Type {
+		case lexer.LeftCurlyBrace:
+			return p.parseNamedImports().AsNode()
+		case lexer.Star:
+			return p.parseNamespaceImport().AsNode()
+		}
+		return nil
+	}
+
+	switch p.lexer.Peek().Type {
+	case lexer.Identifier:
+		name = p.parseIdentifier(false).AsNode()
+		if p.optional(lexer.Comma) {
+			namedBindings = parseNamedBindings()
+		}
+	default:
+		namedBindings = parseNamedBindings()
+	}
+
+	return ast.NewNode(
+		ast.NewImportClause(name, namedBindings),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
 func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordImport)
-
-	importSpecifiers := []*ast.Node{}
-
-	token := p.lexer.Peek()
-	switch token.Type {
-	case lexer.Identifier:
-		identifier := p.parseIdentifier(false)
-		importSpecifiers = append(importSpecifiers,
-			ast.NewNode(
-				ast.NewImportDefaultSpecifier(identifier),
-				identifier.Location,
-			).AsNode(),
-		)
-
-		if p.optional(lexer.Comma) {
-			token = p.lexer.Peek()
-			switch token.Type {
-			case lexer.Star:
-				importSpecifiers = append(importSpecifiers, p.parseNameSpaceImport().AsNode())
-			case lexer.LeftCurlyBrace:
-				importSpecifiers = p.parseNamedImports(importSpecifiers)
-			}
-		}
-	case lexer.LeftCurlyBrace:
-		importSpecifiers = p.parseNamedImports(importSpecifiers)
-	case lexer.Star:
-		importSpecifiers = append(importSpecifiers, p.parseNameSpaceImport().AsNode())
-	default:
-		p.errorf(
-			ast.Location{
-				Pos: p.startPositions.Pop(),
-				End: p.getEndPosition(),
-			},
-			"unexpected token got '%s'\n", token.Value)
-		return nil
-	}
-
+	importClause := p.parseImportClause()
 	p.expectedKeyword(lexer.KeywordFrom)
 	stringLiteral := p.parseStringLiteral()
 	p.expected(lexer.Semicolon)
 
 	return ast.NewNode(
-		ast.NewImportDeclaration(importSpecifiers, stringLiteral),
+		ast.NewImportDeclaration(importClause, stringLiteral),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -232,16 +231,15 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 	)
 }
 
-func (p *Parser) parseNameSpaceImport() *ast.ImportNamespaceSpecifier {
+func (p *Parser) parseNamespaceImport() *ast.NamespaceImport {
 	p.markStartPosition()
 
 	p.expected(lexer.Star)
 	p.expectedKeyword(lexer.KeywordAs)
-
-	identifier := p.parseIdentifier(false)
+	name := p.parseIdentifier(false).AsNode()
 
 	return ast.NewNode(
-		ast.NewImportNamespaceSpecifier(identifier),
+		ast.NewNamespaceImport(name),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -249,33 +247,50 @@ func (p *Parser) parseNameSpaceImport() *ast.ImportNamespaceSpecifier {
 	)
 }
 
-func (p *Parser) parseNamedImports(importSpecifiers []*ast.Node) []*ast.Node {
+func (p *Parser) parseNamedImports() *ast.NamedImports {
+	p.markStartPosition()
+
 	p.expected(lexer.LeftCurlyBrace)
-	token := p.lexer.Peek()
-	for token.Type != lexer.EOF && token.Type != lexer.Invalid && token.Type != lexer.RightCurlyBrace {
-		identifier := p.parseIdentifier(false)
-		importSpecifiers = append(
-			importSpecifiers,
-			ast.NewNode(
-				ast.NewImportSpecifier(
-					identifier,
-					identifier.AsNode(),
-				),
-				identifier.Location,
-			).AsNode(),
-		)
 
-		token = p.lexer.Peek()
-		if token.Type != lexer.RightCurlyBrace {
-			p.expected(lexer.Comma)
-		}
+	importSpecifiers := []*ast.Node{}
 
-		token = p.lexer.Peek()
+	importSpecifiers = append(importSpecifiers, p.parseImportSpecifier().AsNode())
+	for p.optional(lexer.Comma) {
+		importSpecifiers = append(importSpecifiers, p.parseImportSpecifier().AsNode())
 	}
+
+	p.optional(lexer.Comma)
 
 	p.expected(lexer.RightCurlyBrace)
 
-	return importSpecifiers
+	return ast.NewNode(
+		ast.NewNamedImports(importSpecifiers),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseImportSpecifier() *ast.ImportSpecifier {
+	p.markStartPosition()
+
+	var name *ast.Node = nil
+	var propertyName *ast.Node = nil
+
+	name = p.parseIdentifier(false).AsNode()
+	if p.optionalKeyword(lexer.KeywordAs) {
+		propertyName = name
+		name = p.parseIdentifier(false).AsNode()
+	}
+
+	return ast.NewNode(
+		ast.NewImportSpecifier(name, propertyName),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
 }
 
 func (p *Parser) parseExportNamedDeclaration() *ast.ExportNamedDeclaration {
