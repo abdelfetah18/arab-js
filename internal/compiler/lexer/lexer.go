@@ -726,3 +726,35 @@ func NewLexerAtPosition(input string, position int) *Lexer {
 	lexer.currentToken = lexer.nextToken()
 	return lexer
 }
+
+func IsReservedKeyword(token Token) bool {
+	// ReservedWord :: one of
+	// 		await break case catch class const continue debugger default delete
+	// 		do else enum export extends false finally for function if import in
+	// 		instanceof new null return super switch this throw true try typeof
+	// 		var void while with yield
+	if token.Type == KeywordToken {
+		switch token.Value {
+		case
+			KeywordConst,
+			KeywordFunction,
+			KeywordNull,
+			KeywordTrue,
+			KeywordFalse,
+			KeywordIf,
+			KeywordElse,
+			KeywordImport,
+			KeywordExport,
+			KeywordDefault,
+			KeywordReturn,
+			KeywordFor,
+			KeywordThis,
+			KeywordExtends:
+			return true
+		default:
+			return false
+		}
+	}
+
+	return false
+}

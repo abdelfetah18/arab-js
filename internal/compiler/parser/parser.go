@@ -92,7 +92,13 @@ func (p *Parser) parseStatement() *ast.Node {
 		case lexer.KeywordIf:
 			return p.parseIfStatement().AsNode()
 		case lexer.KeywordLet, lexer.KeywordConst:
-			return p.parseVariableStatement(nil).AsNode()
+			state := p.mark()
+			p.lexer.Next()
+			if p.isIdentifier() || p.lexer.Peek().Type == lexer.LeftCurlyBrace || p.lexer.Peek().Type == lexer.LeftSquareBracket {
+				p.rewind(state)
+				return p.parseVariableStatement(nil).AsNode()
+			}
+			p.rewind(state)
 		case lexer.KeywordFunction:
 			return p.parseFunctionDeclaration(nil).AsNode()
 		case lexer.KeywordImport:
@@ -194,13 +200,12 @@ func (p *Parser) parseImportClause() *ast.ImportClause {
 		return nil
 	}
 
-	switch p.lexer.Peek().Type {
-	case lexer.Identifier:
+	if p.isIdentifier() {
 		name = p.parseIdentifier(false).AsNode()
 		if p.optional(lexer.Comma) {
 			namedBindings = parseNamedBindings()
 		}
-	default:
+	} else {
 		namedBindings = parseNamedBindings()
 	}
 
@@ -419,7 +424,7 @@ func (p *Parser) isExpression() bool {
 		return false
 	case lexer.KeywordToken:
 		switch token.Value {
-		case lexer.KeywordFunction, lexer.KeywordLet, lexer.KeywordConst:
+		case lexer.KeywordFunction:
 			return false
 		default:
 			return true
@@ -446,18 +451,16 @@ func (p *Parser) isPrimaryExpression() bool {
 		case lexer.KeywordNull, lexer.KeywordTrue, lexer.KeywordFalse, lexer.KeywordThis, lexer.KeywordFunction:
 			return true
 		default:
-			return false
+			return p.isIdentifier()
 		}
 	default:
-		return false
+		return p.isIdentifier()
 	}
 }
 
 func (p *Parser) parsePrimaryExpression() *ast.Node {
 	token := p.lexer.Peek()
 	switch token.Type {
-	case lexer.Identifier:
-		return p.parseIdentifier(false).AsNode()
 	case lexer.KeywordToken:
 		switch token.Value {
 		case lexer.KeywordNull:
@@ -468,6 +471,10 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 			return p.parseThisExpression().AsNode()
 		case lexer.KeywordFunction:
 			return p.parseFunctionExpression().AsNode()
+		default:
+			if p.isIdentifier() {
+				return p.parseIdentifier(false).AsNode()
+			}
 		}
 	case lexer.Decimal:
 		return p.parseDecimalLiteral().AsNode()
@@ -485,6 +492,10 @@ func (p *Parser) parsePrimaryExpression() *ast.Node {
 		return expression
 	case lexer.Slash:
 		return p.parseRegularExpressionLiteral().AsNode()
+	default:
+		if p.isIdentifier() {
+			return p.parseIdentifier(false).AsNode()
+		}
 	}
 
 	p.errorf(
@@ -636,12 +647,14 @@ func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 
 	var name *ast.Node = nil
 	switch p.lexer.Peek().Type {
-	case lexer.Identifier:
-		name = p.parseIdentifier(true).AsNode()
 	case lexer.LeftSquareBracket:
 		name = p.parseArrayBindingPattern().AsNode()
 	case lexer.LeftCurlyBrace:
 		name = p.parseObjectBindingPattern().AsNode()
+	default:
+		if p.isIdentifier() {
+			name = p.parseIdentifier(true).AsNode()
+		}
 	}
 
 	var initializer *ast.Initializer = nil
@@ -1078,7 +1091,7 @@ func (p *Parser) tryParseArrowFunction() *ast.ArrowFunction {
 }
 
 func (p *Parser) parseArrowParametes() []*ast.Node {
-	if p.lexer.Peek().Type == lexer.Identifier {
+	if p.isIdentifier() {
 		return []*ast.Node{p.parseIdentifier(false).AsNode()}
 	}
 
@@ -1138,9 +1151,10 @@ func (p *Parser) parseIdentifierOrPattern() *ast.Node {
 		return p.parseObjectBindingPattern().AsNode()
 	case lexer.LeftSquareBracket:
 		return p.parseArrayBindingPattern().AsNode()
-	case lexer.Identifier:
-		return p.parseIdentifier(false).AsNode()
 	default:
+		if p.isIdentifier() {
+			return p.parseIdentifier(false).AsNode()
+		}
 		return nil
 	}
 }
@@ -1185,8 +1199,6 @@ func (p *Parser) parsePropertyName() *ast.Node {
 	var name *ast.Node = nil
 
 	switch p.lexer.Peek().Type {
-	case lexer.Identifier:
-		name = p.parseIdentifier(false).AsNode()
 	case lexer.DoubleQuoteString, lexer.SingleQuoteString:
 		name = p.parseStringLiteral().AsNode()
 	case lexer.Decimal:
@@ -1199,6 +1211,10 @@ func (p *Parser) parsePropertyName() *ast.Node {
 			assignmentExpression.Location,
 		).AsNode()
 		p.expected(lexer.RightSquareBracket)
+	default:
+		if p.isIdentifier() {
+			name = p.parseIdentifier(false).AsNode()
+		}
 	}
 
 	return name
@@ -1401,17 +1417,19 @@ func (p *Parser) parsePropertySignature() *ast.PropertySignature {
 	}
 
 	switch p.lexer.Peek().Type {
-	case lexer.Identifier:
-		identifier := p.parseIdentifier(false)
-		if hasPrecedingOriginalNameDirective {
-			identifier.OriginalName = &originalNameDirectiveValue
-		}
-
-		key = identifier.AsNode()
 	case lexer.DoubleQuoteString, lexer.SingleQuoteString:
 		key = p.parseStringLiteral().AsNode()
 	case lexer.Decimal:
 		key = p.parseDecimalLiteral().AsNode()
+	default:
+		if p.isIdentifier() {
+			identifier := p.parseIdentifier(false)
+			if hasPrecedingOriginalNameDirective {
+				identifier.OriginalName = &originalNameDirectiveValue
+			}
+
+			key = identifier.AsNode()
+		}
 	}
 
 	var typeAnnotation *ast.TypeAnnotation = nil
@@ -1544,13 +1562,15 @@ func (p *Parser) parseTypeLiteral() *ast.TypeLiteral {
 			modifierList = ast.NewModifierList(ast.ModifierFlagsReadonly)
 		}
 		switch token.Type {
-		case lexer.Identifier:
-			key = p.parseIdentifier(false).AsNode()
 		case lexer.DoubleQuoteString, lexer.SingleQuoteString:
 			key = p.parseStringLiteral().AsNode()
 		case lexer.Decimal:
 			key = p.parseDecimalLiteral().AsNode()
 		default:
+			if p.isIdentifier() {
+				key = p.parseIdentifier(false).AsNode()
+				break
+			}
 			p.errorf(
 				ast.Location{
 					Pos: p.startPositions.Pop(),
@@ -1702,11 +1722,16 @@ func (p *Parser) parseIdentifierName() *ast.Identifier {
 	)
 }
 
+func (p *Parser) isIdentifier() bool {
+	return p.lexer.Peek().Type == lexer.Identifier ||
+		(p.lexer.Peek().Type == lexer.KeywordToken && !lexer.IsReservedKeyword(p.lexer.Peek()))
+}
+
 func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 	p.markStartPosition()
 
 	identifierName := p.lexer.Peek().Value
-	if !p.expected(lexer.Identifier) {
+	if !p.isIdentifier() {
 		pos := uint(p.lexer.BeforeWhitespacePosition())
 		p.startPositions.Pop()
 		return ast.NewNode(
@@ -1717,6 +1742,7 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 			},
 		)
 	}
+	p.lexer.Next()
 
 	optional := p.optional(lexer.Question)
 	var typeAnnotation *ast.TypeAnnotation = nil
@@ -2298,7 +2324,7 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 	p.expectedKeyword(lexer.KeywordFunction)
 
 	var identifier *ast.Identifier = nil
-	if p.lexer.Peek().Type == lexer.Identifier {
+	if p.isIdentifier() {
 		identifier = p.parseIdentifier(false)
 	}
 
