@@ -729,6 +729,7 @@ type FunctionDeclaration struct {
 	Params          []*Node                    `json:"params,omitempty"`
 	Body            *BlockStatement            `json:"body,omitempty"`
 	TypeAnnotation  *TypeAnnotation            `json:"type_annotation,omitempty"`
+	Generator       bool                       `json:"generator,omitempty"`
 }
 
 func NewFunctionDeclaration(
@@ -738,6 +739,7 @@ func NewFunctionDeclaration(
 	body *BlockStatement,
 	typeAnnotation *TypeAnnotation,
 	modifiers *ModifierList,
+	generator bool,
 ) *FunctionDeclaration {
 	return &FunctionDeclaration{
 		ID:             id,
@@ -748,6 +750,7 @@ func NewFunctionDeclaration(
 		ModifiersBase: ModifiersBase{
 			modifiers: modifiers,
 		},
+		Generator: generator,
 	}
 }
 

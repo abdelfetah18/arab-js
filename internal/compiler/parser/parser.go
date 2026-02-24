@@ -666,6 +666,7 @@ func (p *Parser) parseFunctionDeclaration(modifierList *ast.ModifierList) *ast.F
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordFunction)
+	generator := p.optional(lexer.Star)
 	identifier := p.parseIdentifier(false)
 	var typeParameters *ast.TypeParametersDeclaration = nil
 	if p.lexer.Peek().Type == lexer.LeftArrow {
@@ -685,7 +686,7 @@ func (p *Parser) parseFunctionDeclaration(modifierList *ast.ModifierList) *ast.F
 	}
 
 	return ast.NewNode(
-		ast.NewFunctionDeclaration(identifier, typeParameters, params, body, typeAnnotation, modifierList),
+		ast.NewFunctionDeclaration(identifier, typeParameters, params, body, typeAnnotation, modifierList, generator),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
