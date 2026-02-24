@@ -1081,8 +1081,8 @@ func (p *Parser) tryParseParenthesizedArrowFunction() *ast.ArrowFunction {
 }
 
 func (p *Parser) tryParseArrowFunction() *ast.ArrowFunction {
-	p.markStartPosition()
 	state := p.mark()
+	p.markStartPosition()
 
 	params := p.parseArrowParametes()
 	if !p.expected(lexer.EqualRightArrow) {
@@ -1320,11 +1320,11 @@ func (p *Parser) parseAssignmentExpression() *ast.Node {
 		if parenthesizedArrowFunction != nil {
 			return parenthesizedArrowFunction.AsNode()
 		}
+	}
 
-		arrowFunctionExpression := p.tryParseArrowFunction()
-		if arrowFunctionExpression != nil {
-			return arrowFunctionExpression.AsNode()
-		}
+	arrowFunctionExpression := p.tryParseArrowFunction()
+	if arrowFunctionExpression != nil {
+		return arrowFunctionExpression.AsNode()
 	}
 
 	node := p.parseConditionalExpression()
