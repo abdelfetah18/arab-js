@@ -1940,6 +1940,14 @@ func (p *Parser) parseObjectPropertyOrMethod() *ast.Node {
 		key = p.parseStringLiteral().AsNode()
 	case lexer.Decimal:
 		key = p.parseDecimalLiteral().AsNode()
+	case lexer.LeftSquareBracket:
+		p.expected(lexer.LeftSquareBracket)
+		assignmentExpression := p.parseAssignmentExpression()
+		key = ast.NewNode(
+			ast.NewComputedProperty(assignmentExpression.AsNode()),
+			assignmentExpression.Location,
+		).AsNode()
+		p.expected(lexer.RightSquareBracket)
 	default:
 		generator := p.optional(lexer.Star)
 		if !p.isIdentifierName() {
