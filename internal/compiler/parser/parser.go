@@ -48,6 +48,7 @@ func (p *Parser) Parse() *ast.SourceFile {
 	statements := []*ast.Node{}
 	for p.lexer.Peek().Type != lexer.EOF && p.lexer.Peek().Type != lexer.Invalid {
 		statement := p.parseStatement()
+		p.optional(lexer.Semicolon)
 		statements = append(statements, statement)
 	}
 
@@ -76,6 +77,28 @@ func (p *Parser) parseIfStatement() *ast.IfStatement {
 
 	return ast.NewNode(
 		ast.NewIfStatement(testExpression, consequentStatement, nil),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
+func (p *Parser) parseLabelledStatement() *ast.LabelledStatement {
+	p.markStartPosition()
+
+	label := p.parseIdentifier(false).AsNode()
+	p.expected(lexer.Colon)
+	var statement *ast.Node = nil
+	if p.lexer.Peek().Type == lexer.KeywordToken && p.lexer.Peek().Value == lexer.KeywordFunction {
+		// FIXME: Implement parseModifiers method
+		statement = p.parseFunctionDeclaration(&ast.ModifierList{}).AsNode()
+	} else {
+		statement = p.parseStatement()
+	}
+
+	return ast.NewNode(
+		ast.NewLabelledStatement(label, statement),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -149,15 +172,12 @@ func (p *Parser) parseStatement() *ast.Node {
 					return moduleDeclaration.AsNode()
 				}
 			}
-
-			p.errorf(
-				ast.Location{
-					Pos: p.startPositions.Pop(),
-					End: p.getEndPosition(),
-				},
-				"Expected a declare based declaration but got '%s'\n", p.lexer.Peek().Value)
-			return nil
 		}
+	}
+
+	if p.isIdentifier() && p.lookAhead(lexer.Colon) {
+		labelledStatement := p.parseLabelledStatement()
+		return labelledStatement.AsNode()
 	}
 
 	if p.isExpression() {
@@ -404,6 +424,7 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	statements := []*ast.Node{}
 	for p.lexer.Peek().Type != lexer.EOF && p.lexer.Peek().Type != lexer.Invalid && p.lexer.Peek().Type != lexer.RightCurlyBrace {
 		statements = append(statements, p.parseStatement())
+		p.optional(lexer.Semicolon)
 	}
 
 	p.expected(lexer.RightCurlyBrace)
@@ -2435,6 +2456,20 @@ func (p *Parser) optionalTypeKeyword(typeKeyword lexer.TypeKeyword) bool {
 		return true
 	}
 	return false
+}
+
+func (p *Parser) lookAhead(tokenType lexer.TokenType) bool {
+	return p.lexer.LookAhead().Type == tokenType
+}
+
+func (p *Parser) lookAheadKeyword(keyword lexer.Keyword) bool {
+	token := p.lexer.LookAhead()
+	return token.Type == lexer.KeywordToken && token.Value == keyword
+}
+
+func (p *Parser) lookAheadTypeKeyword(typeKeyword lexer.TypeKeyword) bool {
+	token := p.lexer.LookAhead()
+	return token.Type == lexer.Identifier && token.Value == typeKeyword
 }
 
 func (p *Parser) markStartPosition() {

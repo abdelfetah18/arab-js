@@ -20,6 +20,7 @@ const (
 	NodeTypeBlockStatement
 	NodeTypeReturnStatement
 	NodeTypeForStatement
+	NodeTypeLabelledStatement
 	NodeTypeUpdateExpression
 	NodeTypeAssignmentExpression
 	NodeTypeFunctionDeclaration
@@ -219,6 +220,8 @@ func (t NodeType) String() string {
 		return "ComputedProperty"
 	case NodeTypeShorthandPropertyAssignment:
 		return "ShorthandPropertyAssignment"
+	case NodeTypeLabelledStatement:
+		return "LabelledStatement"
 	default:
 		return "Unknown"
 	}

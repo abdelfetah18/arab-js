@@ -2530,3 +2530,34 @@ func (variableStatement *VariableStatement) NodeType() NodeType {
 func (variableStatement *VariableStatement) ForEachChild(v Visitor) bool {
 	return visit(v, variableStatement.DeclarationList)
 }
+
+type LabelledStatement struct {
+	NodeBase
+	Label     *Node `json:"label,omitempty"`
+	Statement *Node `json:"statement,omitempty"`
+}
+
+func NewLabelledStatement(label *Node, statement *Node) *LabelledStatement {
+	return &LabelledStatement{
+		Label:     label,
+		Statement: statement,
+	}
+}
+
+func (labelledStatement *LabelledStatement) MarshalJSON() ([]byte, error) {
+	type Alias LabelledStatement
+	return json.Marshal(
+		wrapNode(
+			*labelledStatement.AsNode(),
+			(*Alias)(labelledStatement),
+		),
+	)
+}
+
+func (labelledStatement *LabelledStatement) NodeType() NodeType {
+	return NodeTypeLabelledStatement
+}
+
+func (labelledStatement *LabelledStatement) ForEachChild(v Visitor) bool {
+	return visit(v, labelledStatement.Label) || visit(v, labelledStatement.Statement)
+}

@@ -530,6 +530,13 @@ func (l *Lexer) lexDecimalLiteral() *Token {
 	return nil
 }
 
+func (l *Lexer) LookAhead() Token {
+	state := l.Mark()
+	token := l.Next()
+	l.Rewind(state)
+	return token
+}
+
 func (l *Lexer) Peek() Token {
 	return l.currentToken
 }
