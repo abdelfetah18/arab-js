@@ -1227,13 +1227,38 @@ func (p *Parser) parseObjectBindingPattern() *ast.ObjectBindingPattern {
 	)
 }
 
+func (p *Parser) parseArrayBindingElement() *ast.BindingElement {
+	p.markStartPosition()
+
+	rest := p.optional(lexer.TripleDots)
+	name := p.parseIdentifierOrPattern()
+
+	var initializer *ast.Initializer = nil
+	if p.lexer.Peek().Type == lexer.Equal {
+		p.expected(lexer.Equal)
+		assignmentExpression := p.parseAssignmentExpression()
+		initializer = ast.NewNode(
+			ast.NewInitializer(assignmentExpression),
+			assignmentExpression.Location,
+		)
+	}
+
+	return ast.NewNode(
+		ast.NewBindingElement(name, nil, rest, nil, initializer),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: p.getEndPosition(),
+		},
+	)
+}
+
 func (p *Parser) parseArrayBindingPattern() *ast.ArrayBindingPattern {
 	p.markStartPosition()
 	elements := []*ast.Node{}
 	p.expected(lexer.LeftSquareBracket)
 	for {
 		p.optional(lexer.Comma)
-		bindingElement := p.parseIdentifierOrPattern()
+		bindingElement := p.parseArrayBindingElement()
 		if bindingElement != nil {
 			elements = append(elements, bindingElement.AsNode())
 		}
