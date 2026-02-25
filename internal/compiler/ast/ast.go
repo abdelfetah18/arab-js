@@ -908,7 +908,8 @@ func (importDeclaration *ImportDeclaration) NodeType() NodeType {
 }
 
 func (importDeclaration *ImportDeclaration) ForEachChild(v Visitor) bool {
-	return visit(v, importDeclaration.ImportClause.AsNode()) || visit(v, importDeclaration.ModuleSpecifier.AsNode())
+	return (importDeclaration.ImportClause != nil && visit(v, importDeclaration.ImportClause.AsNode())) ||
+		visit(v, importDeclaration.ModuleSpecifier.AsNode())
 }
 
 type ImportClause struct {

@@ -242,10 +242,15 @@ func (p *Parser) parseImportDeclaration() *ast.ImportDeclaration {
 	p.markStartPosition()
 
 	p.expectedKeyword(lexer.KeywordImport)
-	importClause := p.parseImportClause()
-	p.expectedKeyword(lexer.KeywordFrom)
+
+	var importClause *ast.ImportClause = nil
+	if p.lexer.Peek().Type != lexer.SingleQuoteString && p.lexer.Peek().Type != lexer.DoubleQuoteString {
+		importClause = p.parseImportClause()
+		p.expectedKeyword(lexer.KeywordFrom)
+	}
+
 	stringLiteral := p.parseStringLiteral()
-	p.expected(lexer.Semicolon)
+	p.optional(lexer.Semicolon)
 
 	return ast.NewNode(
 		ast.NewImportDeclaration(importClause, stringLiteral),
