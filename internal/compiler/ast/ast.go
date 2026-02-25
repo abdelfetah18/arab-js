@@ -486,11 +486,10 @@ type Identifier struct {
 	Name           string          `json:"name,omitempty"`
 	OriginalName   *string         `json:"original_name,omitempty"`
 	TypeAnnotation *TypeAnnotation `json:"type_annotation,omitempty"`
-	Optional       bool            `json:"optional,omitempty"`
 }
 
-func NewIdentifier(name string, typeAnnotation *TypeAnnotation, optional bool) *Identifier {
-	return &Identifier{Name: name, TypeAnnotation: typeAnnotation, OriginalName: nil, Optional: optional}
+func NewIdentifier(name string, typeAnnotation *TypeAnnotation) *Identifier {
+	return &Identifier{Name: name, TypeAnnotation: typeAnnotation, OriginalName: nil}
 }
 
 func (identifier *Identifier) MarshalJSON() ([]byte, error) {
@@ -2560,4 +2559,37 @@ func (labelledStatement *LabelledStatement) NodeType() NodeType {
 
 func (labelledStatement *LabelledStatement) ForEachChild(v Visitor) bool {
 	return visit(v, labelledStatement.Label) || visit(v, labelledStatement.Statement)
+}
+
+type ConditionalExpression struct {
+	NodeBase
+	Condition *Node `json:"condition,omitempty"`
+	WhenTrue  *Node `json:"when_true,omitempty"`
+	WhenFalse *Node `json:"when_false,omitempty"`
+}
+
+func NewConditionalExpression(condition *Node, whenTrue *Node, whenFalse *Node) *ConditionalExpression {
+	return &ConditionalExpression{
+		Condition: condition,
+		WhenTrue:  whenTrue,
+		WhenFalse: whenFalse,
+	}
+}
+
+func (conditionalExpression *ConditionalExpression) MarshalJSON() ([]byte, error) {
+	type Alias ConditionalExpression
+	return json.Marshal(
+		wrapNode(
+			*conditionalExpression.AsNode(),
+			(*Alias)(conditionalExpression),
+		),
+	)
+}
+
+func (conditionalExpression *ConditionalExpression) NodeType() NodeType {
+	return NodeTypeConditionalExpression
+}
+
+func (conditionalExpression *ConditionalExpression) ForEachChild(v Visitor) bool {
+	return visit(v, conditionalExpression.Condition) || visit(v, conditionalExpression.WhenTrue) || visit(v, conditionalExpression.WhenFalse)
 }

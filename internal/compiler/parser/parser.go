@@ -1065,7 +1065,24 @@ func (p *Parser) parseShortCircuitExpression() *ast.Node {
 }
 
 func (p *Parser) parseConditionalExpression() *ast.Node {
-	return p.parseShortCircuitExpression()
+	p.markStartPosition()
+	shortCircuitExpression := p.parseShortCircuitExpression()
+	if p.optional(lexer.Question) {
+		whenTrue := p.parseAssignmentExpression()
+		p.expected(lexer.Colon)
+		whenFalse := p.parseAssignmentExpression()
+
+		return ast.NewNode(
+			ast.NewConditionalExpression(shortCircuitExpression, whenTrue, whenFalse),
+			ast.Location{
+				Pos: p.startPositions.Pop(),
+				End: p.getEndPosition(),
+			},
+		).AsNode()
+	}
+
+	p.startPositions.Pop()
+	return shortCircuitExpression
 }
 
 func (p *Parser) tryParseParenthesizedArrowFunction() *ast.ArrowFunction {
@@ -1724,7 +1741,7 @@ func (p *Parser) parseIdentifierName() *ast.Identifier {
 	if !p.isIdentifierName() {
 		pos := p.startPositions.Pop()
 		return ast.NewNode(
-			ast.NewIdentifier(identifierName, nil, false),
+			ast.NewIdentifier(identifierName, nil),
 			ast.Location{
 				Pos: pos,
 				End: pos,
@@ -1735,7 +1752,7 @@ func (p *Parser) parseIdentifierName() *ast.Identifier {
 	p.lexer.Next()
 
 	return ast.NewNode(
-		ast.NewIdentifier(identifierName, nil, false),
+		ast.NewIdentifier(identifierName, nil),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -1756,7 +1773,7 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 		pos := uint(p.lexer.BeforeWhitespacePosition())
 		p.startPositions.Pop()
 		return ast.NewNode(
-			ast.NewIdentifier(identifierName, nil, false),
+			ast.NewIdentifier(identifierName, nil),
 			ast.Location{
 				Pos: pos,
 				End: pos,
@@ -1765,14 +1782,13 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 	}
 	p.lexer.Next()
 
-	optional := p.optional(lexer.Question)
 	var typeAnnotation *ast.TypeAnnotation = nil
 	if doParseTypeAnnotation && p.optional(lexer.Colon) {
 		typeAnnotation = p.parseTypeAnnotation()
 	}
 
 	return ast.NewNode(
-		ast.NewIdentifier(identifierName, typeAnnotation, optional),
+		ast.NewIdentifier(identifierName, typeAnnotation),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
