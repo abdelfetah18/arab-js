@@ -626,7 +626,10 @@ func (l *Lexer) nextToken() Token {
 	if tokenType, ok := OneCharTokens[currentOneChar]; ok {
 		pos := l.position
 		l.increasePosition(1)
-		return Token{Type: tokenType, Value: currentOneChar, Position: pos}
+
+		if !(tokenType == Dot && l.LookAhead().Type == Decimal) {
+			return Token{Type: tokenType, Value: currentOneChar, Position: pos}
+		}
 	}
 
 	if l.current() == `"` {
