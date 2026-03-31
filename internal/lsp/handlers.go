@@ -1,6 +1,7 @@
 package lsp
 
 import (
+	"arab_js/internal/artspath"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/project"
@@ -69,10 +70,7 @@ func (h *Handlers) flushChanges() {
 			program := h.Project.Program
 
 			projectPath, _ := findProjectPath(getPath(fileChange.uri))
-			projectFiles, _ := listFilesWithExt(projectPath, ".كود")
-			if len(projectFiles) == 0 {
-				projectFiles, _ = listFilesWithExt(projectPath, ".arts")
-			}
+			projectFiles, _ := listProjectFiles(projectPath)
 
 			program.Diagnostics = []*ast.Diagnostic{}
 			program.ParseSourceFiles(projectFiles)
@@ -355,14 +353,14 @@ func forEachAncestorPath(
 	}
 }
 
-func listFilesWithExt(root, ext string) ([]string, error) {
+func listProjectFiles(root string) ([]string, error) {
 	var files []string
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err // stop if there's a problem accessing the path
 		}
-		if !d.IsDir() && filepath.Ext(path) == ext {
+		if !d.IsDir() && artspath.ExtensionIsArTs(filepath.Ext(path)) {
 			files = append(files, path)
 		}
 		return nil

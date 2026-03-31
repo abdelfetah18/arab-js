@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"arab_js/internal/artspath"
 	"arab_js/internal/compiler"
 	"arab_js/internal/package_definition"
 	"fmt"
@@ -12,14 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func ListFilesWithExt(root, ext string) ([]string, error) {
+func ListProjectFiles(root string) ([]string, error) {
 	var files []string
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err // stop if there's a problem accessing the path
 		}
-		if !d.IsDir() && filepath.Ext(path) == ext {
+		if !d.IsDir() && artspath.ExtensionIsArTs(filepath.Ext(path)) {
 			files = append(files, path)
 		}
 		return nil
@@ -56,7 +57,7 @@ func buildProject(projectPath string, outputPath string) error {
 		return err
 	}
 
-	files, err := ListFilesWithExt(projectPath, ".كود")
+	files, err := ListProjectFiles(projectPath)
 	if err != nil {
 		return err
 	}
