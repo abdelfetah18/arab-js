@@ -602,14 +602,6 @@ func (l *Lexer) nextToken() Token {
 		}
 	}
 
-	for _, keyword := range Keywords {
-		if l.match(string(keyword)) {
-			pos := l.position
-			l.increasePosition(len(keyword))
-			return Token{Type: KeywordToken, Value: string(keyword), Position: pos}
-		}
-	}
-
 	currentThreeChars := l.currentThreeChars()
 	if tokenType, ok := ThreeCharTokens[currentThreeChars]; ok {
 		pos := l.position
@@ -680,6 +672,12 @@ func (l *Lexer) nextToken() Token {
 	}
 
 	if len(identifier) > 0 {
+		for _, keyword := range Keywords {
+			if identifier == keyword {
+				return Token{Type: KeywordToken, Value: string(keyword), Position: l.position - len(identifier)}
+			}
+		}
+
 		return Token{Type: Identifier, Value: identifier, Position: l.position - len(identifier)}
 	}
 
