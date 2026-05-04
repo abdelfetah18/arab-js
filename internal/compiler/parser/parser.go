@@ -868,7 +868,7 @@ func (p *Parser) parseUnaryExpression() *ast.Node {
 	p.markStartPosition()
 
 	isPrefixUnaryExpression := func() (string, bool) {
-		return p.lexer.Peek().Value, (p.optional(lexer.Plus) || p.optional(lexer.Minus))
+		return p.lexer.Peek().Value, (p.optional(lexer.Plus) || p.optional(lexer.Minus) || p.optional(lexer.Exclamation))
 	}
 
 	if operator, ok := isPrefixUnaryExpression(); ok {

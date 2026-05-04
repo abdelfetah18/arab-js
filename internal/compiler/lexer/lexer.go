@@ -67,6 +67,7 @@ const (
 	Minus
 	Slash
 	Percent
+	Exclamation
 	DoubleStar
 	TripleDots
 	Colon
@@ -252,6 +253,7 @@ var OneCharTokens = map[string]TokenType{
 	"/": Slash,
 	"%": Percent,
 	":": Colon,
+	"!": Exclamation,
 }
 
 var TwoCharTokens = map[string]TokenType{
