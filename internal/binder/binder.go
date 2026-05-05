@@ -49,6 +49,8 @@ func (b *Binder) bindStatement(node *ast.Node) {
 		b.bindFunctionDeclaration(node.AsFunctionDeclaration())
 	case ast.NodeTypeForStatement:
 		b.bindForStatement(node.AsForStatement())
+	case ast.NodeTypeExpressionStatement:
+		b.bindExpression(node.AsExpressionStatement().Expression)
 	}
 }
 
@@ -172,6 +174,43 @@ func (b *Binder) bindForStatement(forStatement *ast.ForStatement) {
 	}
 
 	b.bindStatement(forStatement.Body)
+
+	b.container = saveContainer
+}
+
+func (b *Binder) bindExpression(node *ast.Node) {
+	switch node.Type {
+	case ast.NodeTypeCallExpression:
+		callExpression := node.AsCallExpression()
+		b.bindExpression(callExpression.Callee)
+		for _, arg := range callExpression.Args {
+			b.bindExpression(arg)
+		}
+	case ast.NodeTypeArrowFunction:
+		b.bindArrowFunction(node.AsArrowFunction())
+	case ast.NodeTypeMemberExpression:
+		memberExpression := node.AsMemberExpression()
+		b.bindExpression(memberExpression.Object)
+		b.bindExpression(memberExpression.Property)
+	case ast.NodeTypeAssignmentExpression:
+		b.bindExpression(node.AsAssignmentExpression().Left)
+		b.bindExpression(node.AsAssignmentExpression().Right)
+	}
+}
+
+func (b *Binder) bindArrowFunction(arrowFunction *ast.ArrowFunction) {
+	saveContainer := b.container
+	arrowFunction.Scope = &ast.Scope{}
+	arrowFunction.Scope.Parent = b.container.Scope
+	b.container = arrowFunction.ContainerBaseData()
+
+	for _, param := range arrowFunction.Params {
+		b.bindParam(param)
+	}
+
+	if arrowFunction.Body.Type == ast.NodeTypeBlockStatement {
+		b.bindBlockStatement(arrowFunction.Body.AsBlockStatement())
+	}
 
 	b.container = saveContainer
 }
