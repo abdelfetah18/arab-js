@@ -26,97 +26,31 @@ func NewTransformer(program Program) *Transformer {
 	}
 }
 
-func (t *Transformer) Transform() {
-	for _, sourceFile := range t.program.SourceFiles() {
-		if sourceFile.IsDeclarationFile {
-			continue
-		}
-		for _, node := range sourceFile.Body {
-			t.transformStatement(node)
-		}
-	}
-}
-
-func (t *Transformer) transformStatement(node *ast.Node) {
+func (t *Transformer) transformNode(node *ast.Node) bool {
 	switch node.Type {
-	case ast.NodeTypeFunctionDeclaration:
-		t.transformFunctionDeclaration(node.AsFunctionDeclaration())
-	case ast.NodeTypeVariableStatement:
-		t.transformVariableStatement(node.AsVariableStatement())
-	case ast.NodeTypeExpressionStatement:
-		t.transformExpression(node.AsExpressionStatement().Expression)
-	case ast.NodeTypeIfStatement:
-		ifStatement := node.AsIfStatement()
-		t.transformExpression(ifStatement.TestExpression)
-		t.transformStatement(ifStatement.ConsequentStatement)
-		if ifStatement.AlternateStatement != nil {
-			t.transformStatement(ifStatement.AlternateStatement)
-		}
-	case ast.NodeTypeBlockStatement:
-		t.transformBlockStatement(node.AsBlockStatement())
-	case ast.NodeTypeForStatement:
-		forStatement := node.AsForStatement()
-		if forStatement.Init.Type == ast.NodeTypeVariableStatement {
-			t.transformVariableStatement(forStatement.Init.AsVariableStatement())
-		} else {
-			t.transformExpression(forStatement.Init)
-		}
-		t.transformExpression(forStatement.Test)
-		t.transformExpression(forStatement.Update)
-		t.transformStatement(forStatement.Body)
-	case ast.NodeTypeReturnStatement:
-		returnStatement := node.AsReturnStatement()
-		if returnStatement.Argument != nil {
-			t.transformExpression(returnStatement.Argument)
-		}
-	}
-}
-
-func (t *Transformer) transformExpression(node *ast.Node) {
-	switch node.Type {
-	case ast.NodeTypeCallExpression:
-		callExpression := node.AsCallExpression()
-		t.transformExpression(callExpression.Callee)
-		for _, arg := range callExpression.Args {
-			t.transformExpression(arg)
-		}
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
 		symbol := t.NameResolver.Resolve(identifier.Name, node)
 		if symbol != nil && symbol.OriginalName != nil {
 			identifier.Name = *symbol.OriginalName
 		}
-	case ast.NodeTypeBinaryExpression:
-		binaryExpression := node.AsBinaryExpression()
-		t.transformExpression(binaryExpression.Left)
-		t.transformExpression(binaryExpression.Right)
-	case ast.NodeTypeUpdateExpression:
-		updateExpression := node.AsUpdateExpression()
-		t.transformExpression(updateExpression.Argument)
-	case ast.NodeTypeAssignmentExpression:
-		assignmentExpression := node.AsAssignmentExpression()
-		t.transformExpression(assignmentExpression.Left)
-		t.transformExpression(assignmentExpression.Right)
 	case ast.NodeTypeMemberExpression:
 		t.transformMemberExpression(node.AsMemberExpression())
 	case ast.NodeTypeObjectExpression:
 		t.transformObjectExpression(node.AsObjectExpression())
-	case ast.NodeTypeArrayExpression:
-		arrayExpression := node.AsArrayExpression()
-		for _, element := range arrayExpression.Elements {
-			t.transformExpression(element)
+	default:
+		node.ForEachChild(func(n *ast.Node) bool { return t.transformNode(n) })
+	}
+	return false // To Visit All Nodes
+}
+
+func (t *Transformer) Transform() {
+	for _, sourceFile := range t.program.SourceFiles() {
+		if sourceFile.IsDeclarationFile {
+			continue
 		}
-	case ast.NodeTypeSpreadElement:
-		t.transformExpression(node.AsSpreadElement().Argument)
-	case ast.NodeTypePrefixUnaryExpression:
-		t.transformExpression(node.AsPrefixUnaryExpression().Argument)
-	case ast.NodeTypeArrowFunction:
-		arrowFunction := node.AsArrowFunction()
-		if arrowFunction.Body.Type == ast.NodeTypeBlockStatement {
-			t.transformBlockStatement(arrowFunction.Body.AsBlockStatement())
-		} else {
-			t.transformExpression(arrowFunction.Body)
-		}
+
+		sourceFile.ForEachChild(t.transformNode)
 	}
 }
 
@@ -161,25 +95,13 @@ func (t *Transformer) transformProperty(property *ast.Node, objectType *checker.
 	}
 }
 
-func (t *Transformer) transformBlockStatement(blockStatement *ast.BlockStatement) {
-	for _, node := range blockStatement.Body {
-		t.transformStatement(node)
-	}
-}
-
-func (t *Transformer) transformFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
-	if functionDeclaration.Body != nil {
-		t.transformBlockStatement(functionDeclaration.Body)
-	}
-}
-
 func (t *Transformer) transformObjectExpression(objectExpression *ast.ObjectExpression) {
 	_type := t.TypeResolver.ResolveTypeFromNode(objectExpression.AsNode())
 	if _type == nil || _type.Flags&checker.TypeFlagsObject == 0 {
 		for _, property := range objectExpression.Properties {
 			if property.Type == ast.NodeTypeObjectProperty {
 				objectProperty := property.AsObjectProperty()
-				t.transformExpression(objectProperty.Value)
+				t.transformNode(objectProperty.Value)
 			}
 		}
 		return
@@ -197,17 +119,7 @@ func (t *Transformer) transformObjectExpression(objectExpression *ast.ObjectExpr
 				}
 
 			}
-			t.transformExpression(objectProperty.Value)
-		}
-	}
-}
-
-func (t *Transformer) transformVariableStatement(variableStatement *ast.VariableStatement) {
-	variableDeclarationList := variableStatement.DeclarationList.AsVariableDeclarationList()
-	for _, declaration := range variableDeclarationList.Declarations {
-		variableDeclaration := declaration.AsVariableDeclaration()
-		if variableDeclaration.Initializer != nil {
-			t.transformExpression(variableDeclaration.Initializer.Expression)
+			t.transformNode(objectProperty.Value)
 		}
 	}
 }
