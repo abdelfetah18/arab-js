@@ -210,6 +210,21 @@ func (emitter *Emitter) emitExpression(expression *ast.Node) {
 		emitter.Writer.Write("this")
 	case ast.NodeTypeFunctionExpression:
 		emitter.emitFunctionExpression(expression.AsFunctionExpression())
+	case ast.NodeTypeArrowFunction:
+		emitter.emitArrowFunction(expression.AsArrowFunction())
+	case ast.NodeTypePrefixUnaryExpression:
+		prefixUnaryExpression := expression.AsPrefixUnaryExpression()
+		emitter.Writer.Write(prefixUnaryExpression.Operator)
+		emitter.emitExpression(prefixUnaryExpression.Argument)
+	case ast.NodeTypeConditionalExpression:
+		emitter.Writer.Write("( ")
+		conditionalExpression := expression.AsConditionalExpression()
+		emitter.emitExpression(conditionalExpression.Condition)
+		emitter.Writer.Write(" ? ")
+		emitter.emitExpression(conditionalExpression.WhenTrue)
+		emitter.Writer.Write(" : ")
+		emitter.emitExpression(conditionalExpression.WhenFalse)
+		emitter.Writer.Write(" )")
 	}
 }
 
@@ -304,7 +319,9 @@ func (emitter *Emitter) emitFunctionDeclaration(functionDeclaration *ast.Functio
 
 func (emitter *Emitter) emitReturnStatement(returnStatement *ast.ReturnStatement) {
 	emitter.Writer.Write("return ")
-	emitter.emitExpression(returnStatement.Argument)
+	if returnStatement.Argument != nil {
+		emitter.emitExpression(returnStatement.Argument)
+	}
 }
 
 func (emitter *Emitter) emitForStatement(forStatement *ast.ForStatement) {
@@ -335,6 +352,16 @@ func (emitter *Emitter) emitFunctionExpression(functionExpression *ast.FunctionE
 	}
 	emitter.emitParameters(functionExpression.Params)
 	emitter.emitBlockStatement(functionExpression.Body)
+}
+
+func (emitter *Emitter) emitArrowFunction(arrowFunction *ast.ArrowFunction) {
+	emitter.emitParameters(arrowFunction.Params)
+	emitter.Writer.Write(" => ")
+	if arrowFunction.Body.Type == ast.NodeTypeBlockStatement {
+		emitter.emitBlockStatement(arrowFunction.Body.AsBlockStatement())
+	} else {
+		emitter.emitExpression(arrowFunction.Body)
+	}
 }
 
 func (emitter *Emitter) emitImportDeclaration(importDeclaration *ast.ImportDeclaration) {
