@@ -158,7 +158,8 @@ func (p *Parser) parseStatement() *ast.Node {
 				case lexer.KeywordFunction:
 					functionDeclaration := p.parseFunctionDeclaration(modifierList)
 					if p.hasPrecedingOriginalNameDirective {
-						functionDeclaration.ID.OriginalName = &p.originalNameDirectiveValue
+						originalName := strings.Clone(p.originalNameDirectiveValue)
+						functionDeclaration.ID.OriginalName = &originalName
 					}
 					return functionDeclaration.AsNode()
 				}
@@ -167,7 +168,8 @@ func (p *Parser) parseStatement() *ast.Node {
 				case lexer.TypeKeywordModule:
 					moduleDeclaration := p.parseModuleDeclaration()
 					if p.hasPrecedingOriginalNameDirective {
-						moduleDeclaration.OriginalName = &p.originalNameDirectiveValue
+						originalName := strings.Clone(p.originalNameDirectiveValue)
+						moduleDeclaration.OriginalName = &originalName
 					}
 					return moduleDeclaration.AsNode()
 				}
@@ -643,7 +645,8 @@ func (p *Parser) parseVariableDeclarationList() *ast.VariableDeclarationList {
 	declarations = append(declarations, variableDeclaration.AsNode())
 	if p.hasPrecedingOriginalNameDirective {
 		if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
-			variableDeclaration.Name.AsIdentifier().OriginalName = &p.originalNameDirectiveValue
+			originalName := strings.Clone(p.originalNameDirectiveValue)
+			variableDeclaration.Name.AsIdentifier().OriginalName = &originalName
 		}
 	}
 
@@ -654,7 +657,8 @@ func (p *Parser) parseVariableDeclarationList() *ast.VariableDeclarationList {
 		declarations = append(declarations, variableDeclaration.AsNode())
 		if p.hasPrecedingOriginalNameDirective {
 			if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
-				variableDeclaration.Name.AsIdentifier().OriginalName = &p.originalNameDirectiveValue
+				originalName := strings.Clone(p.originalNameDirectiveValue)
+				variableDeclaration.Name.AsIdentifier().OriginalName = &originalName
 			}
 		}
 	}

@@ -23,11 +23,13 @@ const (
 	NodeTypeLabelledStatement
 	NodeTypeConditionalExpression
 	NodeTypeUpdateExpression
+	NodeTypePrefixUnaryExpression
 	NodeTypeAssignmentExpression
 	NodeTypeFunctionDeclaration
 	NodeTypeCallExpression
 	NodeTypeThisEpxression
 	NodeTypeFunctionExpression
+	NodeTypeArrowFunction
 	NodeTypeMemberExpression
 	NodeTypeImportSpecifier
 	NodeTypeImportDeclaration
@@ -207,6 +209,8 @@ func (t NodeType) String() string {
 		return "ThisExpression"
 	case NodeTypeFunctionExpression:
 		return "FunctionExpression"
+	case NodeTypeArrowFunction:
+		return "ArrowFunction"
 	case NodeTypeIndexSignatureDeclaration:
 		return "IndexSignatureDeclaration"
 	case NodeTypeArrayBindingPattern:
@@ -225,6 +229,8 @@ func (t NodeType) String() string {
 		return "LabelledStatement"
 	case NodeTypeConditionalExpression:
 		return "ConditionalExpression"
+	case NodeTypePrefixUnaryExpression:
+		return "PrefixUnaryExpression"
 	default:
 		return "Unknown"
 	}

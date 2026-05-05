@@ -48,6 +48,10 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 			return t.ResolveTypeAnnotation(identifier.TypeAnnotation)
 		}
 
+		if node.Parent != nil && node.Parent.Type == ast.NodeTypeArrowFunction {
+			return t.ResolveTypeAnnotation(identifier.TypeAnnotation)
+		}
+
 		symbol := t.NameResolver.Resolve(identifier.Name, node)
 		if symbol == nil {
 			return nil
@@ -57,7 +61,16 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 	case ast.NodeTypeVariableDeclaration:
 		variableDeclaration := node.AsVariableDeclaration()
 		if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
-			return t.ResolveTypeAnnotation(variableDeclaration.Name.AsIdentifier().TypeAnnotation)
+			if variableDeclaration.Name.AsIdentifier().TypeAnnotation != nil {
+				return t.ResolveTypeAnnotation(variableDeclaration.Name.AsIdentifier().TypeAnnotation)
+			}
+
+			if variableDeclaration.Initializer != nil {
+				result := t.ResolveTypeFromNode(variableDeclaration.Initializer.Expression)
+				return result
+			}
+
+			return nil
 		}
 	case ast.NodeTypeFunctionDeclaration:
 		return t.newFunctionType(t.resolveSignature(node))
@@ -117,6 +130,9 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node) *Type {
 			}
 			return t.newObjectLiteralType(members)
 		}
+	case ast.NodeTypeCallExpression:
+		callExpression := node.AsCallExpression()
+		return t.ResolveTypeFromNode(callExpression.Callee).AsObjectType().signature.returnType
 	default:
 		return nil
 	}
@@ -229,9 +245,14 @@ func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node,
 				switch propertySignature.Key.Type {
 				case ast.NodeTypeIdentifier:
 					identifier := propertySignature.Key.AsIdentifier()
-					interfaceType.members[identifier.Name] = &ObjectTypeMember{
+					objectMember := &ObjectTypeMember{
 						Type:         t.ResolveProperty(propertySignature.TypeNode(), interfaceType),
 						OriginalName: identifier.OriginalName,
+					}
+
+					interfaceType.members[identifier.Name] = objectMember
+					if identifier.OriginalName != nil {
+						interfaceType.members[*identifier.OriginalName] = objectMember
 					}
 				}
 			case ast.NodeTypeIndexSignatureDeclaration:

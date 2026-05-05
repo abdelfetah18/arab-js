@@ -128,6 +128,7 @@ func (node *Node) AsAssignmentExpression() *AssignmentExpression {
 	return node.Data.(*AssignmentExpression)
 }
 func (node *Node) AsFunctionExpression() *FunctionExpression { return node.Data.(*FunctionExpression) }
+func (node *Node) AsArrowFunction() *ArrowFunction           { return node.Data.(*ArrowFunction) }
 
 func (node *Node) AsInitializer() *Initializer         { return node.Data.(*Initializer) }
 func (node *Node) AsIfStatement() *IfStatement         { return node.Data.(*IfStatement) }
@@ -197,6 +198,14 @@ func (node *Node) AsImportSpecifier() *ImportSpecifier {
 
 func (node *Node) AsUnionType() *UnionType {
 	return node.Data.(*UnionType)
+}
+
+func (node *Node) AsPrefixUnaryExpression() *PrefixUnaryExpression {
+	return node.Data.(*PrefixUnaryExpression)
+}
+
+func (node *Node) AsConditionalExpression() *ConditionalExpression {
+	return node.Data.(*ConditionalExpression)
 }
 
 func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }
@@ -2192,12 +2201,11 @@ func (regularExpressionLiteral *RegularExpressionLiteral) NodeType() NodeType {
 
 type ArrowFunction struct {
 	NodeBase
-	ContainerBase   `json:"-"`
-	DeclarationBase `json:"-"`
-	TypeParameters  *TypeParametersDeclaration `json:"type_parameters,omitempty"`
-	Params          []*Node                    `json:"params,omitempty"`
-	Body            *Node                      `json:"body,omitempty"`
-	TypeAnnotation  *TypeAnnotation            `json:"type_annotation,omitempty"`
+	ContainerBase  `json:"-"`
+	TypeParameters *TypeParametersDeclaration `json:"type_parameters,omitempty"`
+	Params         []*Node                    `json:"params,omitempty"`
+	Body           *Node                      `json:"body,omitempty"`
+	TypeAnnotation *TypeAnnotation            `json:"type_annotation,omitempty"`
 }
 
 func NewArrowFunction(typeParameters *TypeParametersDeclaration, params []*Node, body *Node, typeAnnotation *TypeAnnotation) *ArrowFunction {
@@ -2220,7 +2228,7 @@ func (arrowFunction *ArrowFunction) MarshalJSON() ([]byte, error) {
 }
 
 func (arrowFunction *ArrowFunction) NodeType() NodeType {
-	return NodeTypeFunctionExpression
+	return NodeTypeArrowFunction
 }
 
 func (arrowFunction *ArrowFunction) ForEachChild(v Visitor) bool {
@@ -2422,7 +2430,7 @@ func (prefixUnaryExpression *PrefixUnaryExpression) MarshalJSON() ([]byte, error
 }
 
 func (prefixUnaryExpression *PrefixUnaryExpression) NodeType() NodeType {
-	return NodeTypeUpdateExpression
+	return NodeTypePrefixUnaryExpression
 }
 
 func (prefixUnaryExpression *PrefixUnaryExpression) ForEachChild(v Visitor) bool {

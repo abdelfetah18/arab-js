@@ -65,7 +65,10 @@ func (t *Transformer) transformStatement(node *ast.Node) {
 		t.transformExpression(forStatement.Update)
 		t.transformStatement(forStatement.Body)
 	case ast.NodeTypeReturnStatement:
-		t.transformExpression(node.AsReturnStatement().Argument)
+		returnStatement := node.AsReturnStatement()
+		if returnStatement.Argument != nil {
+			t.transformExpression(returnStatement.Argument)
+		}
 	}
 }
 
@@ -105,6 +108,15 @@ func (t *Transformer) transformExpression(node *ast.Node) {
 		}
 	case ast.NodeTypeSpreadElement:
 		t.transformExpression(node.AsSpreadElement().Argument)
+	case ast.NodeTypePrefixUnaryExpression:
+		t.transformExpression(node.AsPrefixUnaryExpression().Argument)
+	case ast.NodeTypeArrowFunction:
+		arrowFunction := node.AsArrowFunction()
+		if arrowFunction.Body.Type == ast.NodeTypeBlockStatement {
+			t.transformBlockStatement(arrowFunction.Body.AsBlockStatement())
+		} else {
+			t.transformExpression(arrowFunction.Body)
+		}
 	}
 }
 
