@@ -6,6 +6,7 @@ import (
 	"arab_js/internal/compiler/lexer"
 	"math"
 	"slices"
+	"sync"
 
 	"github.com/TobiasYin/go-lsp/lsp/defines"
 )
@@ -85,20 +86,7 @@ func getCompletionsFromSourceFile(sourceFile *ast.SourceFile, _checker *checker.
 		currentScope = currentScope.Parent
 	}
 
-	for k, symbol := range _checker.NameResolver.Globals.Locals {
-		d := defines.CompletionItemKindText
-		switch symbol.Node.Type {
-		case ast.NodeTypeFunctionDeclaration:
-			d = defines.CompletionItemKindFunction
-		case ast.NodeTypeVariableDeclaration:
-			d = defines.CompletionItemKindVariable
-		}
-		completions = append(completions, defines.CompletionItem{
-			Label:      k,
-			Kind:       &d,
-			InsertText: &k,
-		})
-	}
+	completions = append(completions, allKeywordCompletions()...)
 
 	return completions
 }
@@ -151,3 +139,31 @@ func getCompletionData(sourceFile *ast.SourceFile, node *ast.Node, position int,
 
 	return completions
 }
+
+var (
+	allKeywordCompletions = sync.OnceValue(func() []defines.CompletionItem {
+		result := make([]defines.CompletionItem, 0, len(lexer.Keywords))
+
+		for _, keword := range lexer.Keywords {
+			d := defines.CompletionItemKindKeyword
+			k := keword
+			result = append(result, defines.CompletionItem{
+				Label:      k,
+				Kind:       &d,
+				InsertText: &k,
+			})
+		}
+
+		for _, typeKeword := range lexer.TypeKeywords {
+			d := defines.CompletionItemKindKeyword
+			k := typeKeword
+			result = append(result, defines.CompletionItem{
+				Label:      k,
+				Kind:       &d,
+				InsertText: &k,
+			})
+		}
+
+		return result
+	})
+)

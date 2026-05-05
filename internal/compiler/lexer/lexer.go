@@ -306,6 +306,18 @@ const (
 	TypeKeywordReadOnly  TypeKeyword = "قراءة_فقط"
 )
 
+var TypeKeywords = []TypeKeyword{
+	TypeKeywordAny,
+	TypeKeywordString,
+	TypeKeywordNumber,
+	TypeKeywordBoolean,
+	TypeKeywordInterface,
+	TypeKeywordType,
+	TypeKeywordDeclare,
+	TypeKeywordModule,
+	TypeKeywordReadOnly,
+}
+
 type LexerState struct {
 	position                          int
 	startPosition                     int
