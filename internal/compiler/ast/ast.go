@@ -251,7 +251,7 @@ func (node *Node) LocalScope() *Scope {
 	return nil
 }
 
-func (node *Node) GetPrentContainer() *Scope {
+func (node *Node) GetParentContainer() *Scope {
 	if node.Type == NodeTypeBlockStatement && node.Parent.Type == NodeTypeFunctionDeclaration {
 		return node.Parent.AsFunctionDeclaration().Scope
 	}
@@ -264,7 +264,7 @@ func (node *Node) GetPrentContainer() *Scope {
 	case NodeTypeFunctionDeclaration:
 		return node.AsFunctionDeclaration().Scope
 	default:
-		return node.Parent.GetPrentContainer()
+		return node.Parent.GetParentContainer()
 	}
 }
 

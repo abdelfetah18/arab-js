@@ -321,6 +321,7 @@ var TypeKeywords = []TypeKeyword{
 type LexerState struct {
 	position                          int
 	startPosition                     int
+	endPosition                       int
 	beforeWhitespacePosition          int
 	currentToken                      Token
 	HasPrecedingOriginalNameDirective bool
@@ -343,6 +344,7 @@ func NewLexer(input string) *Lexer {
 func (l *Lexer) Text() string                  { return l.input }
 func (l *Lexer) Position() int                 { return l.position }
 func (l *Lexer) StartPosition() int            { return l.startPosition }
+func (l *Lexer) EndPosition() int              { return l.endPosition }
 func (l *Lexer) BeforeWhitespacePosition() int { return l.beforeWhitespacePosition }
 
 func (l *Lexer) charAndSize() (rune, int) {
@@ -561,6 +563,7 @@ func (l *Lexer) Next() Token {
 	l.beforeWhitespacePosition = l.position
 	l.currentToken = l.nextToken()
 	l.startPosition = l.currentToken.Position
+	l.endPosition = l.position
 	return l.currentToken
 }
 
@@ -708,6 +711,7 @@ func (l *Lexer) Mark() LexerState {
 func (l *Lexer) Rewind(state LexerState) {
 	l.position = state.position
 	l.startPosition = state.startPosition
+	l.endPosition = state.endPosition
 	l.beforeWhitespacePosition = state.beforeWhitespacePosition
 	l.currentToken = state.currentToken
 	l.HasPrecedingOriginalNameDirective = state.HasPrecedingOriginalNameDirective
@@ -738,6 +742,7 @@ func (l *Lexer) ReScanSlashToken() Token {
 		Position: l.position - len(regex),
 	}
 	l.startPosition = l.currentToken.Position
+	l.endPosition = l.position
 	return l.currentToken
 }
 

@@ -468,6 +468,9 @@ func (t *TypeResolver) inferTypeFromNode(node *ast.Node) *Type {
 }
 
 func (t *TypeResolver) isTypeRelatedTo(target *Type, source *Type) bool {
+	if target == nil || source == nil {
+		return false
+	}
 	if t.isSimpleTypeRelatedTo(target, source) {
 		return true
 	}

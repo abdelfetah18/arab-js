@@ -577,6 +577,7 @@ func (p *Parser) parseTypeNode() *ast.Node {
 				typeNode = p.parseTypeReference().AsNode()
 			}
 		default:
+			p.startPositions.Pop()
 			return nil
 		}
 
@@ -1531,12 +1532,21 @@ func (p *Parser) parseInterfaceBody() *ast.InterfaceBody {
 
 func (p *Parser) parseTypeAnnotation() *ast.TypeAnnotation {
 	p.markStartPosition()
+
+	typeNode := p.parseTypeNode()
+	location := ast.Location{
+		Pos: p.startPositions.Pop(),
+		End: p.getEndPosition(),
+	}
+
+	// FIXME: This is just a workaround
+	if typeNode == nil {
+		location.End = location.Pos
+	}
+
 	return ast.NewNode(
-		ast.NewTypeAnnotation(p.parseTypeNode()),
-		ast.Location{
-			Pos: p.startPositions.Pop(),
-			End: p.getEndPosition(),
-		},
+		ast.NewTypeAnnotation(typeNode),
+		location,
 	)
 }
 
@@ -2506,7 +2516,7 @@ func (p *Parser) getStartPosition() uint {
 }
 
 func (p *Parser) getEndPosition() uint {
-	return uint(p.lexer.BeforeWhitespacePosition())
+	return uint(p.lexer.EndPosition())
 }
 
 func (p *Parser) error(location ast.Location, message string) {

@@ -115,13 +115,7 @@ func (h *Handlers) OnCompletionHandler(ctx context.Context, req *defines.Complet
 		return nil, err
 	}
 
-	node := getNodeAtPosition(sourceFile, position)
-
-	if node == nil {
-		return nil, errors.New("could not locate the node")
-	}
-
-	keys := getCompletionData(sourceFile, node, int(position), h.Project.Program.Checker)
+	keys := getCompletionData(sourceFile, int(position), h.Project.Program.Checker)
 
 	return &keys, nil
 }
