@@ -96,6 +96,9 @@ func getPrecedingTokensAtPos(sourceFile *ast.SourceFile, startPos int, position 
 			break
 		}
 		nextToken()
+		if token.Type == lexer.EOF || token.Type == lexer.Invalid {
+			break
+		}
 	}
 
 	previousToken = tokens[len(tokens)-1]
