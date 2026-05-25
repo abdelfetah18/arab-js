@@ -26,9 +26,6 @@ func (s *Scope) AddVariable(name string, originalName *string, node *Node) *Symb
 		OriginalName: originalName,
 	}
 	s.Locals[name] = &symbol
-	if originalName != nil {
-		s.Locals[(*originalName)] = &symbol
-	}
 	return &symbol
 }
 

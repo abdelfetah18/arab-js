@@ -229,7 +229,11 @@ func (emitter *Emitter) emitExpression(expression *ast.Node) {
 }
 
 func (emitter *Emitter) emitIdentifier(identifier *ast.Identifier) {
-	emitter.Writer.Write(identifier.Name)
+	if identifier.OriginalName != nil {
+		emitter.Writer.Write(*identifier.OriginalName)
+	} else {
+		emitter.Writer.Write(identifier.Name)
+	}
 }
 
 func (emitter *Emitter) emitSpreadElement(spreadElement *ast.SpreadElement) {

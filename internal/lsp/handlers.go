@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"arab_js/internal/artspath"
+	"arab_js/internal/checker"
 	"arab_js/internal/compiler"
 	"arab_js/internal/compiler/ast"
 	"arab_js/internal/project"
@@ -201,7 +202,7 @@ func (h *Handlers) OnSignatureHelpHandler(ctx context.Context, req *defines.Sign
 	}
 
 	_checker := h.Project.Program.Checker
-	_type := _checker.TypeResolver.ResolveTypeFromNode(callExpression.Callee)
+	_type := _checker.TypeResolver.ResolveTypeFromNode(callExpression.Callee, map[string]*checker.Type{})
 	if _type == nil {
 		return nil, errors.New("no type found.")
 	}

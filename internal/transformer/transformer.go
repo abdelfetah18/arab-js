@@ -4,6 +4,7 @@ import (
 	"arab_js/internal/binder"
 	"arab_js/internal/checker"
 	"arab_js/internal/compiler/ast"
+	"strings"
 )
 
 type Program interface {
@@ -31,8 +32,13 @@ func (t *Transformer) transformNode(node *ast.Node) bool {
 	case ast.NodeTypeIdentifier:
 		identifier := node.AsIdentifier()
 		symbol := t.NameResolver.Resolve(identifier.Name, node)
+		if symbol != nil && symbol.OriginalName == nil {
+			originalName := strings.Clone(identifier.Name)
+			symbol.OriginalName = &originalName
+		}
 		if symbol != nil && symbol.OriginalName != nil {
-			identifier.Name = *symbol.OriginalName
+			originalName := strings.Clone(*symbol.OriginalName)
+			identifier.OriginalName = &originalName
 		}
 	case ast.NodeTypeMemberExpression:
 		t.transformMemberExpression(node.AsMemberExpression())
@@ -57,17 +63,23 @@ func (t *Transformer) Transform() {
 func (t *Transformer) transformMemberExpression(memberExpression *ast.MemberExpression) {
 	switch memberExpression.Object.Type {
 	case ast.NodeTypeMemberExpression:
-		objectType := t.TypeResolver.ResolveTypeFromNode(memberExpression.Object)
+		objectType := t.TypeResolver.ResolveTypeFromNode(memberExpression.Object, map[string]*checker.Type{})
 		t.transformMemberExpression(memberExpression.Object.AsMemberExpression())
 		t.transformProperty(memberExpression.Property, objectType.AsObjectType(), memberExpression.Computed)
 	case ast.NodeTypeIdentifier:
 		identifier := memberExpression.Object.AsIdentifier()
 		symbol := t.NameResolver.Resolve(identifier.Name, identifier.AsNode())
-		if symbol != nil && symbol.OriginalName != nil {
-			identifier.Name = *symbol.OriginalName
+		objectType := t.TypeResolver.ResolveTypeFromNode(symbol.Node, map[string]*checker.Type{})
+		if symbol != nil && symbol.OriginalName == nil {
+			originalName := strings.Clone(identifier.Name)
+			identifier.OriginalName = &originalName
 		}
 
-		objectType := t.TypeResolver.ResolveTypeFromNode(symbol.Node)
+		if symbol != nil && symbol.OriginalName != nil {
+			originalName := strings.Clone(*symbol.OriginalName)
+			identifier.OriginalName = &originalName
+		}
+
 		if objectType != nil {
 			if objectType.Flags&checker.TypeFlagsObject == checker.TypeFlagsObject {
 				if objectType.ObjectFlags&checker.ObjectFlagsArrayLiteral != 0 {
@@ -88,15 +100,20 @@ func (t *Transformer) transformProperty(property *ast.Node, objectType *checker.
 		identifier := property.AsIdentifier()
 		if !isComputed {
 			propertyType := objectType.Members()[identifier.Name]
+			if propertyType.OriginalName == nil {
+				originalName := strings.Clone(identifier.Name)
+				identifier.OriginalName = &originalName
+			}
 			if propertyType.OriginalName != nil {
-				identifier.Name = *propertyType.OriginalName
+				originalName := strings.Clone(*propertyType.OriginalName)
+				identifier.OriginalName = &originalName
 			}
 		}
 	}
 }
 
 func (t *Transformer) transformObjectExpression(objectExpression *ast.ObjectExpression) {
-	_type := t.TypeResolver.ResolveTypeFromNode(objectExpression.AsNode())
+	_type := t.TypeResolver.ResolveTypeFromNode(objectExpression.AsNode(), map[string]*checker.Type{})
 	if _type == nil || _type.Flags&checker.TypeFlagsObject == 0 {
 		for _, property := range objectExpression.Properties {
 			if property.Type == ast.NodeTypeObjectProperty {
@@ -115,9 +132,13 @@ func (t *Transformer) transformObjectExpression(objectExpression *ast.ObjectExpr
 				identifier := objectProperty.Key.AsIdentifier()
 				propertyType := objectType.Members()[identifier.Name]
 				if propertyType.OriginalName != nil {
-					identifier.Name = *propertyType.OriginalName
+					originalName := strings.Clone(identifier.Name)
+					identifier.OriginalName = &originalName
 				}
-
+				if propertyType.OriginalName != nil {
+					originalName := strings.Clone(*propertyType.OriginalName)
+					identifier.OriginalName = &originalName
+				}
 			}
 			t.transformNode(objectProperty.Value)
 		}

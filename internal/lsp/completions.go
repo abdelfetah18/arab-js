@@ -178,7 +178,7 @@ func getCompletionsFromType(_type *checker.Type, propertiesToExclude []string) [
 func getCompletionData(sourceFile *ast.SourceFile, position int, _checker *checker.Checker) []defines.CompletionItem {
 	completions := []defines.CompletionItem{}
 	getCompletions := func(node *ast.Node, propertiesToExclude []string) []defines.CompletionItem {
-		return getCompletionsFromType(_checker.TypeResolver.ResolveTypeFromNode(node), propertiesToExclude)
+		return getCompletionsFromType(_checker.TypeResolver.ResolveTypeFromNode(node, map[string]*checker.Type{}), propertiesToExclude)
 	}
 
 	previousNode := getPreviousNodeAtPosition(sourceFile, uint(position))

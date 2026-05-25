@@ -76,6 +76,8 @@ func (c *Checker) checkStatement(node *ast.Node) {
 	switch node.Type {
 	case ast.NodeTypeVariableStatement:
 		c.checkVariableStatement(node.AsVariableStatement())
+	case ast.NodeTypeFunctionDeclaration:
+		c.checkFunctionDeclaration(node.AsFunctionDeclaration())
 	case ast.NodeTypeExpressionStatement:
 		c.checkExpression(node.AsExpressionStatement().Expression)
 	case ast.NodeTypeBlockStatement:
@@ -105,6 +107,12 @@ func (c *Checker) checkVariableStatement(variableStatement *ast.VariableStatemen
 	}
 }
 
+func (c *Checker) checkFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
+	if functionDeclaration.Body != nil {
+		c.checkBlockStatement(functionDeclaration.Body)
+	}
+}
+
 func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
 	if variableDeclaration.Name.Type == ast.NodeTypeIdentifier &&
 		variableDeclaration.Name.AsIdentifier().TypeAnnotation == nil {
@@ -112,12 +120,13 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 		return
 	}
 
-	identifierType := c.TypeResolver.ResolveTypeNode(variableDeclaration.TypeNode())
+	identifierType := c.TypeResolver.ResolveTypeNode(variableDeclaration.TypeNode(), map[string]*Type{})
 
 	if variableDeclaration.Initializer == nil {
 		return
 	}
 	initializerType := c.checkExpression(variableDeclaration.Initializer.Expression)
+	c.TypeResolver.typeNodeMap[variableDeclaration.AsNode()] = initializerType
 	if initializerType == nil {
 		return
 	}
@@ -171,7 +180,48 @@ func (c *Checker) checkFunctionExpression(functionExpression *ast.FunctionExpres
 		c.TypeResolver.newSignature(
 			flags,
 			parameters,
-			c.TypeResolver.ResolveTypeAnnotation(functionExpression.TypeAnnotation),
+			c.TypeResolver.ResolveTypeAnnotation(functionExpression.TypeAnnotation, map[string]*Type{}),
+		),
+	)
+}
+
+func (c *Checker) checkArrowFunction(arrowFunction *ast.ArrowFunction) *Type {
+	parameters := []*SignatureParameter{}
+	flags := SignatureFlagsNone
+	for _, param := range arrowFunction.Params {
+		isRest := false
+		name := ""
+		if param.Type == ast.NodeTypeParameter {
+			parameter := param.AsParameter()
+			if parameter.Name != nil {
+				switch parameter.Name.Type {
+				case ast.NodeTypeIdentifier:
+					name = parameter.Name.AsIdentifier().Name
+				}
+			}
+
+			isRest = parameter.Rest
+			if isRest {
+				flags |= SignatureFlagsHasRestParameter
+			}
+
+		}
+
+		paramType := c.checkExpression(param)
+		parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, Rest: isRest})
+	}
+
+	if arrowFunction.Body.Type == ast.NodeTypeBlockStatement {
+		c.checkBlockStatement(arrowFunction.Body.AsBlockStatement())
+	} else {
+		c.checkStatement(arrowFunction.Body)
+	}
+
+	return c.TypeResolver.newFunctionType(
+		c.TypeResolver.newSignature(
+			flags,
+			parameters,
+			c.TypeResolver.ResolveTypeAnnotation(arrowFunction.TypeAnnotation, map[string]*Type{}),
 		),
 	)
 }
@@ -189,13 +239,15 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		ast.NodeTypeDecimalLiteral,
 		ast.NodeTypeBooleanLiteral,
 		ast.NodeTypeNullLiteral:
-		return c.TypeResolver.ResolveTypeFromNode(expression)
+		return c.TypeResolver.ResolveTypeFromNode(expression, map[string]*Type{})
 	case ast.NodeTypeArrayExpression:
 		return c.checkArrayExpression(expression.AsArrayExpression())
 	case ast.NodeTypeObjectExpression:
 		return c.checkObjectExpression(expression.AsObjectExpression())
 	case ast.NodeTypeFunctionExpression:
 		return c.checkFunctionExpression(expression.AsFunctionExpression())
+	case ast.NodeTypeArrowFunction:
+		return c.checkArrowFunction(expression.AsArrowFunction())
 	case ast.NodeTypeMemberExpression:
 		return c.checkMemberExpression(expression.AsMemberExpression())
 	case ast.NodeTypeAssignmentExpression:
@@ -217,7 +269,8 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		return leftType
 	case ast.NodeTypeCallExpression:
 		callExpression := expression.AsCallExpression()
-		return c.checkCallExpression(callExpression)
+		_type := c.checkCallExpression(callExpression)
+		return _type
 	}
 
 	return nil
@@ -322,5 +375,5 @@ func (c *Checker) checkIdentifier(identifier *ast.Identifier) *Type {
 		return nil
 	}
 
-	return c.TypeResolver.ResolveTypeFromNode(symbol.Node)
+	return c.TypeResolver.ResolveTypeFromNode(symbol.Node, map[string]*Type{})
 }

@@ -148,6 +148,7 @@ type Signature struct {
 	flags      SignatureFlags
 	parameters []*SignatureParameter
 	returnType *Type
+	typeMapper map[string]*Type
 }
 
 func (s *Signature) Flags() SignatureFlags             { return s.flags }
