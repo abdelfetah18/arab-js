@@ -23,7 +23,7 @@ type Checker struct {
 func NewChecker(program Program) *Checker {
 	program.BindSourceFiles()
 
-	globalScope := &ast.Scope{}
+	globalScope := &ast.Scope{IsGlobal: true}
 
 	for _, sourceFile := range program.SourceFiles() {
 		if !ast.IsExternalModule(sourceFile) {

@@ -7,8 +7,9 @@ type Symbol struct {
 }
 
 type Scope struct {
-	Locals map[string]*Symbol
-	Parent *Scope
+	Locals   map[string]*Symbol
+	Parent   *Scope
+	IsGlobal bool
 }
 
 func (s *Scope) AddVariable(name string, originalName *string, node *Node) *Symbol {

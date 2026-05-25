@@ -145,6 +145,9 @@ func getCompletionsFromCurrentNode(node *ast.Node, onlyTypes bool, _checker *che
 	var currentScope *ast.Scope = node.GetParentContainer()
 
 	for currentScope != nil {
+		if currentScope.IsGlobal {
+			break
+		}
 		completions = append(completions, getCompletionsFromScope(currentScope, onlyTypes)...)
 		currentScope = currentScope.Parent
 	}

@@ -22,8 +22,9 @@ func BindSourceFile(sourceFile *ast.SourceFile) {
 
 func (b *Binder) Bind() {
 	b.sourceFile.Scope = &ast.Scope{
-		Locals: map[string]*ast.Symbol{},
-		Parent: nil,
+		Locals:   map[string]*ast.Symbol{},
+		Parent:   nil,
+		IsGlobal: true,
 	}
 
 	for _, node := range b.sourceFile.Body {
@@ -78,7 +79,7 @@ func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 	saveContainer := b.container
 
 	if canCreateNewScope(blockStatement.AsNode()) {
-		blockStatement.Scope = &ast.Scope{}
+		blockStatement.Scope = &ast.Scope{IsGlobal: false}
 		blockStatement.Scope.Parent = b.container.Scope
 		b.container = blockStatement.ContainerBaseData()
 	}
@@ -106,7 +107,7 @@ func (b *Binder) bindInterfaceDeclaration(interfaceDeclaration *ast.InterfaceDec
 	)
 
 	saveContainer := b.container
-	interfaceDeclaration.Scope = &ast.Scope{}
+	interfaceDeclaration.Scope = &ast.Scope{IsGlobal: false}
 	interfaceDeclaration.Scope.Parent = b.container.Scope
 	b.container = interfaceDeclaration.ContainerBaseData()
 
@@ -127,7 +128,7 @@ func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclar
 	)
 
 	saveContainer := b.container
-	functionDeclaration.Scope = &ast.Scope{}
+	functionDeclaration.Scope = &ast.Scope{IsGlobal: false}
 	functionDeclaration.Scope.Parent = b.container.Scope
 	b.container = functionDeclaration.ContainerBaseData()
 
@@ -164,7 +165,7 @@ func (b *Binder) bindParam(node *ast.Node) {
 
 func (b *Binder) bindForStatement(forStatement *ast.ForStatement) {
 	saveContainer := b.container
-	forStatement.Scope = &ast.Scope{}
+	forStatement.Scope = &ast.Scope{IsGlobal: false}
 	forStatement.Scope.Parent = b.container.Scope
 	b.container = forStatement.ContainerBaseData()
 
@@ -200,7 +201,7 @@ func (b *Binder) bindExpression(node *ast.Node) {
 
 func (b *Binder) bindArrowFunction(arrowFunction *ast.ArrowFunction) {
 	saveContainer := b.container
-	arrowFunction.Scope = &ast.Scope{}
+	arrowFunction.Scope = &ast.Scope{IsGlobal: false}
 	arrowFunction.Scope.Parent = b.container.Scope
 	b.container = arrowFunction.ContainerBaseData()
 
