@@ -322,7 +322,7 @@ type LexerState struct {
 	position                          int
 	startPosition                     int
 	endPosition                       int
-	beforeWhitespacePosition          int
+	previousTokenEndPosition          int
 	currentToken                      Token
 	HasPrecedingOriginalNameDirective bool
 	OriginalNameDirectiveValue        string
@@ -345,7 +345,7 @@ func (l *Lexer) Text() string                  { return l.input }
 func (l *Lexer) Position() int                 { return l.position }
 func (l *Lexer) StartPosition() int            { return l.startPosition }
 func (l *Lexer) EndPosition() int              { return l.endPosition }
-func (l *Lexer) BeforeWhitespacePosition() int { return l.beforeWhitespacePosition }
+func (l *Lexer) PreviousTokenEndPosition() int { return l.previousTokenEndPosition }
 
 func (l *Lexer) charAndSize() (rune, int) {
 	return utf8.DecodeRuneInString(l.input[l.position:])
@@ -560,7 +560,7 @@ func (l *Lexer) Peek() Token {
 func (l *Lexer) Next() Token {
 	l.HasPrecedingOriginalNameDirective = false
 	l.OriginalNameDirectiveValue = ""
-	l.beforeWhitespacePosition = l.position
+	l.previousTokenEndPosition = l.position
 	l.currentToken = l.nextToken()
 	l.startPosition = l.currentToken.Position
 	l.endPosition = l.position
@@ -712,7 +712,7 @@ func (l *Lexer) Rewind(state LexerState) {
 	l.position = state.position
 	l.startPosition = state.startPosition
 	l.endPosition = state.endPosition
-	l.beforeWhitespacePosition = state.beforeWhitespacePosition
+	l.previousTokenEndPosition = state.previousTokenEndPosition
 	l.currentToken = state.currentToken
 	l.HasPrecedingOriginalNameDirective = state.HasPrecedingOriginalNameDirective
 	l.OriginalNameDirectiveValue = state.OriginalNameDirectiveValue
@@ -735,7 +735,7 @@ func (l *Lexer) ReScanSlashToken() Token {
 
 	l.HasPrecedingOriginalNameDirective = false
 	l.OriginalNameDirectiveValue = ""
-	l.beforeWhitespacePosition = l.position
+	l.previousTokenEndPosition = l.position
 	l.currentToken = Token{
 		Type:     RegularExpressionLiteral,
 		Value:    regex,

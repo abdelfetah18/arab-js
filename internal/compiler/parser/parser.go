@@ -691,10 +691,12 @@ func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 	var initializer *ast.Initializer = nil
 	if p.optional(lexer.Equal) {
 		assignmentExpression := p.parseAssignmentExpression()
-		initializer = ast.NewNode(
-			ast.NewInitializer(assignmentExpression),
-			assignmentExpression.Location,
-		)
+		if assignmentExpression != nil {
+			initializer = ast.NewNode(
+				ast.NewInitializer(assignmentExpression),
+				assignmentExpression.Location,
+			)
+		}
 	}
 
 	return ast.NewNode(
@@ -1789,7 +1791,7 @@ func (p *Parser) parseIdentifier(doParseTypeAnnotation bool) *ast.Identifier {
 
 	identifierName := p.lexer.Peek().Value
 	if !p.isIdentifier() {
-		pos := uint(p.lexer.BeforeWhitespacePosition())
+		pos := uint(p.lexer.PreviousTokenEndPosition())
 		p.startPositions.Pop()
 		return ast.NewNode(
 			ast.NewIdentifier(identifierName, nil),
@@ -2516,7 +2518,7 @@ func (p *Parser) getStartPosition() uint {
 }
 
 func (p *Parser) getEndPosition() uint {
-	return uint(p.lexer.EndPosition())
+	return uint(p.lexer.PreviousTokenEndPosition())
 }
 
 func (p *Parser) error(location ast.Location, message string) {

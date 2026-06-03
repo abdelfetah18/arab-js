@@ -142,14 +142,16 @@ func getCompletionsFromScope(scope *ast.Scope, onlyTypes bool) []defines.Complet
 
 func getCompletionsFromCurrentNode(node *ast.Node, onlyTypes bool, _checker *checker.Checker) []defines.CompletionItem {
 	completions := []defines.CompletionItem{}
-	var currentScope *ast.Scope = node.GetParentContainer()
+	if node != nil {
+		var currentScope *ast.Scope = node.GetParentContainer()
 
-	for currentScope != nil {
-		if currentScope.IsGlobal {
-			break
+		for currentScope != nil {
+			if currentScope.IsGlobal {
+				break
+			}
+			completions = append(completions, getCompletionsFromScope(currentScope, onlyTypes)...)
+			currentScope = currentScope.Parent
 		}
-		completions = append(completions, getCompletionsFromScope(currentScope, onlyTypes)...)
-		currentScope = currentScope.Parent
 	}
 
 	if !onlyTypes {

@@ -180,6 +180,10 @@ func (b *Binder) bindForStatement(forStatement *ast.ForStatement) {
 }
 
 func (b *Binder) bindExpression(node *ast.Node) {
+	if node == nil {
+		return
+	}
+
 	switch node.Type {
 	case ast.NodeTypeCallExpression:
 		callExpression := node.AsCallExpression()
