@@ -264,7 +264,7 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 
 		if !c.TypeResolver.isTypeRelatedTo(leftType, rightType) {
 			c.errorf(assignmentExpression.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, leftType.Data.Name(), rightType.Data.Name())
-			return nil
+			return c.TypeResolver.errorType
 		}
 		return leftType
 	case ast.NodeTypeCallExpression:
@@ -284,19 +284,19 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 
 	if _type.Flags&TypeFlagsObject == 0 {
 		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.Data.Name())
-		return nil
+		return c.TypeResolver.errorType
 	}
 
 	objectType := _type.AsObjectType()
 	if objectType.signature == nil {
 		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.Data.Name())
-		return nil
+		return c.TypeResolver.errorType
 	}
 
 	if objectType.signature.flags&SignatureFlagsHasRestParameter == 0 {
 		if len(objectType.signature.parameters) != len(callExpression.Args) {
 			c.errorf(callExpression.Location, EXPECTED_0_ARGUMENTS_BUT_GOT_1, len(objectType.signature.parameters), len(callExpression.Args))
-			return nil
+			return c.TypeResolver.errorType
 		}
 	}
 
@@ -313,7 +313,7 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 		_type := c.checkExpression(arg)
 		if !c.TypeResolver.isTypeRelatedTo(param.Type, _type) {
 			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
-			return nil
+			return c.TypeResolver.errorType
 		}
 	}
 
@@ -325,7 +325,7 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 			_type := c.checkExpression(arg)
 			if !c.TypeResolver.isTypeRelatedTo(restElementType, _type) {
 				c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
-				return nil
+				return c.TypeResolver.errorType
 			}
 		}
 	}
@@ -363,7 +363,7 @@ func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) 
 	}
 	if propertyType == nil {
 		c.errorf(memberExpression.AsNode().Location, PROPERTY_0_DOES_NOT_EXIST_ON_TYPE_1, propertyName, objectType.Data.Name())
-		return nil
+		return c.TypeResolver.errorType
 	}
 	return propertyType
 }
@@ -372,7 +372,7 @@ func (c *Checker) checkIdentifier(identifier *ast.Identifier) *Type {
 	symbol := c.NameResolver.Resolve(identifier.Name, identifier.AsNode())
 	if symbol == nil {
 		c.errorf(identifier.Location, CANNOT_FIND_NAME_0, identifier.Name)
-		return nil
+		return c.TypeResolver.errorType
 	}
 
 	return c.TypeResolver.ResolveTypeFromNode(symbol.Node, map[string]*Type{})

@@ -16,6 +16,7 @@ type TypeResolver struct {
 	booleanType *Type
 	nullType    *Type
 	anyType     *Type
+	errorType   *Type
 
 	typeNodeMap map[*ast.Node]*Type
 }
@@ -32,6 +33,7 @@ func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
 	t.trueType = t.newLiteralType(TypeFlagsBoolean, "true")
 	t.falseType = t.newLiteralType(TypeFlagsBoolean, "false")
 	t.booleanType = t.newBooleanUnionType()
+	t.errorType = t.newIntrinsicType(TypeFlagsAny, "error")
 
 	t.typeNodeMap = map[*ast.Node]*Type{}
 
