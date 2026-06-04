@@ -209,11 +209,30 @@ func getCompletionData(sourceFile *ast.SourceFile, position int, _checker *check
 		if (contextToken.Type == lexer.LeftCurlyBrace || contextToken.Type == lexer.Comma) && node.Type == ast.NodeTypeObjectExpression {
 			contextNode := node.Parent
 			properties := node.AsObjectExpression().PropertiesNames()
-			if contextNode.Type == ast.NodeTypeAssignmentExpression {
+
+			switch contextNode.Type {
+			case ast.NodeTypeAssignmentExpression:
 				return getCompletions(contextNode.AsAssignmentExpression().Left, properties)
-			}
-			if contextNode.Type == ast.NodeTypeInitializer {
+			case ast.NodeTypeInitializer:
 				return getCompletions(contextNode.AsInitializer().Parent, properties)
+			case ast.NodeTypeCallExpression:
+				_type := _checker.TypeResolver.ResolveTypeFromNode(
+					contextNode.AsCallExpression().Callee,
+					map[string]*checker.Type{},
+				)
+
+				objectType := _type.AsObjectType()
+				signature := objectType.Signature()
+
+				for index, param := range contextNode.AsCallExpression().Args {
+					if param == node {
+						signatureParam := signature.Parameters()[index]
+						if param != nil {
+							return getCompletionsFromType(signatureParam.Type, []string{})
+						}
+						break
+					}
+				}
 			}
 		}
 
