@@ -68,8 +68,10 @@ func buildProject(projectPath string, outputPath string) error {
 	program.TransformSourceFiles()
 
 	if len(program.Diagnostics) > 0 {
-		for _, diagnostic := range program.Diagnostics {
-			println(diagnostic.Message)
+		for _, diagnostics := range program.Diagnostics {
+			for _, diagnostic := range diagnostics {
+				println(diagnostic.Message)
+			}
 		}
 		return fmt.Errorf("checker errors")
 	}
@@ -99,8 +101,10 @@ func buildFile(filePath string, outputPath string) error {
 	program.TransformSourceFiles()
 
 	if len(program.Diagnostics) > 0 {
-		for _, diagnostic := range program.Diagnostics {
-			println(diagnostic.Message)
+		for _, diagnostics := range program.Diagnostics {
+			for _, diagnostic := range diagnostics {
+				println(diagnostic.Message)
+			}
 		}
 		return fmt.Errorf("checker errors")
 	}

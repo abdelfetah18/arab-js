@@ -56,10 +56,10 @@ func (h *Handlers) flushChanges() {
 		switch fileChange.Kind {
 		case FileChangeKindChange:
 			program := h.Project.Program
-			program.Diagnostics = []*ast.Diagnostic{}
+			program.Diagnostics = map[*ast.SourceFile][]*ast.Diagnostic{}
 			h.Project.UpdateProgram(getPath(fileChange.uri), fileChange.content)
 			h.reportDiagnosticErrors(program, fileChange.uri)
-			program.Diagnostics = []*ast.Diagnostic{}
+			program.Diagnostics = map[*ast.SourceFile][]*ast.Diagnostic{}
 			program.CheckSourceFiles()
 			h.reportDiagnosticErrors(program, fileChange.uri)
 		case FileChangeKindOpen:
@@ -73,10 +73,10 @@ func (h *Handlers) flushChanges() {
 			projectPath, _ := findProjectPath(getPath(fileChange.uri))
 			projectFiles, _ := listProjectFiles(projectPath)
 
-			program.Diagnostics = []*ast.Diagnostic{}
+			program.Diagnostics = map[*ast.SourceFile][]*ast.Diagnostic{}
 			program.ParseSourceFiles(projectFiles)
 			h.reportDiagnosticErrors(program, fileChange.uri)
-			program.Diagnostics = []*ast.Diagnostic{}
+			program.Diagnostics = map[*ast.SourceFile][]*ast.Diagnostic{}
 			program.CheckSourceFiles()
 			h.reportDiagnosticErrors(program, fileChange.uri)
 		}
@@ -275,26 +275,33 @@ func (h *Handlers) reportDiagnosticErrors(program *compiler.Program, uri defines
 	}
 
 	diagnostics := []Diagnostic{}
-	for _, diagnostic := range program.Diagnostics {
-		start, err := indexToPosition(getPath(uri), diagnostic.Location.Pos)
-		if err != nil {
-			start = defines.Position{Line: 0, Character: 0}
+	for sourceFile, sourceFileDiagnostics := range program.Diagnostics {
+		if sourceFile != program.GetSourceFile(getPath(uri)) {
+			continue
 		}
 
-		end, err := indexToPosition(getPath(uri), diagnostic.Location.End)
-		if err != nil {
-			end = defines.Position{Line: 0, Character: 0}
+		for _, diagnostic := range sourceFileDiagnostics {
+
+			start, err := indexToPosition(getPath(uri), diagnostic.Location.Pos)
+			if err != nil {
+				start = defines.Position{Line: 0, Character: 0}
+			}
+
+			end, err := indexToPosition(getPath(uri), diagnostic.Location.End)
+			if err != nil {
+				end = defines.Position{Line: 0, Character: 0}
+			}
+
+			diagnostics = append(diagnostics, Diagnostic{
+				Range: defines.Range{
+					Start: start,
+					End:   end,
+				},
+				Message: diagnostic.Message,
+			})
+
+			log.Printf("message=%s\n", diagnostic.Message)
 		}
-
-		diagnostics = append(diagnostics, Diagnostic{
-			Range: defines.Range{
-				Start: start,
-				End:   end,
-			},
-			Message: diagnostic.Message,
-		})
-
-		log.Printf("message=%s\n", diagnostic.Message)
 	}
 
 	params := PublishDiagnosticsParams{

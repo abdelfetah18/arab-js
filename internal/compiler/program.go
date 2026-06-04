@@ -24,7 +24,7 @@ type Program struct {
 	sourceFiles    []*ast.SourceFile
 	filesByPath    map[string]*ast.SourceFile
 
-	Diagnostics []*ast.Diagnostic
+	Diagnostics map[*ast.SourceFile][]*ast.Diagnostic
 }
 
 func NewProgram() *Program {
@@ -33,7 +33,7 @@ func NewProgram() *Program {
 			Main: "الرئيسية.كود",
 		},
 		sourceFiles: []*ast.SourceFile{},
-		Diagnostics: []*ast.Diagnostic{},
+		Diagnostics: map[*ast.SourceFile][]*ast.Diagnostic{},
 		filesByPath: map[string]*ast.SourceFile{},
 	}
 }
@@ -62,7 +62,7 @@ func (p *Program) ParseSourceFiles(sourceFilesPaths []string) error {
 		p.sourceFiles = append(p.sourceFiles, sourceFile)
 
 		if len(parser.Diagnostics) > 0 {
-			p.Diagnostics = append(p.Diagnostics, parser.Diagnostics...)
+			p.Diagnostics[sourceFile] = parser.Diagnostics
 		}
 	}
 	return nil
@@ -77,7 +77,9 @@ func (p *Program) BindSourceFiles() {
 func (p *Program) CheckSourceFiles() *binder.NameResolver {
 	p.Checker = checker.NewChecker(p)
 	p.Checker.Check()
-	p.Diagnostics = p.Checker.Diagnostics
+	for _, diagnostic := range p.Checker.Diagnostics {
+		p.Diagnostics[diagnostic.SourceFile] = append(p.Diagnostics[diagnostic.SourceFile], diagnostic)
+	}
 	return p.Checker.NameResolver
 }
 
@@ -148,6 +150,6 @@ func (p *Program) UpdateSourceFile(filePath string, content string) {
 	}
 
 	if len(parser.Diagnostics) > 0 {
-		p.Diagnostics = parser.Diagnostics
+		p.Diagnostics[sourceFile] = parser.Diagnostics
 	}
 }

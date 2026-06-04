@@ -36,11 +36,11 @@ func (s *Session) loadProject(filePath string) {
 	projectPath, _ := findProjectPath(filePath)
 	projectFiles, _ := listFilesWithExt(projectPath, ".arts")
 
-	program.Diagnostics = []*ast.Diagnostic{}
+	program.Diagnostics = map[*ast.SourceFile][]*ast.Diagnostic{}
 	program.ParseSourceFiles(projectFiles)
 	// TODO: report diasnostics
 
-	program.Diagnostics = []*ast.Diagnostic{}
+	program.Diagnostics = map[*ast.SourceFile][]*ast.Diagnostic{}
 	program.CheckSourceFiles()
 	// TODO: report diasnostics
 

@@ -18,7 +18,8 @@ type Parser struct {
 	lexer          *lexer.Lexer
 	startPositions stack.Stack[uint]
 
-	Diagnostics []*ast.Diagnostic
+	Diagnostics       []*ast.Diagnostic
+	currentSourceFile *ast.SourceFile
 
 	opts ast.SourceFileParseOptions
 
@@ -52,7 +53,18 @@ func (p *Parser) Parse() *ast.SourceFile {
 		statements = append(statements, statement)
 	}
 
-	return ast.NewNode(ast.NewSourceFile(p.lexer.Text(), statements, directives, isDeclarationFile), ast.Location{Pos: p.startPositions.Pop(), End: uint(p.lexer.Position())})
+	return ast.NewNode(
+		ast.NewSourceFile(
+			p.lexer.Text(),
+			statements,
+			directives,
+			isDeclarationFile,
+		),
+		ast.Location{
+			Pos: p.startPositions.Pop(),
+			End: uint(p.lexer.Position()),
+		},
+	)
 }
 
 func (p *Parser) parseIfStatement() *ast.IfStatement {
