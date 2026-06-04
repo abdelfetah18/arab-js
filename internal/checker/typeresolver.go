@@ -17,8 +17,6 @@ type TypeResolver struct {
 	nullType    *Type
 	anyType     *Type
 	errorType   *Type
-
-	typeNodeMap map[*ast.Node]*Type
 }
 
 func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
@@ -35,133 +33,125 @@ func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
 	t.booleanType = t.newBooleanUnionType()
 	t.errorType = t.newIntrinsicType(TypeFlagsAny, "error")
 
-	t.typeNodeMap = map[*ast.Node]*Type{}
-
 	return t
 }
 
 func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node, typeMapper map[string]*Type) *Type {
-	typeNode, exist := t.typeNodeMap[node]
-	if !exist {
-		typeNode = nil
-		switch node.Type {
-		case ast.NodeTypeParameter:
-			typeNode = t.ResolveTypeAnnotation(node.AsParameter().TypeAnnotation, typeMapper)
-		case ast.NodeTypeIdentifier:
-			identifier := node.AsIdentifier()
-			if node.Parent != nil && node.Parent.Type == ast.NodeTypeVariableDeclaration {
-				typeNode = t.ResolveTypeAnnotation(identifier.TypeAnnotation, typeMapper)
+	var typeNode *Type = nil
+	switch node.Type {
+	case ast.NodeTypeParameter:
+		typeNode = t.ResolveTypeAnnotation(node.AsParameter().TypeAnnotation, typeMapper)
+	case ast.NodeTypeIdentifier:
+		identifier := node.AsIdentifier()
+		if node.Parent != nil && node.Parent.Type == ast.NodeTypeVariableDeclaration {
+			typeNode = t.ResolveTypeAnnotation(identifier.TypeAnnotation, typeMapper)
+			break
+		}
+
+		if node.Parent != nil && node.Parent.Type == ast.NodeTypeFunctionDeclaration {
+			typeNode = t.ResolveTypeAnnotation(identifier.TypeAnnotation, typeMapper)
+			break
+		}
+
+		if node.Parent != nil && node.Parent.Type == ast.NodeTypeArrowFunction {
+			typeNode = t.ResolveTypeAnnotation(identifier.TypeAnnotation, typeMapper)
+			break
+		}
+
+		symbol := t.NameResolver.Resolve(identifier.Name, node)
+		if symbol == nil {
+			typeNode = nil
+			break
+		}
+
+		typeNode = t.ResolveTypeFromNode(symbol.Node, typeMapper)
+	case ast.NodeTypeVariableDeclaration:
+		variableDeclaration := node.AsVariableDeclaration()
+		if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
+			if variableDeclaration.Name.AsIdentifier().TypeAnnotation != nil {
+				typeNode = t.ResolveTypeAnnotation(variableDeclaration.Name.AsIdentifier().TypeAnnotation, typeMapper)
 				break
 			}
 
-			if node.Parent != nil && node.Parent.Type == ast.NodeTypeFunctionDeclaration {
-				typeNode = t.ResolveTypeAnnotation(identifier.TypeAnnotation, typeMapper)
+			if variableDeclaration.Initializer != nil {
+				result := t.ResolveTypeFromNode(variableDeclaration.Initializer.Expression, typeMapper)
+				typeNode = result
 				break
 			}
 
-			if node.Parent != nil && node.Parent.Type == ast.NodeTypeArrowFunction {
-				typeNode = t.ResolveTypeAnnotation(identifier.TypeAnnotation, typeMapper)
-				break
-			}
+			typeNode = nil
+			break
+		}
+	case ast.NodeTypeFunctionDeclaration:
+		typeNode = t.newFunctionType(t.resolveSignature(node, typeMapper))
+	case ast.NodeTypeStringLiteral:
+		typeNode = t.stringType
+	case ast.NodeTypeDecimalLiteral:
+		typeNode = t.numberType
+	case ast.NodeTypeBooleanLiteral:
+		typeNode = t.booleanType
+	case ast.NodeTypeNullLiteral:
+		typeNode = t.nullType
+	case ast.NodeTypeMemberExpression:
+		memberExpression := node.AsMemberExpression()
+		objectType := t.ResolveTypeFromNode(memberExpression.Object, typeMapper)
+		if objectType == nil {
+			typeNode = nil
+			break
+		}
 
-			symbol := t.NameResolver.Resolve(identifier.Name, node)
-			if symbol == nil {
+		if objectType.Flags&TypeFlagsObject == 0 {
+			typeNode = nil
+			break
+		}
+
+		if memberExpression.Computed && memberExpression.Property.Type == ast.NodeTypeDecimalLiteral {
+			index := slices.IndexFunc(objectType.AsObjectType().indexInfos, func(indexInfo *IndexInfo) bool {
+				return indexInfo.keyType.Flags&TypeFlagsNumber != 0
+			})
+			if index == -1 {
 				typeNode = nil
 				break
 			}
 
-			typeNode = t.ResolveTypeFromNode(symbol.Node, typeMapper)
-		case ast.NodeTypeVariableDeclaration:
-			variableDeclaration := node.AsVariableDeclaration()
+			typeNode = objectType.AsObjectType().indexInfos[index].valueType
+			break
+		}
+
+		typeNode = objectType.AsObjectType().members[memberExpression.PropertyName()].Type
+	case ast.NodeTypeObjectExpression:
+		objectExpression := node.AsObjectExpression()
+		switch objectExpression.Parent.Type {
+		case ast.NodeTypeInitializer:
+			variableDeclaration := objectExpression.Parent.Parent.AsVariableDeclaration()
 			if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
-				if variableDeclaration.Name.AsIdentifier().TypeAnnotation != nil {
-					typeNode = t.ResolveTypeAnnotation(variableDeclaration.Name.AsIdentifier().TypeAnnotation, typeMapper)
-					break
-				}
-
-				if variableDeclaration.Initializer != nil {
-					result := t.ResolveTypeFromNode(variableDeclaration.Initializer.Expression, typeMapper)
-					typeNode = result
-					break
-				}
-
-				typeNode = nil
+				typeNode = t.ResolveTypeAnnotation(variableDeclaration.Name.AsIdentifier().TypeAnnotation, typeMapper)
 				break
 			}
-		case ast.NodeTypeFunctionDeclaration:
-			typeNode = t.newFunctionType(t.resolveSignature(node, typeMapper))
-		case ast.NodeTypeStringLiteral:
-			typeNode = t.stringType
-		case ast.NodeTypeDecimalLiteral:
-			typeNode = t.numberType
-		case ast.NodeTypeBooleanLiteral:
-			typeNode = t.booleanType
-		case ast.NodeTypeNullLiteral:
-			typeNode = t.nullType
-		case ast.NodeTypeMemberExpression:
-			memberExpression := node.AsMemberExpression()
-			objectType := t.ResolveTypeFromNode(memberExpression.Object, typeMapper)
-			if objectType == nil {
-				typeNode = nil
-				break
-			}
-
-			if objectType.Flags&TypeFlagsObject == 0 {
-				typeNode = nil
-				break
-			}
-
-			if memberExpression.Computed && memberExpression.Property.Type == ast.NodeTypeDecimalLiteral {
-				index := slices.IndexFunc(objectType.AsObjectType().indexInfos, func(indexInfo *IndexInfo) bool {
-					return indexInfo.keyType.Flags&TypeFlagsNumber != 0
-				})
-				if index == -1 {
-					typeNode = nil
-					break
-				}
-
-				typeNode = objectType.AsObjectType().indexInfos[index].valueType
-				break
-			}
-
-			typeNode = objectType.AsObjectType().members[memberExpression.PropertyName()].Type
-		case ast.NodeTypeObjectExpression:
-			objectExpression := node.AsObjectExpression()
-			switch objectExpression.Parent.Type {
-			case ast.NodeTypeInitializer:
-				variableDeclaration := objectExpression.Parent.Parent.AsVariableDeclaration()
-				if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
-					typeNode = t.ResolveTypeAnnotation(variableDeclaration.Name.AsIdentifier().TypeAnnotation, typeMapper)
-					break
-				}
-			case ast.NodeTypeAssignmentExpression:
-				assignmentExpression := objectExpression.Parent.AsAssignmentExpression()
-				typeNode = t.ResolveTypeFromNode(assignmentExpression.Left, typeMapper)
-			default:
-				members := map[string]*ObjectTypeMember{}
-				for _, property := range objectExpression.Properties {
-					if property.Type == ast.NodeTypeObjectProperty {
-						objectProperty := property.AsObjectProperty()
-						propertyName := objectProperty.Name()
-						members[propertyName] = &ObjectTypeMember{
-							Type:         t.inferTypeFromNode(objectProperty.Value),
-							OriginalName: nil,
-						}
+		case ast.NodeTypeAssignmentExpression:
+			assignmentExpression := objectExpression.Parent.AsAssignmentExpression()
+			typeNode = t.ResolveTypeFromNode(assignmentExpression.Left, typeMapper)
+		default:
+			members := map[string]*ObjectTypeMember{}
+			for _, property := range objectExpression.Properties {
+				if property.Type == ast.NodeTypeObjectProperty {
+					objectProperty := property.AsObjectProperty()
+					propertyName := objectProperty.Name()
+					members[propertyName] = &ObjectTypeMember{
+						Type:         t.inferTypeFromNode(objectProperty.Value),
+						OriginalName: nil,
 					}
 				}
-				typeNode = t.newObjectLiteralType(members)
 			}
-		case ast.NodeTypeCallExpression:
-			callExpression := node.AsCallExpression()
-			typeNode = t.ResolveTypeFromNode(callExpression.Callee, typeMapper).AsObjectType().signature.returnType
-		default:
-			typeNode = nil
+			typeNode = t.newObjectLiteralType(members)
 		}
-		t.typeNodeMap[node] = typeNode
-		return typeNode
-	} else {
-		return typeNode
+	case ast.NodeTypeCallExpression:
+		callExpression := node.AsCallExpression()
+		typeNode = t.ResolveTypeFromNode(callExpression.Callee, typeMapper).AsObjectType().signature.returnType
+	default:
+		typeNode = nil
 	}
+	return typeNode
 }
 
 func (t *TypeResolver) ResolveTypeAnnotation(typeAnnotation *ast.TypeAnnotation, typeMapper map[string]*Type) *Type {

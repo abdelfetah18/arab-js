@@ -126,7 +126,6 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 		return
 	}
 	initializerType := c.checkExpression(variableDeclaration.Initializer.Expression)
-	c.TypeResolver.typeNodeMap[variableDeclaration.AsNode()] = initializerType
 	if initializerType == nil {
 		return
 	}
