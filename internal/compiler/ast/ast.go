@@ -208,6 +208,10 @@ func (node *Node) AsConditionalExpression() *ConditionalExpression {
 	return node.Data.(*ConditionalExpression)
 }
 
+func (node *Node) AsTypeAnnotation() *TypeAnnotation {
+	return node.Data.(*TypeAnnotation)
+}
+
 func (node *Node) ForEachChild(v Visitor) bool     { return node.Data.ForEachChild(v) }
 func (node *NodeBase) ForEachChild(v Visitor) bool { return false }
 
@@ -237,6 +241,10 @@ func (node *Node) TypeNode() *Node {
 	case NodeTypeIdentifier:
 		if node.AsIdentifier().TypeAnnotation != nil {
 			return node.AsIdentifier().TypeAnnotation.TypeAnnotation
+		}
+	case NodeTypeParameter:
+		if node.AsParameter().TypeAnnotation != nil {
+			return node.AsParameter().TypeAnnotation.TypeAnnotation
 		}
 	}
 

@@ -262,6 +262,29 @@ func (h *Handlers) OnSignatureHelpHandler(ctx context.Context, req *defines.Sign
 	}, nil
 }
 
+func (h *Handlers) OnHoverHandler(ctx context.Context, req *defines.HoverParams) (result *defines.Hover, err error) {
+	h.flushChanges()
+
+	filePath := getPath(req.TextDocument.Uri)
+	sourceFile := h.Project.Program.GetSourceFile(filePath)
+
+	if sourceFile == nil {
+		return nil, errors.New("sourceFile not found")
+	}
+
+	position, err := h.snapshots[req.TextDocument.Uri].PositionToIndex(req.Position)
+	if err != nil {
+		return nil, err
+	}
+
+	node := getNodeAtPosition(sourceFile, position)
+	if node == nil {
+		return nil, errors.New("could not locate the node")
+	}
+
+	return ProvideHover(node, h.Project.Program.Checker.NameResolver)
+}
+
 func (h *Handlers) reportDiagnosticErrors(program *compiler.Program, uri defines.DocumentUri) bool {
 	type Diagnostic struct {
 		Range   defines.Range `json:"range"`

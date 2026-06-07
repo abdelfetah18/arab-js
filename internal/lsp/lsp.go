@@ -32,6 +32,7 @@ func StartLSP() {
 	server.OnDidChangeTextDocument(handlers.OnDidChangeTextDocument)
 	server.OnCompletion(handlers.OnCompletionHandler)
 	server.OnSignatureHelp(handlers.OnSignatureHelpHandler)
+	server.OnHover(handlers.OnHoverHandler)
 
 	for _, m := range server.GetMethods() {
 		if m != nil {
