@@ -210,17 +210,21 @@ func (c *Checker) checkArrowFunction(arrowFunction *ast.ArrowFunction) *Type {
 		parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, Rest: isRest})
 	}
 
+	returnType := c.TypeResolver.ResolveTypeAnnotation(arrowFunction.TypeAnnotation, map[string]*Type{})
 	if arrowFunction.Body.Type == ast.NodeTypeBlockStatement {
 		c.checkBlockStatement(arrowFunction.Body.AsBlockStatement())
 	} else {
-		c.checkStatement(arrowFunction.Body)
+		returnedType := c.checkExpression(arrowFunction.Body)
+		if !c.TypeResolver.isTypeRelatedTo(returnType, returnedType) {
+			c.errorf(arrowFunction.Body.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, returnType.Data.Name(), returnedType.Data.Name())
+		}
 	}
 
 	return c.TypeResolver.newFunctionType(
 		c.TypeResolver.newSignature(
 			flags,
 			parameters,
-			c.TypeResolver.ResolveTypeAnnotation(arrowFunction.TypeAnnotation, map[string]*Type{}),
+			returnType,
 		),
 	)
 }

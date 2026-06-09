@@ -156,7 +156,7 @@ func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node, typeMapper map[string
 
 func (t *TypeResolver) ResolveTypeAnnotation(typeAnnotation *ast.TypeAnnotation, typeMapper map[string]*Type) *Type {
 	if typeAnnotation == nil {
-		return nil
+		return t.anyType
 	}
 
 	return t.ResolveTypeNode(typeAnnotation.TypeAnnotation, typeMapper)
@@ -512,6 +512,27 @@ func (t *TypeResolver) isTypeRelatedTo(target *Type, source *Type) bool {
 			sourceTypeArgument := sourceType.typeArguments[index]
 			if !t.isTypeRelatedTo(targetTypeArgument, sourceTypeArgument) {
 				return false
+			}
+		}
+
+		if targetType.signature != nil && sourceType.signature == nil {
+			return false
+		}
+
+		if targetType.signature != nil && sourceType.signature != nil {
+			if !t.isTypeRelatedTo(targetType.signature.returnType, sourceType.signature.returnType) {
+				return false
+			}
+
+			if len(targetType.signature.parameters) != len(sourceType.signature.parameters) {
+				return false
+			}
+
+			for index, targetTypeParam := range targetType.signature.parameters {
+				sourceTypeParam := sourceType.signature.parameters[index]
+				if !t.isTypeRelatedTo(targetTypeParam.Type, sourceTypeParam.Type) {
+					return false
+				}
 			}
 		}
 
