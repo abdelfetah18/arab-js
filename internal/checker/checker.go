@@ -274,6 +274,11 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		callExpression := expression.AsCallExpression()
 		_type := c.checkCallExpression(callExpression)
 		return _type
+	case ast.NodeTypeConditionalExpression:
+		conditionalExpression := expression.AsConditionalExpression()
+		whenTrue := c.checkExpression(conditionalExpression.WhenTrue)
+		whenFalse := c.checkExpression(conditionalExpression.WhenFalse)
+		return c.TypeResolver.newUnionType([]*Type{whenTrue, whenFalse})
 	}
 
 	return nil
