@@ -231,7 +231,7 @@ func (c *Checker) checkArrowFunction(arrowFunction *ast.ArrowFunction) *Type {
 
 func (c *Checker) checkExpression(expression *ast.Node) *Type {
 	if expression == nil {
-		return nil
+		return c.TypeResolver.errorType
 	}
 
 	switch expression.Type {
@@ -258,11 +258,11 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		leftType := c.checkExpression(assignmentExpression.Left)
 		rightType := c.checkExpression(assignmentExpression.Right)
 		if leftType == nil {
-			return nil
+			return c.TypeResolver.errorType
 		}
 
 		if rightType == nil {
-			return nil
+			return c.TypeResolver.errorType
 		}
 
 		if !c.TypeResolver.isTypeRelatedTo(leftType, rightType) {
@@ -281,13 +281,13 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		return c.TypeResolver.newUnionType([]*Type{whenTrue, whenFalse})
 	}
 
-	return nil
+	return c.TypeResolver.errorType
 }
 
 func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type {
 	_type := c.checkExpression(callExpression.Callee)
 	if _type == nil {
-		return nil
+		return c.TypeResolver.errorType
 	}
 
 	if _type.Flags&TypeFlagsObject == 0 {
@@ -360,7 +360,7 @@ func (c *Checker) checkObjectExpression(objectExpression *ast.ObjectExpression) 
 func (c *Checker) checkMemberExpression(memberExpression *ast.MemberExpression) *Type {
 	objectType := c.checkExpression(memberExpression.Object)
 	if objectType == nil {
-		return nil
+		return c.TypeResolver.errorType
 	}
 	propertyName := memberExpression.PropertyName()
 	var propertyType *Type = nil
