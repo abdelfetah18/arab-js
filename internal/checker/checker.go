@@ -214,6 +214,10 @@ func (c *Checker) checkArrowFunction(arrowFunction *ast.ArrowFunction) *Type {
 		parameters = append(parameters, &SignatureParameter{Name: name, Type: paramType, Rest: isRest})
 	}
 
+	if arrowFunction.Body == nil {
+		return c.TypeResolver.errorType
+	}
+
 	returnType := c.TypeResolver.ResolveTypeAnnotation(arrowFunction.TypeAnnotation, map[string]*Type{})
 	if arrowFunction.Body.Type == ast.NodeTypeBlockStatement {
 		c.checkBlockStatement(arrowFunction.Body.AsBlockStatement())

@@ -217,6 +217,10 @@ func (b *Binder) bindArrowFunction(arrowFunction *ast.ArrowFunction) {
 		b.bindParam(param)
 	}
 
+	if arrowFunction.Body == nil {
+		return
+	}
+
 	if arrowFunction.Body.Type == ast.NodeTypeBlockStatement {
 		b.bindBlockStatement(arrowFunction.Body.AsBlockStatement())
 	}
