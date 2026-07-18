@@ -127,13 +127,9 @@ func (p *Parser) parseStatement() *ast.Node {
 		case lexer.KeywordIf:
 			return p.parseIfStatement().AsNode()
 		case lexer.KeywordLet, lexer.KeywordConst:
-			state := p.mark()
-			p.lexer.Next()
-			if p.isIdentifier() || p.lexer.Peek().Type == lexer.LeftCurlyBrace || p.lexer.Peek().Type == lexer.LeftSquareBracket {
-				p.rewind(state)
+			if !p.lookAhead(lexer.Colon) {
 				return p.parseVariableStatement(nil).AsNode()
 			}
-			p.rewind(state)
 		case lexer.KeywordFunction:
 			return p.parseFunctionDeclaration(nil).AsNode()
 		case lexer.KeywordImport:
@@ -637,11 +633,15 @@ func (p *Parser) parseVariableStatement(modifierList *ast.ModifierList) *ast.Var
 	}
 
 	variableDeclarationList := p.parseVariableDeclarationList()
+	var variableDeclarationListNode *ast.Node = nil
+	if variableDeclarationList != nil {
+		variableDeclarationListNode = variableDeclarationList.AsNode()
+	}
 
 	p.optional(lexer.Semicolon)
 
 	return ast.NewNode(
-		ast.NewVariableStatement(declarationType, variableDeclarationList.AsNode(), modifierList),
+		ast.NewVariableStatement(declarationType, variableDeclarationListNode, modifierList),
 		ast.Location{
 			Pos: p.startPositions.Pop(),
 			End: p.getEndPosition(),
@@ -655,6 +655,11 @@ func (p *Parser) parseVariableDeclarationList() *ast.VariableDeclarationList {
 	declarations := []*ast.Node{}
 
 	variableDeclaration := p.parseVariableDeclaration()
+	if variableDeclaration == nil {
+		p.startPositions.Pop()
+		return nil
+	}
+
 	declarations = append(declarations, variableDeclaration.AsNode())
 	if p.hasPrecedingOriginalNameDirective {
 		if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
@@ -697,6 +702,9 @@ func (p *Parser) parseVariableDeclaration() *ast.VariableDeclaration {
 	default:
 		if p.isIdentifier() {
 			name = p.parseIdentifier(true).AsNode()
+		} else {
+			p.startPositions.Pop()
+			return nil
 		}
 	}
 

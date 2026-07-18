@@ -102,6 +102,10 @@ func (c *Checker) checkIfStatement(ifStatement *ast.IfStatement) {
 }
 
 func (c *Checker) checkVariableStatement(variableStatement *ast.VariableStatement) {
+	if variableStatement.DeclarationList == nil {
+		return
+	}
+
 	for _, declaration := range variableStatement.DeclarationList.AsVariableDeclarationList().Declarations {
 		c.checkVariableDeclaration(declaration.AsVariableDeclaration())
 	}

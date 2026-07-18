@@ -56,6 +56,10 @@ func (b *Binder) bindStatement(node *ast.Node) {
 }
 
 func (b *Binder) bindVariableStatement(variableStatement *ast.VariableStatement) {
+	if variableStatement.DeclarationList == nil {
+		return
+	}
+
 	b.bindVariableDeclarationList(variableStatement.DeclarationList.AsVariableDeclarationList())
 }
 
