@@ -73,6 +73,10 @@ func (c *Checker) checkBlockStatement(blockStatement *ast.BlockStatement) {
 }
 
 func (c *Checker) checkStatement(node *ast.Node) {
+	if node == nil {
+		return
+	}
+
 	switch node.Type {
 	case ast.NodeTypeVariableStatement:
 		c.checkVariableStatement(node.AsVariableStatement())

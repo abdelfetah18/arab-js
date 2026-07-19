@@ -49,6 +49,10 @@ func (p *Parser) Parse() *ast.SourceFile {
 	statements := []*ast.Node{}
 	for p.lexer.Peek().Type != lexer.EOF && p.lexer.Peek().Type != lexer.Invalid {
 		statement := p.parseStatement()
+		if statement == nil {
+			break
+		}
+
 		p.optional(lexer.Semicolon)
 		statements = append(statements, statement)
 	}
@@ -194,6 +198,10 @@ func (p *Parser) parseStatement() *ast.Node {
 		p.markStartPosition()
 
 		expression := p.parseExpression()
+		if expression == nil {
+			p.startPositions.Pop()
+			return nil
+		}
 		p.expected(lexer.Semicolon)
 
 		return ast.NewNode(
@@ -438,7 +446,12 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 
 	statements := []*ast.Node{}
 	for p.lexer.Peek().Type != lexer.EOF && p.lexer.Peek().Type != lexer.Invalid && p.lexer.Peek().Type != lexer.RightCurlyBrace {
-		statements = append(statements, p.parseStatement())
+		statement := p.parseStatement()
+		if statement == nil {
+			break
+		}
+
+		statements = append(statements, statement)
 		p.optional(lexer.Semicolon)
 	}
 
@@ -739,7 +752,7 @@ func (p *Parser) parseFunctionDeclaration(modifierList *ast.ModifierList) *ast.F
 		typeParameters = p.parseTypeParametersDeclaration()
 	}
 
-	params := p.parseParameters()
+	params, _ := p.parseParameters()
 
 	var typeAnnotation *ast.TypeAnnotation = nil
 	if p.optional(lexer.Colon) {
@@ -776,6 +789,9 @@ func (p *Parser) parseCallExpressionRest(expression *ast.Node) *ast.Node {
 				pos := p.lexer.Position()
 				rest := p.optional(lexer.TripleDots)
 				argument := p.parseAssignmentExpression()
+				if argument == nil {
+					break
+				}
 				if rest {
 					argument = ast.NewNode(
 						ast.NewSpreadElement(argument),
@@ -828,6 +844,10 @@ func (p *Parser) parseMemberExpression() *ast.Node {
 }
 
 func (p *Parser) parseMemberExpressionRest(memberExpression *ast.Node) *ast.Node {
+	if memberExpression == nil {
+		return nil
+	}
+
 	for {
 		if p.optional(lexer.LeftSquareBracket) {
 			computed := true
@@ -1133,8 +1153,9 @@ func (p *Parser) tryParseArrowFunction() *ast.ArrowFunction {
 	state := p.mark()
 	p.markStartPosition()
 
-	params := p.parseArrowParametes()
-	if !p.expected(lexer.EqualRightArrow) {
+	params, isParameters, isOneParam := p.parseArrowParametes()
+
+	if !p.expected(lexer.EqualRightArrow) && (isOneParam || !isParameters) {
 		p.rewind(state)
 		return nil
 	}
@@ -1160,16 +1181,20 @@ func (p *Parser) tryParseArrowFunction() *ast.ArrowFunction {
 	)
 }
 
-func (p *Parser) parseArrowParametes() []*ast.Node {
+func (p *Parser) parseArrowParametes() (nodeList []*ast.Node, isParameters bool, isOneParam bool) {
 	if p.isIdentifier() {
-		return []*ast.Node{p.parseIdentifier(false).AsNode()}
+		return []*ast.Node{p.parseIdentifier(false).AsNode()}, true, true
 	}
 
-	return p.parseParameters()
+	nodeList, isParameters = p.parseParameters()
+	return nodeList, isParameters, false
 }
 
-func (p *Parser) parseParameters() []*ast.Node {
-	p.expected(lexer.LeftParenthesis)
+func (p *Parser) parseParameters() (nodeList []*ast.Node, isParameters bool) {
+	if !p.expected(lexer.LeftParenthesis) {
+		return nil, false
+	}
+
 	params := []*ast.Node{}
 	param := p.parseParameter()
 	if param != nil {
@@ -1182,7 +1207,7 @@ func (p *Parser) parseParameters() []*ast.Node {
 		}
 	}
 	p.expected(lexer.RightParenthesis)
-	return params
+	return params, true
 }
 
 func (p *Parser) parseObjectBindingElement() *ast.BindingElement {
@@ -1591,7 +1616,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 func (p *Parser) parseFunctionType() *ast.FunctionType {
 	p.markStartPosition()
 
-	params := p.parseParameters()
+	params, _ := p.parseParameters()
 	p.expected(lexer.EqualRightArrow)
 
 	typeAnnotation := p.parseTypeAnnotation()
@@ -2091,7 +2116,7 @@ func (p *Parser) parseObjectPropertyOrMethod() *ast.Node {
 				typeParameters = p.parseTypeParametersDeclaration()
 			}
 
-			params := p.parseParameters()
+			params, _ := p.parseParameters()
 
 			var typeAnnotation *ast.TypeAnnotation = nil
 			if p.optional(lexer.Colon) {
@@ -2411,7 +2436,7 @@ func (p *Parser) parseFunctionExpression() *ast.FunctionExpression {
 		typeParameters = p.parseTypeParametersDeclaration()
 	}
 
-	params := p.parseParameters()
+	params, _ := p.parseParameters()
 
 	var typeAnnotation *ast.TypeAnnotation = nil
 	if p.optional(lexer.Colon) {

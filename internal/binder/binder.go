@@ -33,6 +33,10 @@ func (b *Binder) Bind() {
 }
 
 func (b *Binder) bindStatement(node *ast.Node) {
+	if node == nil {
+		return
+	}
+
 	switch node.Type {
 	case ast.NodeTypeIfStatement:
 		ifStatement := node.AsIfStatement()
