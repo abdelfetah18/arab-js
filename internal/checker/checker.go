@@ -24,10 +24,29 @@ func NewChecker(program Program) *Checker {
 	program.BindSourceFiles()
 
 	globalScope := &ast.Scope{IsGlobal: true}
+	diagnostics := []*ast.Diagnostic{}
 
 	for _, sourceFile := range program.SourceFiles() {
 		if !ast.IsExternalModule(sourceFile) {
-			globalScope.MergeScopeLocals(sourceFile.Scope)
+			globalScope.MergeScopeLocals(sourceFile.Scope, func(target, source *ast.Symbol) {
+				if target.Flags&ast.SymbolFlagsBlockScoped != 0 {
+					diagnostics = append(diagnostics,
+						ast.NewDiagnostic(
+							sourceFile,
+							source.Node.DeclarationBaseData().IdentifierNameNode().Location,
+							fmt.Sprintf(binder.CANNOT_REDECLARE_BLOCK_SCOPED_VARIABLE_0, source.Name),
+						),
+					)
+				} else {
+					diagnostics = append(diagnostics,
+						ast.NewDiagnostic(
+							sourceFile,
+							source.Node.DeclarationBaseData().IdentifierNameNode().Location,
+							fmt.Sprintf(binder.DUPLICATE_IDENTIFIER_0, target.Name),
+						),
+					)
+				}
+			})
 		}
 	}
 
@@ -35,7 +54,7 @@ func NewChecker(program Program) *Checker {
 
 	return &Checker{
 		program:      program,
-		Diagnostics:  []*ast.Diagnostic{},
+		Diagnostics:  diagnostics,
 		NameResolver: nameResolver,
 		TypeResolver: NewTypeResolver(nameResolver),
 	}

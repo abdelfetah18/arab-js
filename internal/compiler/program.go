@@ -70,7 +70,10 @@ func (p *Program) ParseSourceFiles(sourceFilesPaths []string) error {
 
 func (p *Program) BindSourceFiles() {
 	for _, sourceFile := range p.sourceFiles {
-		binder.BindSourceFile(sourceFile)
+		b := binder.BindSourceFile(sourceFile)
+		if len(b.Diagnostics) > 0 {
+			p.Diagnostics[sourceFile] = b.Diagnostics
+		}
 	}
 }
 

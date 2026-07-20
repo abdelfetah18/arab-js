@@ -72,6 +72,7 @@ type NodeData interface {
 	MarshalJSON() ([]byte, error)
 	ForEachChild(v Visitor) bool
 	ContainerBaseData() *ContainerBase
+	DeclarationBaseData() *DeclarationBase
 }
 
 type NodeBase struct {
@@ -218,6 +219,9 @@ func (node *NodeBase) ForEachChild(v Visitor) bool { return false }
 func (node *Node) ContainerBaseData() *ContainerBase     { return node.Data.ContainerBaseData() }
 func (node *NodeBase) ContainerBaseData() *ContainerBase { return nil }
 
+func (node *Node) DeclarationBaseData() *DeclarationBase     { return node.Data.DeclarationBaseData() }
+func (node *NodeBase) DeclarationBaseData() *DeclarationBase { return nil }
+
 func (node *Node) TypeNode() *Node {
 	switch node.Type {
 	case NodeTypeVariableDeclaration:
@@ -290,10 +294,27 @@ type ContainerBase struct {
 	Scope *Scope
 }
 
-func (node *ContainerBase) ContainerBaseData() *ContainerBase { return node }
+func (containerBase *ContainerBase) ContainerBaseData() *ContainerBase { return containerBase }
 
 type DeclarationBase struct {
 	Symbol *Symbol
+}
+
+func (declarationBase *DeclarationBase) DeclarationBaseData() *DeclarationBase {
+	return declarationBase
+}
+func (declarationBase *DeclarationBase) IdentifierNameNode() *Node {
+	node := declarationBase.Symbol.Node
+	switch node.Type {
+	case NodeTypeVariableDeclaration:
+		return node.AsVariableDeclaration().Name
+	case NodeTypeFunctionDeclaration:
+		return node.AsFunctionDeclaration().ID.AsNode()
+	case NodeTypeInterfaceDeclaration:
+		return node.AsInterfaceDeclaration().Id.AsNode()
+	default:
+		return nil
+	}
 }
 
 type ModifiersBase struct {
@@ -359,6 +380,10 @@ func (variableDeclaration *VariableDeclaration) NodeType() NodeType {
 
 func (variableDeclaration *VariableDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, variableDeclaration.Name.AsNode()) || (variableDeclaration.Initializer != nil && visit(v, variableDeclaration.Initializer.AsNode()))
+}
+
+func (variableDeclaration *VariableDeclaration) DeclarationBaseData() *DeclarationBase {
+	return &variableDeclaration.DeclarationBase
 }
 
 type TypeAnnotation struct {
@@ -793,6 +818,10 @@ func (functionDeclaration *FunctionDeclaration) ForEachChild(v Visitor) bool {
 
 func (functionDeclaration *FunctionDeclaration) ContainerBaseData() *ContainerBase {
 	return &functionDeclaration.ContainerBase
+}
+
+func (functionDeclaration *FunctionDeclaration) DeclarationBaseData() *DeclarationBase {
+	return &functionDeclaration.DeclarationBase
 }
 
 type CallExpression struct {
@@ -1540,6 +1569,10 @@ func (interfaceDeclaration *InterfaceDeclaration) ContainerBaseData() *Container
 	return &interfaceDeclaration.ContainerBase
 }
 
+func (interfaceDeclaration *InterfaceDeclaration) DeclarationBaseData() *DeclarationBase {
+	return &interfaceDeclaration.DeclarationBase
+}
+
 type InterfaceBody struct {
 	NodeBase
 	Body []*Node `json:"body,omitempty"`
@@ -1691,6 +1724,10 @@ func (typeAliasDeclaration *TypeAliasDeclaration) NodeType() NodeType {
 
 func (typeAliasDeclaration *TypeAliasDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, typeAliasDeclaration.Id.AsNode()) || visit(v, typeAliasDeclaration.TypeAnnotation.AsNode())
+}
+
+func (typeAliasDeclaration *TypeAliasDeclaration) DeclarationBaseData() *DeclarationBase {
+	return &typeAliasDeclaration.DeclarationBase
 }
 
 type TypeLiteral struct {
@@ -1915,6 +1952,10 @@ func (moduleDeclaration *ModuleDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, moduleDeclaration.Id.AsNode()) || visit(v, moduleDeclaration.Body.AsNode())
 }
 
+func (moduleDeclaration *ModuleDeclaration) DeclarationBaseData() *DeclarationBase {
+	return &moduleDeclaration.DeclarationBase
+}
+
 type ModuleBlock struct {
 	NodeBase
 	Body []*Node
@@ -1995,6 +2036,10 @@ func (typeParameter *TypeParameter) MarshalJSON() ([]byte, error) {
 
 func (typeParameter *TypeParameter) NodeType() NodeType {
 	return NodeTypeTypeParameter
+}
+
+func (typeParameter *TypeParameter) DeclarationBaseData() *DeclarationBase {
+	return &typeParameter.DeclarationBase
 }
 
 type TypeParametersDeclaration struct {
@@ -2141,6 +2186,10 @@ func (functionExpression *FunctionExpression) ContainerBaseData() *ContainerBase
 	return &functionExpression.ContainerBase
 }
 
+func (functionExpression *FunctionExpression) DeclarationBaseData() *DeclarationBase {
+	return &functionExpression.DeclarationBase
+}
+
 type ModifierList struct {
 	ModifierFlags ModifierFlags
 }
@@ -2180,6 +2229,10 @@ func (indexSignatureDeclaration *IndexSignatureDeclaration) NodeType() NodeType 
 
 func (indexSignatureDeclaration *IndexSignatureDeclaration) ForEachChild(v Visitor) bool {
 	return visit(v, indexSignatureDeclaration.Index.AsNode())
+}
+
+func (indexSignatureDeclaration *IndexSignatureDeclaration) DeclarationBaseData() *DeclarationBase {
+	return &indexSignatureDeclaration.DeclarationBase
 }
 
 type RegularExpressionLiteral struct {
@@ -2287,6 +2340,10 @@ func (parameter *Parameter) ForEachChild(v Visitor) bool {
 	return visit(v, parameter.Name) ||
 		(parameter.TypeAnnotation != nil && visit(v, parameter.TypeAnnotation.AsNode())) ||
 		(parameter.Initializer != nil && visit(v, parameter.Initializer.AsNode()))
+}
+
+func (parameter *Parameter) DeclarationBaseData() *DeclarationBase {
+	return &parameter.DeclarationBase
 }
 
 type ObjectBindingPattern struct {

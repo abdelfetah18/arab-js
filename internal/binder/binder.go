@@ -2,11 +2,14 @@ package binder
 
 import (
 	"arab_js/internal/compiler/ast"
+	"fmt"
 )
 
 type Binder struct {
 	sourceFile *ast.SourceFile
 	container  *ast.ContainerBase
+
+	Diagnostics []*ast.Diagnostic
 }
 
 func NewBinder(sourceFile *ast.SourceFile) *Binder {
@@ -16,8 +19,10 @@ func NewBinder(sourceFile *ast.SourceFile) *Binder {
 	}
 }
 
-func BindSourceFile(sourceFile *ast.SourceFile) {
-	NewBinder(sourceFile).Bind()
+func BindSourceFile(sourceFile *ast.SourceFile) *Binder {
+	b := NewBinder(sourceFile)
+	b.Bind()
+	return b
 }
 
 func (b *Binder) Bind() {
@@ -75,10 +80,12 @@ func (b *Binder) bindVariableDeclarationList(variableDeclarationList *ast.Variab
 
 func (b *Binder) bindVariableDeclaration(variableDeclaration *ast.VariableDeclaration) {
 	if variableDeclaration.Name.Type == ast.NodeTypeIdentifier {
-		variableDeclaration.Symbol = b.container.Scope.AddVariable(
+		variableDeclaration.Symbol = b.declareSymbol(
+			b.container.Scope,
 			variableDeclaration.Name.AsIdentifier().Name,
 			variableDeclaration.Name.AsIdentifier().OriginalName,
 			variableDeclaration.AsNode(),
+			ast.SymbolFlagsBlockScopedVariable,
 		)
 	}
 }
@@ -100,18 +107,22 @@ func (b *Binder) bindBlockStatement(blockStatement *ast.BlockStatement) {
 }
 
 func (b *Binder) bindTypeParam(typeParameter *ast.TypeParameter) {
-	b.container.Scope.AddVariable(
+	b.declareSymbol(
+		b.container.Scope,
 		typeParameter.Name,
 		nil,
 		typeParameter.AsNode(),
+		ast.SymbolFlagsTypeParameter,
 	)
 }
 
 func (b *Binder) bindInterfaceDeclaration(interfaceDeclaration *ast.InterfaceDeclaration) {
-	interfaceDeclaration.Symbol = b.container.Scope.AddVariable(
+	interfaceDeclaration.Symbol = b.declareSymbol(
+		b.container.Scope,
 		interfaceDeclaration.Id.Name,
 		nil,
 		interfaceDeclaration.AsNode(),
+		ast.SymbolFlagsInterface,
 	)
 
 	saveContainer := b.container
@@ -129,10 +140,12 @@ func (b *Binder) bindInterfaceDeclaration(interfaceDeclaration *ast.InterfaceDec
 }
 
 func (b *Binder) bindFunctionDeclaration(functionDeclaration *ast.FunctionDeclaration) {
-	functionDeclaration.Symbol = b.container.Scope.AddVariable(
+	functionDeclaration.Symbol = b.declareSymbol(
+		b.container.Scope,
 		functionDeclaration.ID.Name,
 		functionDeclaration.ID.OriginalName,
 		functionDeclaration.AsNode(),
+		ast.SymbolFlagsFunction,
 	)
 
 	saveContainer := b.container
@@ -162,10 +175,12 @@ func (b *Binder) bindParam(node *ast.Node) {
 		switch param.Name.Type {
 		case ast.NodeTypeIdentifier:
 			identifier := param.Name.AsIdentifier()
-			b.container.Scope.AddVariable(
+			b.declareSymbol(
+				b.container.Scope,
 				identifier.Name,
 				nil,
 				node,
+				ast.SymbolFlagsFunctionScopedVariable,
 			)
 		}
 	}
@@ -230,6 +245,43 @@ func (b *Binder) bindArrowFunction(arrowFunction *ast.ArrowFunction) {
 	}
 
 	b.container = saveContainer
+}
+
+func (b *Binder) declareSymbol(
+	scope *ast.Scope,
+	name string,
+	originalName *string,
+	node *ast.Node,
+	flags ast.SymbolFlags,
+) *ast.Symbol {
+	if scope.Locals == nil {
+		scope.Locals = make(map[string]*ast.Symbol)
+	}
+
+	if existingSymbol, exists := scope.Locals[name]; exists {
+		if existingSymbol.Flags&ast.SymbolFlagsBlockScoped != 0 {
+			b.errorf(node.DeclarationBaseData().IdentifierNameNode().Location, CANNOT_REDECLARE_BLOCK_SCOPED_VARIABLE_0, name)
+		} else {
+			b.errorf(node.DeclarationBaseData().IdentifierNameNode().Location, DUPLICATE_IDENTIFIER_0, name)
+		}
+		return nil
+	}
+
+	return scope.AddVariable(name, originalName, node, flags)
+}
+
+func (b *Binder) error(location ast.Location, message string) {
+	b.Diagnostics = append(b.Diagnostics,
+		ast.NewDiagnostic(
+			b.sourceFile,
+			location,
+			message,
+		),
+	)
+}
+
+func (b *Binder) errorf(location ast.Location, format string, a ...any) {
+	b.error(location, fmt.Sprintf(format, a...))
 }
 
 func canCreateNewScope(node *ast.Node) bool {
