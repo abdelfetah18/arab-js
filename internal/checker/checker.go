@@ -3,6 +3,7 @@ package checker
 import (
 	"arab_js/internal/binder"
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/emitter"
 	"fmt"
 )
 
@@ -158,7 +159,7 @@ func (c *Checker) checkVariableDeclaration(variableDeclaration *ast.VariableDecl
 	}
 
 	if !c.TypeResolver.isTypeRelatedTo(identifierType, initializerType) {
-		c.errorf(variableDeclaration.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, identifierType.Data.Name(), initializerType.Data.Name())
+		c.errorf(variableDeclaration.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1, emitter.EmitTypeNode(variableDeclaration.TypeNode()), initializerType.ToString())
 		return
 	}
 }
@@ -247,7 +248,7 @@ func (c *Checker) checkArrowFunction(arrowFunction *ast.ArrowFunction) *Type {
 	} else {
 		returnedType := c.checkExpression(arrowFunction.Body)
 		if !c.TypeResolver.isTypeRelatedTo(returnType, returnedType) {
-			c.errorf(arrowFunction.Body.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, returnType.Data.Name(), returnedType.Data.Name())
+			c.errorf(arrowFunction.Body.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1, emitter.EmitTypeNode(arrowFunction.TypeAnnotation.TypeAnnotation), returnedType.ToString())
 		}
 	}
 
@@ -297,7 +298,7 @@ func (c *Checker) checkExpression(expression *ast.Node) *Type {
 		}
 
 		if !c.TypeResolver.isTypeRelatedTo(leftType, rightType) {
-			c.errorf(assignmentExpression.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1_FORMAT, leftType.Data.Name(), rightType.Data.Name())
+			c.errorf(assignmentExpression.Location, TYPE_0_IS_NOT_ASSIGNABLE_TO_TYPE_1, leftType.ToString(), rightType.ToString())
 			return c.TypeResolver.errorType
 		}
 		return leftType
@@ -322,13 +323,13 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 	}
 
 	if _type.Flags&TypeFlagsObject == 0 {
-		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.Data.Name())
+		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.ToString())
 		return c.TypeResolver.errorType
 	}
 
 	objectType := _type.AsObjectType()
 	if objectType.signature == nil {
-		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.Data.Name())
+		c.errorf(callExpression.Location, THIS_EXPRESSION_IS_NOT_CALLABLE_TYPE_0_HAS_NO_CALL_SIGNATURES, _type.ToString())
 		return c.TypeResolver.errorType
 	}
 
@@ -351,7 +352,7 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 		arg := callExpression.Args[index]
 		_type := c.checkExpression(arg)
 		if !c.TypeResolver.isTypeRelatedTo(param.Type, _type) {
-			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
+			c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.ToString(), param.Type.ToString())
 			return c.TypeResolver.errorType
 		}
 	}
@@ -363,7 +364,7 @@ func (c *Checker) checkCallExpression(callExpression *ast.CallExpression) *Type 
 			arg := callExpression.Args[index]
 			_type := c.checkExpression(arg)
 			if !c.TypeResolver.isTypeRelatedTo(restElementType, _type) {
-				c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.Data.Name(), param.Name)
+				c.errorf(callExpression.Location, ARGUMENT_OF_TYPE_0_IS_NOT_ASSIGNABLE_TO_PARAMETER_OF_TYPE_1, _type.ToString(), param.Type.ToString())
 				return c.TypeResolver.errorType
 			}
 		}
@@ -414,5 +415,5 @@ func (c *Checker) checkIdentifier(identifier *ast.Identifier) *Type {
 		return c.TypeResolver.errorType
 	}
 
-	return c.TypeResolver.ResolveTypeFromNode(symbol.Node, map[string]*Type{})
+	return c.TypeResolver.ResolveTypeFromSymbol(symbol)
 }

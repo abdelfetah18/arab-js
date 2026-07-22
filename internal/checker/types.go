@@ -1,5 +1,11 @@
 package checker
 
+import (
+	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/lexer"
+	"fmt"
+)
+
 type TypeFlags uint32
 
 const (
@@ -72,6 +78,8 @@ type Type struct {
 	Flags       TypeFlags
 	ObjectFlags ObjectFlags
 	Data        TypeData
+	Symbol      *ast.Symbol
+	Name        *string
 }
 
 type TypeData interface {
@@ -83,6 +91,48 @@ func (t *Type) AsType() *Type                   { return t }
 func (t *Type) AsIntrinsicType() *IntrinsicType { return t.Data.(*IntrinsicType) }
 func (t *Type) AsObjectType() *ObjectType       { return t.Data.(*ObjectType) }
 func (t *Type) AsUnionType() *UnionType         { return t.Data.(*UnionType) }
+
+func (t *Type) ToString() string {
+	switch v := t.Data.(type) {
+	case *ObjectType:
+		if v.signature != nil {
+			return v.signature.ToString()
+		}
+
+		if v.ObjectFlags&ObjectFlagsInterface != 0 && t.Name != nil {
+			return *t.Name
+		}
+
+		str := "{ "
+		for name, member := range v.members {
+			str += fmt.Sprintf("%s: %s؛ ", name, member.Type.ToString())
+		}
+		str += "}"
+		return str
+	case *IntrinsicType:
+		switch {
+		case v.Flags&TypeFlagsAny != 0:
+			return lexer.TypeKeywordAny
+		case v.Flags&TypeFlagsBoolean != 0:
+			return lexer.TypeKeywordBoolean
+		case v.Flags&TypeFlagsNumber != 0:
+			return lexer.TypeKeywordNumber
+		case v.Flags&TypeFlagsString != 0:
+			return lexer.TypeKeywordString
+		}
+	case *UnionType:
+		str := ""
+		for index, _type := range v.types {
+			str += _type.ToString()
+			if index != len(v.types)-1 {
+				str += " | "
+			}
+		}
+		return str
+	}
+
+	return "؟"
+}
 
 type IntrinsicType struct {
 	Type
@@ -154,3 +204,15 @@ type Signature struct {
 func (s *Signature) Flags() SignatureFlags             { return s.flags }
 func (s *Signature) Parameters() []*SignatureParameter { return s.parameters }
 func (s *Signature) ReturnType() *Type                 { return s.returnType }
+
+func (s *Signature) ToString() string {
+	str := "("
+	for index, param := range s.parameters {
+		str += fmt.Sprintf("%s : %s", param.Name, param.Type.ToString())
+		if index != len(s.parameters)-1 {
+			str += ", "
+		}
+	}
+	str += fmt.Sprintf(") => %s", s.returnType.ToString())
+	return str
+}

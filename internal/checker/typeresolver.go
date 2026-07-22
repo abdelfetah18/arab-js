@@ -36,6 +36,12 @@ func NewTypeResolver(nameResolver *binder.NameResolver) *TypeResolver {
 	return t
 }
 
+func (t *TypeResolver) ResolveTypeFromSymbol(symbol *ast.Symbol) *Type {
+	nodeType := t.ResolveTypeFromNode(symbol.Node, map[string]*Type{})
+	nodeType.Symbol = symbol
+	return nodeType
+}
+
 func (t *TypeResolver) ResolveTypeFromNode(node *ast.Node, typeMapper map[string]*Type) *Type {
 	var typeNode *Type = nil
 	switch node.Type {
@@ -242,7 +248,7 @@ func (t *TypeResolver) ResolveTypeFromTypeDeclaration(typeDeclaration *ast.Node,
 	case ast.NodeTypeInterfaceDeclaration:
 		interfaceDeclaration := typeDeclaration.AsInterfaceDeclaration()
 		interfaceType := t.newObjectType(ObjectFlagsInterface).AsObjectType()
-
+		interfaceType.Type.Name = new(interfaceDeclaration.Id.Name)
 		if interfaceDeclaration.TypeParameters != nil {
 			for index, typeParameter := range interfaceDeclaration.TypeParameters.Params {
 				interfaceType.typeArguments[typeParameter.Name] = typesArguments[index]

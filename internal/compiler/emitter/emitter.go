@@ -2,6 +2,7 @@ package emitter
 
 import (
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/lexer"
 	"fmt"
 	"strings"
 )
@@ -410,4 +411,29 @@ func (emitter *Emitter) emitImportClause(importClause *ast.ImportClause) {
 			emitter.emitIdentifier(namespaceImport.Name.AsIdentifier())
 		}
 	}
+}
+
+func EmitTypeNode(node *ast.Node) string {
+	if node == nil {
+		return ""
+	}
+
+	emitter := NewEmitter()
+
+	switch node.Type {
+	case ast.NodeTypeTypeAnnotation:
+		emitter.Writer.Write(EmitTypeNode(node.AsTypeAnnotation().TypeAnnotation))
+	case ast.NodeTypeTypeReference:
+		emitter.Writer.Write(node.AsTypeReferenceNode().TypeName.Name)
+	case ast.NodeTypeAnyKeyword:
+		emitter.Writer.Write(lexer.TypeKeywordAny)
+	case ast.NodeTypeStringKeyword:
+		emitter.Writer.Write(lexer.TypeKeywordString)
+	case ast.NodeTypeNumberKeyword:
+		emitter.Writer.Write(lexer.TypeKeywordNumber)
+	case ast.NodeTypeBooleanKeyword:
+		emitter.Writer.Write(lexer.TypeKeywordBoolean)
+	}
+
+	return emitter.Writer.Output
 }
