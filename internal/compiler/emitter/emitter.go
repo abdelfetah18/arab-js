@@ -415,7 +415,7 @@ func (emitter *Emitter) emitImportClause(importClause *ast.ImportClause) {
 
 func EmitTypeNode(node *ast.Node) string {
 	if node == nil {
-		return ""
+		return lexer.TypeKeywordAny
 	}
 
 	emitter := NewEmitter()
@@ -433,6 +433,17 @@ func EmitTypeNode(node *ast.Node) string {
 		emitter.Writer.Write(lexer.TypeKeywordNumber)
 	case ast.NodeTypeBooleanKeyword:
 		emitter.Writer.Write(lexer.TypeKeywordBoolean)
+	case ast.NodeTypeArrayType:
+		emitter.Writer.Write(fmt.Sprintf("%s[]", EmitTypeNode(node.AsArrayType().ElementType)))
+	case ast.NodeTypeUnionType:
+		unionType := node.AsUnionType()
+		types := make([]string, len(unionType.Types))
+		for i, _type := range unionType.Types {
+			types[i] = EmitTypeNode(_type)
+		}
+		emitter.Writer.Write(strings.Join(types, " | "))
+	default:
+		emitter.Writer.Write(lexer.TypeKeywordAny)
 	}
 
 	return emitter.Writer.Output

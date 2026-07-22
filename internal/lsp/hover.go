@@ -3,13 +3,15 @@ package lsp
 import (
 	"arab_js/internal/binder"
 	"arab_js/internal/compiler/ast"
+	"arab_js/internal/compiler/emitter"
 	"fmt"
+	"strings"
 
 	"github.com/TobiasYin/go-lsp/lsp/defines"
 )
 
 func ProvideHover(node *ast.Node, nameResolver *binder.NameResolver) (result *defines.Hover, err error) {
-	// If it identifier
+	// If it's not an identifier, skip
 	if node.Type != ast.NodeTypeIdentifier {
 		return nil, nil
 	}
@@ -18,68 +20,43 @@ func ProvideHover(node *ast.Node, nameResolver *binder.NameResolver) (result *de
 
 	switch node.Parent.Type {
 	case ast.NodeTypeVariableDeclaration:
-		// If it variable name
 		variableDeclaration := node.Parent.AsVariableDeclaration()
 		if variableDeclaration.Name != node {
 			break
 		}
-		contents = fmt.Sprintf("```arts\nمتغير %s: %s\n```", node.AsIdentifier().Name, TypeNodeToString(node.TypeNode()))
+		contents = formatVarHover(variableDeclaration)
+
 	case ast.NodeTypeFunctionDeclaration:
-		// If it function name
 		functionDeclaration := node.Parent.AsFunctionDeclaration()
 		if functionDeclaration.ID != node.AsIdentifier() {
 			break
 		}
+		contents = formatFuncHover(functionDeclaration)
 
-		contents = fmt.Sprintf("```arts\nدالة %s(", node.AsIdentifier().Name)
-		for index, param := range functionDeclaration.Params {
-			parameter := param.AsParameter()
-			paramStr := fmt.Sprintf("%s: %s", parameter.Name.AsIdentifier().Name, TypeNodeToString(parameter.TypeNode()))
-			if len(functionDeclaration.Params)-1 != index {
-				paramStr = fmt.Sprintf("%s,", paramStr)
-			}
-			contents = fmt.Sprintf("%s%s", contents, paramStr)
-		}
-		contents = fmt.Sprintf("%s)\n```", contents)
 	case ast.NodeTypeMemberExpression:
-		// If it property name
 		memberExpression := node.Parent.AsMemberExpression()
+		if memberExpression.Object == node {
+			symbol := nameResolver.Resolve(node.AsIdentifier().Name, node)
+			if symbol == nil {
+				return nil, nil
+			}
+			contents = formatDeclarationHover(symbol.Node)
+		}
 		if memberExpression.Property != node {
 			break
 		}
 		// FIXME: Handle property
 
 	default:
-		// If it refrencing identifier
 		symbol := nameResolver.Resolve(node.AsIdentifier().Name, node)
 		if symbol == nil {
 			return nil, nil
 		}
+		contents = formatDeclarationHover(symbol.Node)
+	}
 
-		switch symbol.Node.Type {
-		case ast.NodeTypeVariableDeclaration:
-			// If it variable name
-			variableDeclaration := symbol.Node.AsVariableDeclaration()
-			identifier := variableDeclaration.Name.AsIdentifier()
-			contents = fmt.Sprintf("```arts\nمتغير %s: %s\n```", identifier.Name, TypeNodeToString(identifier.TypeNode()))
-		case ast.NodeTypeFunctionDeclaration:
-			// If it function name
-			functionDeclaration := symbol.Node.AsFunctionDeclaration()
-			identifier := functionDeclaration.ID
-
-			contents = fmt.Sprintf("```arts\nدالة %s(", identifier.Name)
-			for index, param := range functionDeclaration.Params {
-				parameter := param.AsParameter()
-				paramStr := fmt.Sprintf("%s: %s", parameter.Name.AsIdentifier().Name, TypeNodeToString(parameter.TypeNode()))
-				if len(functionDeclaration.Params)-1 != index {
-					paramStr = fmt.Sprintf("%s,", paramStr)
-				}
-				contents = fmt.Sprintf("%s%s", contents, paramStr)
-			}
-			contents = fmt.Sprintf("%s)\n```", contents)
-		default:
-			return nil, nil
-		}
+	if contents == "" {
+		return nil, nil
 	}
 
 	return &defines.Hover{
@@ -90,39 +67,44 @@ func ProvideHover(node *ast.Node, nameResolver *binder.NameResolver) (result *de
 	}, nil
 }
 
-func TypeNodeToString(node *ast.Node) string {
-	if node == nil {
-		return "أي_نوع"
+// Formats hover text for a node resolved from a symbol (variable or function)
+func formatDeclarationHover(node *ast.Node) string {
+	switch node.Type {
+	case ast.NodeTypeVariableDeclaration:
+		return formatVarHover(node.AsVariableDeclaration())
+	case ast.NodeTypeFunctionDeclaration:
+		return formatFuncHover(node.AsFunctionDeclaration())
+	default:
+		return ""
+	}
+}
+
+// Formats a variable declaration for hover display
+func formatVarHover(decl *ast.VariableDeclaration) string {
+	identifier := decl.Name.AsIdentifier()
+
+	var prefix string
+	if decl.Symbol != nil && decl.Symbol.OriginalName != nil {
+		prefix = fmt.Sprintf("// الإسم الأصلي: %s\n", *decl.Symbol.OriginalName)
 	}
 
-	switch node.Type {
-	case ast.NodeTypeTypeAnnotation:
-		return TypeNodeToString(node.AsTypeAnnotation().TypeAnnotation)
-	case ast.NodeTypeStringKeyword:
-		return "نص"
-	case ast.NodeTypeNumberKeyword:
-		return "عدد"
-	case ast.NodeTypeBooleanKeyword:
-		return "قيمة_منطقية"
-	case ast.NodeTypeNullKeyword:
-		return "فارغ"
-	case ast.NodeTypeAnyKeyword:
-		return "أي_نوع"
-	case ast.NodeTypeTypeReference:
-		return node.AsTypeReferenceNode().TypeName.Name
-	case ast.NodeTypeArrayType:
-		return fmt.Sprintf("%s[]", TypeNodeToString(node.AsArrayType().ElementType))
-	case ast.NodeTypeUnionType:
-		unionType := node.AsUnionType()
-		unionTypeString := ""
-		for index, _type := range unionType.Types {
-			unionTypeString = fmt.Sprintf("%s%s", unionTypeString, TypeNodeToString(_type))
-			if index != len(unionType.Types)-1 {
-				unionTypeString = fmt.Sprintf("%s | ", unionTypeString)
-			}
-		}
-		return unionTypeString
-	default:
-		return "أي_نوع"
+	return fmt.Sprintf("```arts\n%sمتغير %s: %s\n```", prefix, identifier.Name, emitter.EmitTypeNode(decl.TypeNode()))
+}
+
+// Formats a function declaration for hover display
+func formatFuncHover(decl *ast.FunctionDeclaration) string {
+	identifier := decl.ID
+
+	var prefix string
+	if decl.Symbol != nil && decl.Symbol.OriginalName != nil {
+		prefix = fmt.Sprintf("// الإسم الأصلي: %s\n", *decl.Symbol.OriginalName)
 	}
+
+	var params []string
+	for _, param := range decl.Params {
+		parameter := param.AsParameter()
+		params = append(params, fmt.Sprintf("%s: %s", parameter.Name.AsIdentifier().Name, emitter.EmitTypeNode(parameter.TypeNode())))
+	}
+
+	return fmt.Sprintf("```arts\n%sدالة %s(%s)\n```", prefix, identifier.Name, strings.Join(params, ", "))
 }
